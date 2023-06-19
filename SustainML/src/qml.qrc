@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/main.qml</file>
+        <file alias="Settings">qml/utils/project_settings.qml</file>
+        <file alias="Screen_manager">qml/utils/screen_manager.qml</file>
+        <file>qml/components/SML_Text.qml</file>
+    </qresource>
+</RCC>
