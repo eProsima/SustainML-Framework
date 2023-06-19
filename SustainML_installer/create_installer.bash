@@ -1,6 +1,6 @@
 #!/bin/bash
 
-default_version="0.0.0"
+default_version="0.1.0"
 
 if [ -z $1 ]; then
     echo "Using the default version: " $default_version
@@ -21,6 +21,7 @@ rm -rf packages/com.eProsima.SustainML/data/*
 
 # copy the required files
 cp -r ../build*/SustainML packages/com.eProsima.SustainML/data/SustainML
+cp ../LICENSE packages/com.eProsima.SustainML/meta/LICENSE
 
 # set the given version in the configuration files, and the current date
 sed -i "/<Version>/c<Version>$default_version</Version>" config/config.xml

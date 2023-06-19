@@ -5,6 +5,6 @@
 <Version>0.1.0</Version>
 <ReleaseDate>2023-06-19</ReleaseDate>
     <Licenses>
-        <License name="Apache License Agreement" file="license.txt" />
+<License name="Apache License Agreement" file="LICENSE" />
     </Licenses>
 </Package>
