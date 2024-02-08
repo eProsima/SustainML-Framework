@@ -15,10 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with eProsima SustainML front-end. If not, see <https://www.gnu.org/licenses/>.
 
+#include <iostream>
+#include <memory>
+
 #include <QQmlApplicationEngine>
 #include <qqmlcontext.h>
 
 #include <sustainml_frontend/Engine.h>
+
+#include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
+#include <sustainml_cpp/types/types.h>
 
 Engine::Engine()
     : enabled_(false)
@@ -27,19 +33,14 @@ Engine::Engine()
 
 QObject* Engine::enable()
 {
-    // Initialize async backend
-    //listener_ = new backend::Listener(this);
-    //backend_connection_.set_listener(listener_);
+    // Initialize orchestrator node
+    orchestrator = new sustainml::orchestrator::OrchestratorNode(shared_from_this());
 
-    // Initialize models
-
-    // Initialized qml
-    //rootContext()->setContextProperty("controller", controller_);
+    // Share engine public methods with QML
+    rootContext()->setContextProperty("engine", this);
 
     // Load main GUI
     load(QUrl(QLatin1String("qrc:/qml/main.qml")));
-
-    // Connect Callback Listener to this object
 
     // Set enable as True
     enabled_ = true;
@@ -51,12 +52,33 @@ Engine::~Engine()
 {
     if  (enabled_)
     {
-        // First free the listener to stop new entities from appear
-        // if (listener_)
-        // {
-        //     backend_connection_.unset_listener();
-        //     delete listener_;
-        // }
+        delete orchestrator;
     }
 }
 
+void Engine::on_new_node_output(
+        const sustainml::NodeID& /*id*/,
+        void* /*data*/)
+{
+    //std::lock_guard<std::mutex> lock(mtx_);
+    //node_data_received_[id].second++;
+    //cv_.notify_one();
+}
+
+void Engine::on_node_status_change(
+        const sustainml::NodeID& /*id*/,
+        const types::NodeStatus& /*status*/)
+{
+    //std::lock_guard<std::mutex> lock(mtx_);
+    //node_data_received_[id].first = status.node_status();
+    //cv_.notify_one();
+}
+
+void Engine::launch_task()
+{
+    auto task = orchestrator->prepare_new_task();
+
+    task.second->task_id(task.first);
+    task.second->problem_description("Testing task " + std::to_string(task.first));
+    orchestrator->start_task(task.first, task.second);
+}

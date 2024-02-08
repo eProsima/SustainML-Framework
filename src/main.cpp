@@ -45,8 +45,8 @@ int main(
     QFontDatabase::addApplicationFont("qrc:/font/ArimaMadurai-ExtraBold.ttf");
 
     // Register engine
-    Engine engine;
-    QObject* topLevel = engine.enable();
+    std::shared_ptr<Engine> engine = std::make_shared<Engine>();
+    QObject* topLevel = engine->enable();
 
     QQuickWindow* window = qobject_cast<QQuickWindow*>(topLevel); \
     if ( !window )

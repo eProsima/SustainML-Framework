@@ -22,13 +22,20 @@
 #ifndef _EPROSIMA_SUSTAINML_ENGINE_H
 #define _EPROSIMA_SUSTAINML_ENGINE_H
 
+#include <memory>
+
 #include <QQmlApplicationEngine>
 #include <QQueue>
 #include <QtCharts/QVXYModelMapper>
 #include <QThread>
 #include <QWaitCondition>
 
-class Engine : public QQmlApplicationEngine
+#include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
+#include <sustainml_cpp/types/types.h>
+
+class Engine : public QQmlApplicationEngine,
+    public sustainml::orchestrator::OrchestratorNodeHandle,
+    public std::enable_shared_from_this<Engine>
 {
     Q_OBJECT
 
@@ -47,9 +54,40 @@ public:
      */
     QObject* enable();
 
+    /**
+     * @brief New node output callback
+     *
+     * @param id node identifier
+     * @param data data received
+     */
+    void on_new_node_output(
+            const sustainml::NodeID& id,
+            void* data) override;
+
+    /**
+     * @brief Node status change callback
+     *
+     * @param id node identifier
+     * @param status new status
+     */
+    void on_node_status_change(
+            const sustainml::NodeID& id,
+            const types::NodeStatus& status) override;
+
+public slots:
+
+    /**
+     * @brief  launch dummy task
+     *
+     */
+    void launch_task();
+
 protected:
+
     //! Set to true if the engine is being enabled
     bool enabled_;
+
+    sustainml::orchestrator::OrchestratorNode* orchestrator;
 };
 
 #endif //_EPROSIMA_SUSTAINML_ENGINE_H

@@ -290,7 +290,7 @@ Window {
     {
         x: 1000
         y: 120
-        text: "Go restuls screen, bottom-right"
+        text: "Go results screen, bottom-right"
         onClicked: {
             main_window.load_screen(ScreenManager.Screens.Results)
         }
@@ -303,6 +303,16 @@ Window {
         text: "Go other screen, bottom-left"
         onClicked: {
             main_window.load_screen(ScreenManager.Screens.Other)
+        }
+    }
+
+    Button
+    {
+        x: 1000
+        y: 240
+        text: "Send dummy task"
+        onClicked: {
+            engine.launch_task()
         }
     }
 
