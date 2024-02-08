@@ -82,10 +82,27 @@ public slots:
      */
     void launch_task();
 
+signals:
+
+    void update_log(
+            const QString& log);
+
 protected:
 
     //! Set to true if the engine is being enabled
     bool enabled_;
+
+private:
+
+    QString get_name_from_node_id(
+            const sustainml::NodeID& id);
+
+    QString get_task_from_data(
+            const sustainml::NodeID& id,
+            void* data);
+
+    QString get_status_from_node(
+            const types::NodeStatus& status);
 
     sustainml::orchestrator::OrchestratorNode* orchestrator;
 };

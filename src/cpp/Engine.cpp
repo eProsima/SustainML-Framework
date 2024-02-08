@@ -20,6 +20,7 @@
 
 #include <QQmlApplicationEngine>
 #include <qqmlcontext.h>
+#include <QString>
 
 #include <sustainml_frontend/Engine.h>
 
@@ -57,21 +58,18 @@ Engine::~Engine()
 }
 
 void Engine::on_new_node_output(
-        const sustainml::NodeID& /*id*/,
-        void* /*data*/)
+        const sustainml::NodeID& id,
+        void* data)
 {
-    //std::lock_guard<std::mutex> lock(mtx_);
-    //node_data_received_[id].second++;
-    //cv_.notify_one();
+    QString log = QString("Received output from node ") + get_name_from_node_id(id);
+    emit update_log(log + QString(",\tTask ") + get_task_from_data(id, data));
 }
 
 void Engine::on_node_status_change(
-        const sustainml::NodeID& /*id*/,
-        const types::NodeStatus& /*status*/)
+        const sustainml::NodeID& id,
+        const types::NodeStatus& status)
 {
-    //std::lock_guard<std::mutex> lock(mtx_);
-    //node_data_received_[id].first = status.node_status();
-    //cv_.notify_one();
+    emit update_log(get_name_from_node_id(id) + QString(" node status changed to ") + get_status_from_node(status));
 }
 
 void Engine::launch_task()
@@ -81,4 +79,89 @@ void Engine::launch_task()
     task.second->task_id(task.first);
     task.second->problem_description("Testing task " + std::to_string(task.first));
     orchestrator->start_task(task.first, task.second);
+}
+
+QString Engine::get_name_from_node_id(
+        const sustainml::NodeID& id)
+{
+    switch (id)
+    {
+        case sustainml::NodeID::ID_TASK_ENCODER:
+            return QString("TASK_ENCODER_NODE");
+        case sustainml::NodeID::ID_MACHINE_LEARNING:
+            return QString("ML_MODEL_NODE");
+        case sustainml::NodeID::ID_HARDWARE_RESOURCES:
+            return QString("HW_RESOURCES_NODE");
+        case sustainml::NodeID::ID_CARBON_FOOTPRINT:
+            return QString("CO2_TRACKER_NODE");
+        case sustainml::NodeID::ID_ORCHESTRATOR:
+            return QString("ORCHESTRATOR_NODE");
+        default:
+            return QString("UNKNOWN");
+    }
+}
+
+QString Engine::get_task_from_data(
+        const sustainml::NodeID& id,
+        void* data)
+{
+    types::EncodedTask* encoded = nullptr;
+    types::MLModel* ml = nullptr;
+    types::HWResource* hw = nullptr;
+    types::CO2Footprint* co2 = nullptr;
+    switch (id)
+    {
+        case sustainml::NodeID::ID_TASK_ENCODER:
+            encoded = static_cast<types::EncodedTask*>(data);
+            if (nullptr != encoded)
+            {
+                return QString::number(encoded->task_id());
+            }
+            return QString("UNKNOWN");
+        case sustainml::NodeID::ID_MACHINE_LEARNING:
+            ml = static_cast<types::MLModel*>(data);
+            if (nullptr != ml)
+            {
+                return QString::number(ml->task_id());
+            }
+            return QString("UNKNOWN");
+        case sustainml::NodeID::ID_HARDWARE_RESOURCES:
+            hw = static_cast<types::HWResource*>(data);
+            if (nullptr != hw)
+            {
+                return QString::number(hw->task_id());
+            }
+            return QString("UNKNOWN");
+        case sustainml::NodeID::ID_CARBON_FOOTPRINT:
+            co2 = static_cast<types::CO2Footprint*>(data);
+            if (nullptr != co2)
+            {
+                return QString::number(co2->task_id());
+            }
+            return QString("UNKNOWN");
+        default:
+            return QString("UNKNOWN");
+    }
+}
+
+QString Engine::get_status_from_node(
+        const types::NodeStatus& status)
+{
+    switch (status.node_status())
+    {
+        case 0u: //Status::NODE_INACTIVE
+            return QString("NODE_INACTIVE");
+        case 1u: //Status::NODE_INITIALIZING
+            return QString("NODE_INITIALIZING");
+        case 2u: //Status::NODE_IDLE
+            return QString("NODE_IDLE");
+        case 3u: //Status::NODE_RUNNING
+            return QString("NODE_RUNNING");
+        case 4u: //Status::NODE_ERROR
+            return QString("NODE_ERROR");
+        case 5u: //Status::NODE_TERMINATING
+            return QString("NODE_TERMINATING");
+        default:
+            return QString("UNKNOWN");
+    }
 }

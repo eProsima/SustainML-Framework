@@ -12,7 +12,7 @@ Item
         Home,
         Definition,
         Results,
-        Other
+        Log
     }
 
     // Variables that user might change during the app execution

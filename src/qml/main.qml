@@ -219,20 +219,34 @@ Window {
             }
         }
 
-        // OTHER SCREEN
+        // LOG SCREEN
         Component
         {
-            id: other_screen
+            id: log_screen
 
             Rectangle{
                 color: "transparent"
-
-                SmlText {
-                    text_value: "this screen would be used eventually"
-                    text_kind: SmlText.TextKind.Body
-
+                ScrollView {
+                    verticalScrollBarPolicy: Qt.ScrollBarAsNeeded
+                    horizontalScrollBarPolicy: Qt.ScrollBarAsNeeded
                     x: 50
                     y: 90
+                    width: 900
+                    height: 600
+
+                    SML_Text {
+                        id: logger
+                        text_value: "LOG"
+                        text_kind: SML_Text.Text_kind.Body
+
+                        Connections
+                        {
+                            target: engine
+                            function onUpdate_log(log) {
+                                logger.text_value = logger.text_value + "\n" + log
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -300,9 +314,9 @@ Window {
     {
         x: 1000
         y: 160
-        text: "Go other screen, bottom-left"
+        text: "Go LOG screen, bottom-left"
         onClicked: {
-            main_window.load_screen(ScreenManager.Screens.Other)
+            main_window.load_screen(ScreenManager.Screens.Log)
         }
     }
 
@@ -344,8 +358,8 @@ Window {
                 case ScreenManager.Screens.Results:
                     screen_to_be_loaded = results_screen
                     break
-                case ScreenManager.Screens.Other:
-                    screen_to_be_loaded = other_screen
+                case ScreenManager.Screens.Log:
+                    screen_to_be_loaded = log_screen
                     break
                 default:
                 case ScreenManager.Screens.Home:
@@ -384,7 +398,7 @@ Window {
                 movement[0] = Settings.background_x_final
                 movement[1] = Settings.background_y_final
                 break
-            case ScreenManager.Screens.Other:
+            case ScreenManager.Screens.Log:
                 movement[0] = Settings.background_x_initial
                 movement[1] = Settings.background_y_final
                 break
