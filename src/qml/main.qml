@@ -16,12 +16,46 @@ Window {
 
     // properties
     property bool in_use: true
+    property string log: "LOG"
+    property string task_encoder_node_last_status: "NODE_INNACTIVE"
+    property string ml_model_node_last_status: "NODE_INNACTIVE"
+    property string hw_resources_node_last_status: "NODE_INNACTIVE"
+    property string co2_footprint_node_last_status: "NODE_INNACTIVE"
 
     // Main view properties
     width:  Settings.app_width
     height: Settings.app_height
     visible: true
     title:  Settings.app_name
+
+    Connections
+    {
+        target: engine
+        function onUpdate_log(new_log)
+        {
+            main_window.log = main_window.log + "\n" + new_log
+        }
+
+        function onUpdate_task_encoder_node_status(new_status)
+        {
+            main_window.task_encoder_node_last_status = new_status
+        }
+
+        function onUpdate_ml_model_node_status(new_status)
+        {
+            main_window.ml_model_node_last_status = new_status
+        }
+
+        function onUpdate_hw_resources_node_status(new_status)
+        {
+            main_window.hw_resources_node_last_status = new_status
+        }
+
+        function onUpdate_co2_footprint_node_status(new_status)
+        {
+            main_window.co2_footprint_node_last_status = new_status
+        }
+    }
 
     // Background
     Rectangle
@@ -234,18 +268,10 @@ Window {
                     width: 900
                     height: 600
 
-                    SML_Text {
+                    SmlText {
                         id: logger
-                        text_value: "LOG"
-                        text_kind: SML_Text.Text_kind.Body
-
-                        Connections
-                        {
-                            target: engine
-                            function onUpdate_log(log) {
-                                logger.text_value = logger.text_value + "\n" + log
-                            }
-                        }
+                        text_value: main_window.log
+                        text_kind: SmlText.TextKind.Body
                     }
                 }
             }
@@ -339,6 +365,36 @@ Window {
             ScreenManager.night_mode = !ScreenManager.night_mode
         }
     }
+
+    SmlText {
+        x: 1000
+        y: 280
+        text_value: "Task Encoder Node Status: \n          " + main_window.task_encoder_node_last_status
+        text_kind: SmlText.TextKind.Body
+    }
+
+    SmlText {
+        x: 1000
+        y: 340
+        text_value: "ML Model Node Status: \n          " + main_window.ml_model_node_last_status
+        text_kind: SmlText.TextKind.Body
+    }
+
+    SmlText {
+        x: 1000
+        y: 420
+        text_value: "HW Resources Node Status: \n          " + main_window.hw_resources_node_last_status
+        text_kind: SmlText.TextKind.Body
+    }
+
+    SmlText {
+        x: 1000
+        y: 500
+        text_value: "CO2 Footprint Node Status: \n          " + main_window.co2_footprint_node_last_status
+        text_kind: SmlText.TextKind.Body
+    }
+
+
 
 
     // Screen loader plus background animation trigger

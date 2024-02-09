@@ -87,6 +87,18 @@ signals:
     void update_log(
             const QString& log);
 
+    void update_task_encoder_node_status(
+            const QString& status);
+
+    void update_ml_model_node_status(
+            const QString& status);
+
+    void update_hw_resources_node_status(
+            const QString& status);
+
+    void update_co2_footprint_node_status(
+            const QString& status);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -102,6 +114,10 @@ private:
             void* data);
 
     QString get_status_from_node(
+            const types::NodeStatus& status);
+
+    QString update_node_status(
+            const sustainml::NodeID& id,
             const types::NodeStatus& status);
 
     sustainml::orchestrator::OrchestratorNode* orchestrator;

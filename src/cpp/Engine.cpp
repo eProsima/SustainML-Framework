@@ -22,7 +22,7 @@
 #include <qqmlcontext.h>
 #include <QString>
 
-#include <sustainml_frontend/Engine.h>
+#include <sustainml/Engine.h>
 
 #include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
 #include <sustainml_cpp/types/types.h>
@@ -34,14 +34,14 @@ Engine::Engine()
 
 QObject* Engine::enable()
 {
-    // Initialize orchestrator node
-    orchestrator = new sustainml::orchestrator::OrchestratorNode(shared_from_this());
-
     // Share engine public methods with QML
     rootContext()->setContextProperty("engine", this);
 
     // Load main GUI
     load(QUrl(QLatin1String("qrc:/qml/main.qml")));
+
+    // Initialize orchestrator node
+    orchestrator = new sustainml::orchestrator::OrchestratorNode(shared_from_this());
 
     // Set enable as True
     enabled_ = true;
@@ -69,7 +69,7 @@ void Engine::on_node_status_change(
         const sustainml::NodeID& id,
         const types::NodeStatus& status)
 {
-    emit update_log(get_name_from_node_id(id) + QString(" node status changed to ") + get_status_from_node(status));
+    emit update_log(get_name_from_node_id(id) + QString(" node status changed to ") + update_node_status(id, status));
 }
 
 void Engine::launch_task()
@@ -105,6 +105,7 @@ QString Engine::get_task_from_data(
         const sustainml::NodeID& id,
         void* data)
 {
+    types::UserInput* ui = nullptr;
     types::EncodedTask* encoded = nullptr;
     types::MLModel* ml = nullptr;
     types::HWResource* hw = nullptr;
@@ -113,32 +114,19 @@ QString Engine::get_task_from_data(
     {
         case sustainml::NodeID::ID_TASK_ENCODER:
             encoded = static_cast<types::EncodedTask*>(data);
-            if (nullptr != encoded)
-            {
-                return QString::number(encoded->task_id());
-            }
-            return QString("UNKNOWN");
+            return QString::number(encoded->task_id());
         case sustainml::NodeID::ID_MACHINE_LEARNING:
             ml = static_cast<types::MLModel*>(data);
-            if (nullptr != ml)
-            {
-                return QString::number(ml->task_id());
-            }
-            return QString("UNKNOWN");
+            return QString::number(ml->task_id());
         case sustainml::NodeID::ID_HARDWARE_RESOURCES:
             hw = static_cast<types::HWResource*>(data);
-            if (nullptr != hw)
-            {
-                return QString::number(hw->task_id());
-            }
-            return QString("UNKNOWN");
+            return QString::number(hw->task_id());
         case sustainml::NodeID::ID_CARBON_FOOTPRINT:
             co2 = static_cast<types::CO2Footprint*>(data);
-            if (nullptr != co2)
-            {
-                return QString::number(co2->task_id());
-            }
-            return QString("UNKNOWN");
+            return QString::number(co2->task_id());
+        case sustainml::NodeID::ID_ORCHESTRATOR:
+            ui = static_cast<types::UserInput*>(data);
+            return QString::number(ui->task_id());
         default:
             return QString("UNKNOWN");
     }
@@ -164,4 +152,29 @@ QString Engine::get_status_from_node(
         default:
             return QString("UNKNOWN");
     }
+}
+
+QString Engine::update_node_status(
+        const sustainml::NodeID& id,
+        const types::NodeStatus& status)
+{
+    QString status_value = get_status_from_node(status);
+    switch (id)
+    {
+        case sustainml::NodeID::ID_TASK_ENCODER:
+            emit update_task_encoder_node_status(status_value);
+            break;
+        case sustainml::NodeID::ID_MACHINE_LEARNING:
+            emit update_ml_model_node_status(status_value);
+            break;
+        case sustainml::NodeID::ID_HARDWARE_RESOURCES:
+            emit update_hw_resources_node_status(status_value);
+            break;
+        case sustainml::NodeID::ID_CARBON_FOOTPRINT:
+            emit update_co2_footprint_node_status(status_value);
+            break;
+        default:
+            break;
+    }
+    return status_value;
 }
