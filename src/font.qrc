@@ -1,6 +1,6 @@
 <RCC>
     <qresource prefix="/">
-        <file alias="SustainML_font">font/font_loader.qml</file>
+        <file alias="SustainMLFont">font/font_loader.qml</file>
         <file>font/ArimaMadurai-Thin.ttf</file>
         <file>font/ArimaMadurai-Regular.ttf</file>
         <file>font/ArimaMadurai-Medium.ttf</file>

@@ -26,7 +26,7 @@ Window {
     // Background
     Rectangle
     {
-        color: Screen_manager.background_color
+        color: ScreenManager.background_color
 
         // set background size two times the app size
         width:  2 * Settings.app_width
@@ -40,7 +40,7 @@ Window {
         Image
         {
             id: background
-            source: Screen_manager.background_shape
+            source: ScreenManager.background_shape
 
             // set image size two times the app size
             width:  2 * Settings.app_width
@@ -120,11 +120,11 @@ Window {
                     antialiasing: true
                 }
 
-                SML_Text
+                SmlText
                 {
                     id: sustainML_text
                     text_value: "SustainML"
-                    text_kind: SML_Text.App_name
+                    text_kind: SmlText.App_name
 
                     // Layout constraints
                     anchors
@@ -135,11 +135,11 @@ Window {
                     }
                 }
 
-                SML_Text
+                SmlText
                 {
                     id: title_text
                     text_value: "AI serving to reduce the footprint"
-                    text_kind: SML_Text.Header_3
+                    text_kind: SmlText.Header_3
 
                     // Layout constraints
                     anchors
@@ -150,11 +150,11 @@ Window {
                     }
                 }
 
-                SML_Text
+                SmlText
                 {
                     id: example_text
                     text_value: "This is an example test to check \nthe style in the GUI"
-                    text_kind: SML_Text.Body
+                    text_kind: SmlText.Body
 
                     // Layout constraints
                     anchors
@@ -175,9 +175,9 @@ Window {
             Rectangle{
                 color: "transparent"
 
-                SML_Text {
+                SmlText {
                     text_value: "this is the definition screen, where input data would be collected."
-                    text_kind: SML_Text.Text_kind.Body
+                    text_kind: SmlText.TextKind.Body
 
                     x: 50
                     y: 90
@@ -193,25 +193,25 @@ Window {
             Rectangle{
                 color: "transparent"
 
-                SML_Text {
+                SmlText {
                     text_value: "this is the results screen, where results are displayed to the user."
-                    text_kind: SML_Text.Text_kind.Body
+                    text_kind: SmlText.TextKind.Body
 
                     x: 50
                     y: 90
                 }
 
-                SML_Text {
+                SmlText {
                     text_value: "CO2 footprint"
-                    text_kind: SML_Text.Text_kind.Header_2
+                    text_kind: SmlText.TextKind.Header_2
 
                     x: 50
                     y: 150
                 }
 
-                SML_Text {
+                SmlText {
                     text_value: "180 g"
-                    text_kind: SML_Text.Text_kind.Body
+                    text_kind: SmlText.TextKind.Body
 
                     x: 50
                     y: 200
@@ -227,9 +227,9 @@ Window {
             Rectangle{
                 color: "transparent"
 
-                SML_Text {
+                SmlText {
                     text_value: "this screen would be used eventually"
-                    text_kind: SML_Text.Text_kind.Body
+                    text_kind: SmlText.TextKind.Body
 
                     x: 50
                     y: 90
@@ -272,7 +272,7 @@ Window {
         y: 40
         text: "Go home screen, top-left"
         onClicked: {
-            main_window.load_screen(Screen_manager.Screens.Home)
+            main_window.load_screen(ScreenManager.Screens.Home)
         }
     }
 
@@ -282,7 +282,7 @@ Window {
         y: 80
         text: "Go problem definition screen, top-right"
         onClicked: {
-            main_window.load_screen(Screen_manager.Screens.Definition)
+            main_window.load_screen(ScreenManager.Screens.Definition)
         }
     }
 
@@ -292,7 +292,7 @@ Window {
         y: 120
         text: "Go restuls screen, bottom-right"
         onClicked: {
-            main_window.load_screen(Screen_manager.Screens.Results)
+            main_window.load_screen(ScreenManager.Screens.Results)
         }
     }
 
@@ -302,7 +302,7 @@ Window {
         y: 160
         text: "Go other screen, bottom-left"
         onClicked: {
-            main_window.load_screen(Screen_manager.Screens.Other)
+            main_window.load_screen(ScreenManager.Screens.Other)
         }
     }
 
@@ -312,7 +312,7 @@ Window {
         y: Settings.app_height - 60
         text: "Swap Color Theme"
         onClicked: {
-            Screen_manager.night_mode = !Screen_manager.night_mode
+            ScreenManager.night_mode = !ScreenManager.night_mode
         }
     }
 
@@ -320,25 +320,25 @@ Window {
     // Screen loader plus background animation trigger
     function load_screen(screen)
     {
-        var screen_to_be_loaded  = Screen_manager.current_screen // current screen as default
+        var screen_to_be_loaded  = ScreenManager.current_screen // current screen as default
 
         // Check if actual change is required
-        if (Screen_manager.current_screen !== screen)
+        if (ScreenManager.current_screen !== screen)
         {
             // Select actual screen identifier
             switch (screen)
             {
-                case Screen_manager.Screens.Definition:
+                case ScreenManager.Screens.Definition:
                     screen_to_be_loaded = definition_screen
                     break
-                case Screen_manager.Screens.Results:
+                case ScreenManager.Screens.Results:
                     screen_to_be_loaded = results_screen
                     break
-                case Screen_manager.Screens.Other:
+                case ScreenManager.Screens.Other:
                     screen_to_be_loaded = other_screen
                     break
                 default:
-                case Screen_manager.Screens.Home:
+                case ScreenManager.Screens.Home:
                     screen_to_be_loaded = home_screen
                     break
             }
@@ -351,7 +351,7 @@ Window {
             background_y_animation.to = position_to_be_moved[1]
 
             // update current status variables
-            Screen_manager.current_screen = screen
+            ScreenManager.current_screen = screen
 
             // Run the animations and perform screen change
             stack_view.replace({item: screen_to_be_loaded, replace: true, destroyOnPop: true})
@@ -366,20 +366,20 @@ Window {
         var movement = [0,0]
         switch (screen)
         {
-            case Screen_manager.Screens.Definition:
+            case ScreenManager.Screens.Definition:
                 movement[0] = Settings.background_x_final
                 movement[1] = Settings.background_y_initial
                 break
-            case Screen_manager.Screens.Results:
+            case ScreenManager.Screens.Results:
                 movement[0] = Settings.background_x_final
                 movement[1] = Settings.background_y_final
                 break
-            case Screen_manager.Screens.Other:
+            case ScreenManager.Screens.Other:
                 movement[0] = Settings.background_x_initial
                 movement[1] = Settings.background_y_final
                 break
             default:
-            case Screen_manager.Screens.Home:
+            case ScreenManager.Screens.Home:
                 movement[0] = Settings.background_x_initial
                 movement[1] = Settings.background_y_initial
                 break

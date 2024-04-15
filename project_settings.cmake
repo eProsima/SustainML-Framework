@@ -13,11 +13,11 @@
 # limitations under the License.
 
 ###############################################################################
-# This file sets settings for project sustainml_frontend
+# This file sets settings for project sustainml
 ###############################################################################
 
 set(MODULE_NAME
-    sustainml_frontend)
+    sustainml)
 
 set(MODULE_SUMMARY
     "Qt Application for SustainML.")

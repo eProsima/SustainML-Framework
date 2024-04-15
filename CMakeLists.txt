@@ -66,12 +66,12 @@ configure_project_cpp()
 set(QT_PATH "" CACHE STRING "Path to the Qt installation folder")
 list(APPEND CMAKE_PREFIX_PATH ${QT_PATH})
 
-find_package(Qt5 5.15 COMPONENTS Core Widgets Gui Qml Quick Charts QuickControls2 REQUIRED)
+find_package(Qt5 5.15 COMPONENTS Core Widgets Gui Qml Quick QuickControls2 REQUIRED)
 find_package(fastcdr REQUIRED)
 find_package(fastrtps REQUIRED)
 find_package(sustainml_cpp REQUIRED)
 
-foreach(c Core Widgets Gui Quick Qml Charts QuickControls2 Utils)
+foreach(c Core Widgets Gui Quick Qml QuickControls2 Utils)
     if(${Qt5${c}_FOUND})
         message(STATUS "Found Qt5${c}: ${Qt5${c}_CONFIG} (found version ${Qt5${c}_VERSION})")
     endif()
@@ -196,7 +196,6 @@ set(QT5_LIBRARY_LINKS
     Qt5::Gui
     Qt5::Qml
     Qt5::Quick
-    Qt5::Charts
     Qt5::QuickControls2)
 
     # Link against fast backend and its dependencies

@@ -15,10 +15,10 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonType( QUrl("qrc:/Settings"), "eProsima.SustainML.Settings", 1, 0, "Settings" );
 
     // Register project fonts
-    qmlRegisterSingletonType( QUrl("qrc:/SustainML_font"), "eProsima.SustainML.Font", 1, 0, "SustainML_font" );
+    qmlRegisterSingletonType( QUrl("qrc:/SustainMLFont"), "eProsima.SustainML.Font", 1, 0, "SustainMLFont" );
 
     // Register project screen manager
-    qmlRegisterSingletonType( QUrl("qrc:/Screen_manager"), "eProsima.SustainML.ScreenMan", 1, 0, "Screen_manager" );
+    qmlRegisterSingletonType( QUrl("qrc:/ScreenManager"), "eProsima.SustainML.ScreenMan", 1, 0, "ScreenManager" );
 
     // Register fonts
     //QFontDatabase::addApplicationFont("qrc:/font/ArimaMadurai-ExtraBold.ttf");
