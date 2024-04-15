@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>sustainml</name>
+  <!-->There must be a release. Update version accordingly<-->
+  <version>0.1.0</version>
+  <description>
+    Qt application written in C++ that acts as a frontend for the SustainML project.
+  </description>
+  <!-->Update maintainer information<-->
+  <maintainer email="RaulSanchezMateos@eprosima.com">Raul Sánchez-Mateos</maintainer>
+  <maintainer email="mariodominguez@eprosima.com">Mario Domínguez</maintainer>
+  <maintainer email="jesuspoderoso@eprosima.com">Jesús Poderoso</maintainer>
+  <license file="LICENSE">GNU general public license</license>
+
+  <url type="website">https://sustainml.eu/</url>
+  <url type="bugtracker">https://github.com/eProsima/SustainML-Frontend/issues</url>
+  <url type="repository">https://github.com/eProsima/SustainML-Frontend</url>
+
+  <depend>fastcdr</depend>
+  <depend>fastrtps</depend>
+  <depend>dev-utils</depend>
+  <depend>cmake_utils</depend>
+  <depend>sustainml_cpp</depend>
+
+  <buildtool_depend>cmake</buildtool_depend>
+
+  <doc_depend>doxygen</doc_depend>
+  <doc_depend>Sphinx</doc_depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
