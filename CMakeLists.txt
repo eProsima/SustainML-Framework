@@ -66,7 +66,7 @@ configure_project_cpp()
 set(QT_PATH "" CACHE STRING "Path to the Qt installation folder")
 list(APPEND CMAKE_PREFIX_PATH ${QT_PATH})
 
-find_package(Qt5 5.15 COMPONENTS Core Widgets Gui Qml Quick Charts QuickControls2 REQUIRED)
+find_package(Qt5 5.15 COMPONENTS Core Widgets Gui Qml Quick QuickControls2 REQUIRED)
 
 foreach(component Core Widgets Gui Quick Qml QuickControls2 Utils)
     if(${Qt5${component}_FOUND})
