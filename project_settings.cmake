@@ -28,8 +28,20 @@ set(MODULE_FIND_PACKAGES
         fastcdr
         fastrtps
         cpp_utils
-        cmake_utils
         sustainml_cpp
     )
 
-set (MODULE_VERSION_FILE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+set(MODULE_DEPENDENCIES
+        ${MODULE_FIND_PACKAGES}
+        Qt5::Core
+        Qt5::Widgets
+        Qt5::Gui
+        Qt5::Qml
+        Qt5::Quick
+        Qt5::QuickControls2)
+
+set(MODULE_LICENSE_FILE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+
+set(MODULE_VERSION_FILE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
+
+set(MODULE_CPP_VERSION C++17)

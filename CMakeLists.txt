@@ -61,58 +61,18 @@ project(
 configure_project_cpp()
 
 ###############################################################################
-# Load external projects
+# Load Qt projects
 ###############################################################################
 set(QT_PATH "" CACHE STRING "Path to the Qt installation folder")
 list(APPEND CMAKE_PREFIX_PATH ${QT_PATH})
 
-find_package(Qt5 5.15 COMPONENTS Core Widgets Gui Qml Quick QuickControls2 REQUIRED)
-find_package(fastcdr REQUIRED)
-find_package(fastrtps REQUIRED)
-find_package(sustainml_cpp REQUIRED)
+find_package(Qt5 5.15 COMPONENTS Core Widgets Gui Qml Quick Charts QuickControls2 REQUIRED)
 
-foreach(c Core Widgets Gui Quick Qml QuickControls2 Utils)
-    if(${Qt5${c}_FOUND})
-        message(STATUS "Found Qt5${c}: ${Qt5${c}_CONFIG} (found version ${Qt5${c}_VERSION})")
+foreach(component Core Widgets Gui Quick Qml QuickControls2 Utils)
+    if(${Qt5${component}_FOUND})
+        message(STATUS "Found Qt5${component}: ${Qt5${component}_CONFIG} (found version ${Qt5${component}_VERSION})")
     endif()
 endforeach()
-
-if(${fastcdr_FOUND})
-    message(STATUS "Fast CDR found!")
-endif()
-if(${fastrtps_FOUND})
-    message(STATUS "Fast DDS found!")
-endif()
-if(${sustainml_cpp_FOUND})
-    message(STATUS "SustainML library found!")
-endif()
-
-###############################################################################
-# Set C++14 as the C++ standard required to build the project
-###############################################################################
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-###############################################################################
-# Warning level
-###############################################################################
-if(MSVC OR MSVC_IDE)
-    if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
-        string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-    else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
-    endif()
-else()
-    set(CMAKE_CXX_FLAGS
-        "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-unknown-pragmas -Wno-error=deprecated-declarations")
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,error")
-    endif()
-endif()
 
 ###############################################################################
 # Qt compiler flags, pthreads, and position independent code (PIE)
@@ -122,21 +82,6 @@ if(MSVC OR MSVC_IDE)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS} -pthread -no-pie")
 endif()
-
-###############################################################################
-# Installation paths
-###############################################################################
-set(BIN_INSTALL_DIR bin/ CACHE PATH "Installation directory for binaries")
-set(INCLUDE_INSTALL_DIR include/ CACHE PATH "Installation directory for C++ headers")
-set(LIB_INSTALL_DIR lib${LIB_SUFFIX}/ CACHE PATH "Installation directory for libraries")
-set(DATA_INSTALL_DIR share/ CACHE PATH "Installation directory for data")
-if(WIN32)
-    set(LICENSE_INSTALL_DIR . CACHE PATH "Installation directory for licenses")
-else()
-    set(LICENSE_INSTALL_DIR ${DATA_INSTALL_DIR}/${PROJECT_NAME} CACHE PATH "Installation directory for licenses")
-endif()
-
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 ###############################################################################
 # Configure Qt project
@@ -170,45 +115,33 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 ###############################################################################
-# Compile program
+# Compile C++ library
 ###############################################################################
-set(PROJECT_HEADERS
-    ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/Engine.h
+set(PROJECT_INLCUDE_DIRS
+    "${PROJECT_SOURCE_DIR}/include")
+
+file(GLOB_RECURSE PROJECT_SOURCE_FILES
+    "${PROJECT_SOURCE_DIR}/src/main.cpp"
+    "${PROJECT_SOURCE_DIR}/src/cpp/*.c"
+    "${PROJECT_SOURCE_DIR}/src/cpp/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/cpp/*.cxx"
+    "${PROJECT_SOURCE_DIR}/src/cpp/**/*.c"
+    "${PROJECT_SOURCE_DIR}/src/cpp/**/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/cpp/**/*.cxx")
+
+file(GLOB_RECURSE PROJECT_HEADER_FILES
+    "${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.h"
+    "${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.hpp"
+    "${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/**/*.h"
+    "${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/**/*.hpp")
+
+set(EXECUTABLE_REQUIRED_FILES ${PROJECT_SOURCE_FILES} ${PROJECT_HEADER_FILES} ${QT_RESOURCES})
+
+compile_tool(
+    "${PROJECT_SOURCE_DIR}/src" # Source directory
+    "${EXECUTABLE_REQUIRED_FILES}"
+    "${PROJECT_INLCUDE_DIRS}"
 )
-# Concatenate main with the rest of the sources
-set(PROJECT_SOURCES
-    ${PROJECT_SOURCE_DIR}/src/cpp/Engine.cpp
-    # MAIN MUST BE THE LAST FILE
-    ${PROJECT_SOURCE_DIR}/src/main.cpp
-)
-
-# Avoid launch command prompt when running the executable (.exe) from file explorer
-if(MSVC OR MSVC_IDE)
-    add_executable(${PROJECT_NAME} WIN32 ${PROJECT_SOURCES} ${PROJECT_HEADERS} ${QT_RESOURCES} ${APP_ICON_RESOURCE_WINDOWS})
-else()
-    add_executable(${PROJECT_NAME} ${PROJECT_SOURCES} ${PROJECT_HEADERS} ${QT_RESOURCES})
-endif()
-
-target_include_directories(${PROJECT_NAME} PRIVATE
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-        $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include/${PROJECT_NAME}>)
-
-# Qt5 required libraries
-set(QT5_LIBRARY_LINKS
-    Qt5::Core
-    Qt5::Widgets
-    Qt5::Gui
-    Qt5::Qml
-    Qt5::Quick
-    Qt5::QuickControls2)
-
-    # Link against fast backend and its dependencies
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    ${QT5_LIBRARY_LINKS}
-    fastcdr
-    fastrtps
-    sustainml_cpp)
 
 ###############################################################################
 # Disable QDebug traces in Release
@@ -219,13 +152,4 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 ###############################################################################
 # Packaging
 ###############################################################################
-# Install license
-install(FILES ${PROJECT_SOURCE_DIR}/LICENSE
-    DESTINATION ${LICENSE_INSTALL_DIR}
-    COMPONENT licenses
-    )
-set(CPACK_COMPONENT_LICENSES_HIDDEN 1)
-
-#Install executable
-install(TARGETS ${PROJECT_NAME}
-    RUNTIME DESTINATION ${BIN_INSTALL_DIR})
+eprosima_packaging()
