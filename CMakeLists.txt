@@ -172,10 +172,15 @@ set(CMAKE_AUTORCC ON)
 ###############################################################################
 # Compile program
 ###############################################################################
-
+set(PROJECT_HEADERS
+    ${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/Engine.h
+)
 # Concatenate main with the rest of the sources
 set(PROJECT_SOURCES
-    ${PROJECT_SOURCE_DIR}/src/main.cpp)
+    ${PROJECT_SOURCE_DIR}/src/cpp/Engine.cpp
+    # MAIN MUST BE THE LAST FILE
+    ${PROJECT_SOURCE_DIR}/src/main.cpp
+)
 
 # Avoid launch command prompt when running the executable (.exe) from file explorer
 if(MSVC OR MSVC_IDE)
