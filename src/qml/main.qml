@@ -17,10 +17,12 @@ Window {
     // properties
     property bool in_use: true
     property string log: "LOG"
-    property string task_encoder_node_last_status: "NODE_INNACTIVE"
-    property string ml_model_node_last_status: "NODE_INNACTIVE"
-    property string hw_resources_node_last_status: "NODE_INNACTIVE"
-    property string co2_footprint_node_last_status: "NODE_INNACTIVE"
+    property string app_requirements_node_last_status: "INNACTIVE"
+    property string carbon_footprint_node_last_status: "INNACTIVE"
+    property string hw_constraints_node_last_status: "INNACTIVE"
+    property string hw_resources_node_last_status: "INNACTIVE"
+    property string ml_model_node_last_status: "INNACTIVE"
+    property string ml_model_metadata_node_last_status: "INNACTIVE"
 
     // Main view properties
     width:  Settings.app_width
@@ -36,14 +38,19 @@ Window {
             main_window.log = main_window.log + "\n" + new_log
         }
 
-        function onUpdate_task_encoder_node_status(new_status)
+        function onUpdate_app_requirements_node_status(new_status)
         {
-            main_window.task_encoder_node_last_status = new_status
+            main_window.app_requirements_node_last_status = new_status
         }
 
-        function onUpdate_ml_model_node_status(new_status)
+        function onUpdate_carbon_footprint_node_status(new_status)
         {
-            main_window.ml_model_node_last_status = new_status
+            main_window.carbon_footprint_node_last_status = new_status
+        }
+
+        function onUpdate_hw_constraints_node_status(new_status)
+        {
+            main_window.hw_constraints_node_last_status = new_status
         }
 
         function onUpdate_hw_resources_node_status(new_status)
@@ -51,9 +58,14 @@ Window {
             main_window.hw_resources_node_last_status = new_status
         }
 
-        function onUpdate_co2_footprint_node_status(new_status)
+        function onUpdate_ml_model_node_status(new_status)
         {
-            main_window.co2_footprint_node_last_status = new_status
+            main_window.ml_model_node_last_status = new_status
+        }
+
+        function onUpdate_ml_model_metadata_node_status(new_status)
+        {
+            main_window.ml_model_metadata_node_last_status = new_status
         }
     }
 
@@ -369,33 +381,44 @@ Window {
     SmlText {
         x: 1000
         y: 280
-        text_value: "Task Encoder Node Status: \n          " + main_window.task_encoder_node_last_status
+        text_value: "App requirements Node Status: \n          " + main_window.app_requirements_node_last_status
         text_kind: SmlText.TextKind.Body
     }
 
     SmlText {
         x: 1000
         y: 340
-        text_value: "ML Model Node Status: \n          " + main_window.ml_model_node_last_status
+        text_value: "Carbon footprint Node Status: \n          " + main_window.carbon_footprint_node_last_status
         text_kind: SmlText.TextKind.Body
     }
 
     SmlText {
         x: 1000
         y: 420
-        text_value: "HW Resources Node Status: \n          " + main_window.hw_resources_node_last_status
+        text_value: "Hardware constraints Node Status: \n          " + main_window.hw_constraints_node_last_status
         text_kind: SmlText.TextKind.Body
     }
 
     SmlText {
         x: 1000
         y: 500
-        text_value: "CO2 Footprint Node Status: \n          " + main_window.co2_footprint_node_last_status
+        text_value: "Hardware resources Node Status: \n          " + main_window.hw_resources_node_last_status
         text_kind: SmlText.TextKind.Body
     }
 
+    SmlText {
+        x: 1000
+        y: 580
+        text_value: "ML model Node Status: \n          " + main_window.ml_model_node_last_status
+        text_kind: SmlText.TextKind.Body
+    }
 
-
+    SmlText {
+        x: 1000
+        y: 660
+        text_value: "ML model metadata Node Status: \n          " + main_window.ml_model_metadata_node_last_status
+        text_kind: SmlText.TextKind.Body
+    }
 
     // Screen loader plus background animation trigger
     function load_screen(screen)

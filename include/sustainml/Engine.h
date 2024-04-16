@@ -56,8 +56,7 @@ public:
 
     /**
      * @brief New node output callback
-     *
-     * @param id node identifier
+     * @param   id node identifier
      * @param data data received
      */
     void on_new_node_output(
@@ -87,16 +86,22 @@ signals:
     void update_log(
             const QString& log);
 
-    void update_task_encoder_node_status(
+    void update_app_requirements_node_status(
             const QString& status);
 
-    void update_ml_model_node_status(
+    void update_carbon_footprint_node_status(
+            const QString& status);
+
+    void update_hw_constraints_node_status(
             const QString& status);
 
     void update_hw_resources_node_status(
             const QString& status);
 
-    void update_co2_footprint_node_status(
+    void update_ml_model_metadata_node_status(
+            const QString& status);
+
+    void update_ml_model_node_status(
             const QString& status);
 
 protected:
@@ -115,6 +120,9 @@ private:
 
     QString get_status_from_node(
             const types::NodeStatus& status);
+
+    QString get_task_QString(
+            const types::TaskId& task_id);
 
     QString update_node_status(
             const sustainml::NodeID& id,
