@@ -19,6 +19,8 @@ Text {
     // External properties
     property int text_kind: SmlText.TextKind.Body   // Body kind as default
     required property string text_value             // Required text introduced by the user
+    property bool force_color: false
+    property string forced_color: "black"
 
     // Internal properties, based on the input selection
     property string __font_family: sustainml_custom_text.text_kind === SmlText.TextKind.App_name ? SustainMLFont.sustainml_font  :
@@ -37,5 +39,6 @@ Text {
     font.bold: sustainml_custom_text.text_kind === SmlText.TextKind.App_name
     font.family: sustainml_custom_text.__font_family
     font.pixelSize: sustainml_custom_text.__font_size
-    color: sustainml_custom_text.__font_color
+    color: sustainml_custom_text.force_color ? sustainml_custom_text.forced_color : sustainml_custom_text.__font_color
+    wrapMode: Text.WordWrap
 }
