@@ -82,11 +82,78 @@ void Engine::on_node_status_change(
     }
 }
 
-void Engine::launch_task()
+void Engine::launch_task(
+        QString problem_short_description,
+        QString modality,
+        QString problem_definition,
+        QString inputs,
+        QString outputs,
+        int minimum_samples,
+        int maximum_samples,
+        bool optimize_carbon_footprint_auto,
+        bool optimize_carbon_footprint_manual,
+        int previous_iteration,
+        double desired_carbon_footprint,
+        QString geo_location_continent,
+        QString geo_location_region,
+        QString extra_data)
 {
+    std::vector<std::string> input_set;
+    std::vector<std::string> output_set;
+    split_string(inputs.toStdString(), input_set, ' ');
+    split_string(outputs.toStdString(), output_set, ' ');
+    uint32_t min = 1;
+    uint32_t max = sizeof(uint32_t)-1;
+    if (minimum_samples > 0)
+    {
+        try
+        {
+            min = static_cast<uint32_t>(minimum_samples);
+        }
+        catch (const std::exception& e)
+        {
+            emit update_log(QString("Error converting minimum samples to uint32_t: ") + e.what());
+        }
+    }
+    else
+    {
+        emit update_log(QString("Error: minimum samples (") + QString::number(minimum_samples) +
+                QString(") must be greater than 0. Using default value " + QString::number(min)));
+    }
+    if (maximum_samples > 0)
+    {
+        try
+        {
+            max = static_cast<uint32_t>(maximum_samples);
+        }
+        catch (const std::exception& e)
+        {
+            emit update_log(QString("Error converting maximum samples to uint32_t: ") + e.what());
+        }
+    }
+    else
+    {
+        emit update_log(QString("Error: maximum samples (") + QString::number(maximum_samples) +
+                QString(") must be greater than 0. Using default value " + QString::number(max)));
+    }
+    std::vector<uint8_t> raw_data(extra_data.toStdString().begin(), extra_data.toStdString().end());
+
     auto task = orchestrator->prepare_new_task();
     task.second->task_id(task.first);
-    task.second->problem_definition("Testing task " + get_task_QString(task.first).toStdString());
+    task.second->modality(modality.toStdString());
+    task.second->problem_short_description(problem_short_description.toStdString());
+    task.second->problem_definition(problem_definition.toStdString());
+    task.second->inputs(input_set);
+    task.second->outputs(output_set);
+    task.second->minimum_samples(min);
+    task.second->maximum_samples(max);
+    task.second->optimize_carbon_footprint_auto(optimize_carbon_footprint_auto);
+    task.second->optimize_carbon_footprint_manual(optimize_carbon_footprint_manual);
+    task.second->previous_iteration(previous_iteration);
+    task.second->desired_carbon_footprint(desired_carbon_footprint);
+    task.second->geo_location_continent(geo_location_continent.toStdString());
+    task.second->geo_location_region(geo_location_region.toStdString());
+    task.second->extra_data(raw_data);
     orchestrator->start_task(task.first, task.second);
 }
 
@@ -212,4 +279,25 @@ QString Engine::update_node_status(
             break;
     }
     return status_value;
+}
+
+size_t Engine::split_string(
+        const std::string& string,
+        std::vector<std::string>& string_set,
+        char delimeter)
+{
+    size_t position = string.find(delimeter);
+    size_t initial_position = 0;
+    string_set.clear();
+
+    // Split loop
+    while (position != std::string::npos)
+    {
+        string_set.push_back(string.substr(initial_position, position - initial_position));
+        initial_position = position + 1;
+        position = string.find(delimeter, initial_position);
+    }
+    string_set.push_back(string.substr(initial_position, std::min(position, string.size()) - initial_position + 1));
+
+    return string_set.size();
 }
