@@ -10,6 +10,7 @@ import eProsima.SustainML.ScreenMan 1.0
 
 // Component imports
 import "components"
+import "screens"
 
 Window {
     id: main_window
@@ -109,7 +110,7 @@ Window {
             id: background_x_animation
             target: background
             properties: "x"
-            duration: Settings.background_movement
+            duration: Settings.background_movement_anim_duration
             to: Settings.app_width
         }
 
@@ -119,7 +120,7 @@ Window {
             id: background_y_animation
             target: background
             properties: "y"
-            duration: Settings.background_movement
+            duration: Settings.background_movement_anim_duration
             to: Settings.app_height
         }
     }
@@ -136,80 +137,14 @@ Window {
         {
             id: home_screen
 
-            Rectangle{
-                color: "transparent"
+            SmlHomeScreen
+            {
+                id: home_screen_component
 
-                // Display the logo in the corner
-                Image
-                {
-                    id: sustainML_logo
+                // Layout constraints
+                anchors.fill: parent
 
-                    source: Settings.app_logo
-
-                    // set image size
-                    height: Settings.app_height / 2
-
-                    // Layout constraints
-                    anchors
-                    {
-                        left: parent.left
-                        leftMargin: Settings.spacing_big
-                        top: parent.top
-                        topMargin: Settings.spacing_big
-                    }
-
-                    // Image smoothness
-                    sourceSize.width: width
-                    sourceSize.height: height
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    antialiasing: true
-                }
-
-                SmlText
-                {
-                    id: sustainML_text
-                    text_value: "SustainML"
-                    text_kind: SmlText.App_name
-
-                    // Layout constraints
-                    anchors
-                    {
-                        horizontalCenter: sustainML_logo.horizontalCenter
-                        top: sustainML_logo.bottom
-                        topMargin: Settings.spacing_normal
-                    }
-                }
-
-                SmlText
-                {
-                    id: title_text
-                    text_value: "AI serving to reduce the footprint"
-                    text_kind: SmlText.Header_3
-
-                    // Layout constraints
-                    anchors
-                    {
-                        top: sustainML_text.bottom
-                        topMargin: -Settings.spacing_small
-                        left: sustainML_text.left
-                    }
-                }
-
-                SmlText
-                {
-                    id: example_text
-                    text_value: "This is an example test to check \nthe style in the GUI"
-                    text_kind: SmlText.Body
-
-                    // Layout constraints
-                    anchors
-                    {
-                        top: title_text.bottom
-                        topMargin: Settings.spacing_small
-                        left: title_text.left
-                    }
-                }
+                onGo_problem_definition: main_window.load_screen(ScreenManager.Screens.Definition)
             }
         }
 
@@ -218,15 +153,31 @@ Window {
         {
             id: definition_screen
 
-            Rectangle{
-                color: "transparent"
+            SmlProblemDefinitionScreen
+            {
+                id: definition_screen_component
 
-                SmlText {
-                    text_value: "this is the definition screen, where input data would be collected."
-                    text_kind: SmlText.TextKind.Body
+                // Layout constraints
+                anchors.fill: parent
 
-                    x: 50
-                    y: 90
+                onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
+                onSend_task:
+                {
+                    engine.launch_task(
+                            problem_short_description,
+                            modality,
+                            problem_definition,
+                            inputs,
+                            outputs,
+                            minimum_samples,
+                            maximum_samples,
+                            optimize_carbon_footprint_auto,
+                            optimize_carbon_footprint_manual,
+                            previous_iteration,
+                            desired_carbon_footprint,
+                            geo_location_continent,
+                            geo_location_region,
+                            extra_data)
                 }
             }
         }
@@ -270,22 +221,22 @@ Window {
         {
             id: log_screen
 
-            Rectangle{
-                color: "transparent"
-                ScrollView {
-                    verticalScrollBarPolicy: Qt.ScrollBarAsNeeded
-                    horizontalScrollBarPolicy: Qt.ScrollBarAsNeeded
-                    x: 50
-                    y: 90
-                    width: 900
-                    height: 600
+            SmlSettingsScreen
+            {
+                id: log_screen_component
 
-                    SmlText {
-                        id: logger
-                        text_value: main_window.log
-                        text_kind: SmlText.TextKind.Body
-                    }
-                }
+                // Layout constraints
+                anchors.fill: parent
+
+                log: main_window.log
+                app: main_window.app_requirements_node_last_status
+                carbon: main_window.carbon_footprint_node_last_status
+                hw_constraints: main_window.hw_constraints_node_last_status
+                hw_resources: main_window.hw_resources_node_last_status
+                model: main_window.ml_model_node_last_status
+                metadata: main_window.ml_model_metadata_node_last_status
+
+                onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
             }
         }
 
@@ -304,7 +255,7 @@ Window {
                     property: "opacity"
                     from: 0
                     to: 1
-                    duration: Settings.screen_in_opacity
+                    duration: Settings.screen_in_opacity_anim_duration
                 }
                 PropertyAnimation
                 {
@@ -312,7 +263,7 @@ Window {
                     property: "opacity"
                     from: 1
                     to: 0
-                    duration: Settings.screen_out_opacity
+                    duration: Settings.screen_out_opacity_anim_duration
                 }
             }
          }
@@ -321,103 +272,64 @@ Window {
     Button
     {
         x: 1000
-        y: 40
-        text: "Go home screen, top-left"
-        onClicked: {
-            main_window.load_screen(ScreenManager.Screens.Home)
-        }
-    }
-
-    Button
-    {
-        x: 1000
-        y: 80
-        text: "Go problem definition screen, top-right"
-        onClicked: {
-            main_window.load_screen(ScreenManager.Screens.Definition)
-        }
-    }
-
-    Button
-    {
-        x: 1000
         y: 120
+        visible: false
         text: "Go results screen, bottom-right"
         onClicked: {
             main_window.load_screen(ScreenManager.Screens.Results)
         }
     }
 
-    Button
+    SmlIcon
     {
-        x: 1000
-        y: 160
-        text: "Go LOG screen, bottom-left"
-        onClicked: {
-            main_window.load_screen(ScreenManager.Screens.Log)
+        id: settings_icon
+        name:   Settings.settings_icon_name
+        color:  Settings.app_color_green_1
+        color_pressed:  Settings.app_color_green_2
+        nightmode_color:  Settings.app_color_green_4
+        nightmode_color_pressed:  Settings.app_color_green_3
+        size: Settings.button_big_icon_size
+
+        x: Settings.app_width -  (size * 2)
+        y: Settings.app_height - (size * 2)
+
+        MouseArea
+        {
+            anchors.centerIn: parent
+            hoverEnabled: true
+            width: parent.width * 1.5
+            height: parent.height * 1.5
+            onEntered: settings_icon.start_animation();
+            onPressed: settings_icon.pressed = true;
+            onReleased: settings_icon.pressed = false;
+            //onClicked: main_window.load_screen(ScreenManager.Screens.Log);
+            onClicked: ScreenManager.night_mode = !ScreenManager.night_mode
         }
     }
 
-    Button
+    // Logs button
+    SmlButton
     {
-        x: 1000
-        y: 240
-        text: "Send dummy task"
-        onClicked: {
-            engine.launch_task()
+        id: logs_button
+        icon_name: ""
+        text_kind: SmlText.Header_3
+        text_value: "Logs"
+        rounded: true
+        color: "transparent" //Settings.app_color_green_3
+        color_pressed: Settings.app_color_green_1
+        nightmode_color: "transparent" //Settings.app_color_green_1
+        nightmode_color_pressed: Settings.app_color_green_3
+
+        // Layout constraints
+        anchors
+        {
+            top: settings_icon.top
+            topMargin: Settings.spacing_normal
+            verticalCenter: settings_icon.verticalCenter
         }
-    }
 
-    Button
-    {
-        x: Settings.app_width - 200
-        y: Settings.app_height - 60
-        text: "Swap Color Theme"
-        onClicked: {
-            ScreenManager.night_mode = !ScreenManager.night_mode
-        }
-    }
-
-    SmlText {
-        x: 1000
-        y: 280
-        text_value: "App requirements Node Status: \n          " + main_window.app_requirements_node_last_status
-        text_kind: SmlText.TextKind.Body
-    }
-
-    SmlText {
-        x: 1000
-        y: 340
-        text_value: "Carbon footprint Node Status: \n          " + main_window.carbon_footprint_node_last_status
-        text_kind: SmlText.TextKind.Body
-    }
-
-    SmlText {
-        x: 1000
-        y: 420
-        text_value: "Hardware constraints Node Status: \n          " + main_window.hw_constraints_node_last_status
-        text_kind: SmlText.TextKind.Body
-    }
-
-    SmlText {
-        x: 1000
-        y: 500
-        text_value: "Hardware resources Node Status: \n          " + main_window.hw_resources_node_last_status
-        text_kind: SmlText.TextKind.Body
-    }
-
-    SmlText {
-        x: 1000
-        y: 580
-        text_value: "ML model Node Status: \n          " + main_window.ml_model_node_last_status
-        text_kind: SmlText.TextKind.Body
-    }
-
-    SmlText {
-        x: 1000
-        y: 660
-        text_value: "ML model metadata Node Status: \n          " + main_window.ml_model_metadata_node_last_status
-        text_kind: SmlText.TextKind.Body
+        // Button actions
+        onClicked: main_window.load_screen(ScreenManager.Screens.Log)
     }
 
     // Screen loader plus background animation trigger

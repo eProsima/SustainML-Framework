@@ -3,6 +3,13 @@
         <file>qml/main.qml</file>
         <file alias="Settings">qml/utils/ProjectSettings.qml</file>
         <file alias="ScreenManager">qml/utils/ScreenManager.qml</file>
+        <file>qml/components/SmlButton.qml</file>
+        <file>qml/components/SmlCombobox.qml</file>
+        <file>qml/components/SmlIcon.qml</file>
+        <file>qml/components/SmlInput.qml</file>
         <file>qml/components/SmlText.qml</file>
+        <file>qml/screens/SmlHomeScreen.qml</file>
+        <file>qml/screens/SmlProblemDefinitionScreen.qml</file>
+        <file>qml/screens/SmlSettingsScreen.qml</file>
     </qresource>
 </RCC>
