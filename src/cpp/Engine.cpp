@@ -247,7 +247,7 @@ QString Engine::get_task_QString(
         const types::TaskId& task_id)
 {
     return QString("Task {") + QString::number(task_id.problem_id()) + QString(",") +
-            QString::number(task_id.data_id()) + QString("}");
+            QString::number(task_id.iteration_id()) + QString("}");
 }
 
 QString Engine::update_node_status(

@@ -18,12 +18,12 @@ Window {
     // properties
     property bool in_use: true
     property string log: "LOG"
-    property string app_requirements_node_last_status: "INNACTIVE"
-    property string carbon_footprint_node_last_status: "INNACTIVE"
-    property string hw_constraints_node_last_status: "INNACTIVE"
-    property string hw_resources_node_last_status: "INNACTIVE"
-    property string ml_model_node_last_status: "INNACTIVE"
-    property string ml_model_metadata_node_last_status: "INNACTIVE"
+    property string app_requirements_node_last_status: "INACTIVE"
+    property string carbon_footprint_node_last_status: "INACTIVE"
+    property string hw_constraints_node_last_status: "INACTIVE"
+    property string hw_resources_node_last_status: "INACTIVE"
+    property string ml_model_node_last_status: "INACTIVE"
+    property string ml_model_metadata_node_last_status: "INACTIVE"
 
     // Main view properties
     width:  Settings.app_width
