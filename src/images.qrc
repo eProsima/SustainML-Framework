@@ -5,5 +5,41 @@
         <file>images/shape3.svg</file>
         <file>images/shape2.svg</file>
         <file>images/shape3_dark.svg</file>
+
+        <file>images/icons/back/back.svg</file>
+        <file>images/icons/back/back_1.svg</file>
+        <file>images/icons/back/back_2.svg</file>
+        <file>images/icons/back/back_3.svg</file>
+        <file>images/icons/back/back_4.svg</file>
+        <file>images/icons/back/back_w.svg</file>
+
+        <file>images/icons/down/down.svg</file>
+        <file>images/icons/down/down_1.svg</file>
+        <file>images/icons/down/down_2.svg</file>
+        <file>images/icons/down/down_3.svg</file>
+        <file>images/icons/down/down_4.svg</file>
+        <file>images/icons/down/down_w.svg</file>
+
+        <file>images/icons/gear/gear.svg</file>
+        <file>images/icons/gear/gear_1.svg</file>
+        <file>images/icons/gear/gear_2.svg</file>
+        <file>images/icons/gear/gear_3.svg</file>
+        <file>images/icons/gear/gear_4.svg</file>
+        <file>images/icons/gear/gear_w.svg</file>
+
+        <file>images/icons/home/home.svg</file>
+        <file>images/icons/home/home_1.svg</file>
+        <file>images/icons/home/home_2.svg</file>
+        <file>images/icons/home/home_3.svg</file>
+        <file>images/icons/home/home_4.svg</file>
+        <file>images/icons/home/home_w.svg</file>
+
+        <file>images/icons/leaf/leaf.svg</file>
+        <file>images/icons/leaf/leaf_1.svg</file>
+        <file>images/icons/leaf/leaf_2.svg</file>
+        <file>images/icons/leaf/leaf_3.svg</file>
+        <file>images/icons/leaf/leaf_4.svg</file>
+        <file>images/icons/leaf/leaf_w.svg</file>
+
     </qresource>
 </RCC>
