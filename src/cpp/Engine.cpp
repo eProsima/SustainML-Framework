@@ -64,7 +64,7 @@ void Engine::on_new_node_output(
         void* data)
 {
     emit update_log(QString("Output received. Task ") + get_task_from_data(id, data) + (",\tnode ") +
-            get_name_from_node_id(id));
+            get_name_from_node_id(id) + ":\n" + get_raw_output(id, data));
 }
 
 void Engine::on_node_status_change(
@@ -248,6 +248,117 @@ QString Engine::get_task_QString(
 {
     return QString("Task {") + QString::number(task_id.problem_id()) + QString(",") +
             QString::number(task_id.iteration_id()) + QString("}");
+}
+
+QString Engine::get_raw_output(
+        const sustainml::NodeID& id,
+        void* data)
+{
+    QString output = "";
+    types::AppRequirements* requirements = nullptr;
+    types::CO2Footprint* carbon = nullptr;
+    types::HWConstraints* hw_constraints = nullptr;
+    types::HWResource* hw_resources = nullptr;
+    types::MLModel* model = nullptr;
+    types::MLModelMetadata* metadata = nullptr;
+    types::UserInput* input = nullptr;
+
+    switch (id)
+    {
+        case sustainml::NodeID::ID_APP_REQUIREMENTS:
+            requirements = static_cast<types::AppRequirements*>(data);
+            output += "App requirements: ";
+            for (std::string req : requirements->app_requirements())
+            {
+                output += QString::fromStdString(req) + QString(", ");
+            }
+            output += "\n";
+            return output;
+        case sustainml::NodeID::ID_CARBON_FOOTPRINT:
+            carbon = static_cast<types::CO2Footprint*>(data);
+            output += QString("Carbon footprint: ") + QString::number(carbon->carbon_footprint()) + QString("\n");
+            output += QString("Energy consumption: ") + QString::number(carbon->energy_consumption()) + QString("\n");
+            output += QString("Carbon intensity: ") + QString::number(carbon->carbon_intensity()) + QString("\n");
+            return output;
+        case sustainml::NodeID::ID_HW_CONSTRAINTS:
+            hw_constraints = static_cast<types::HWConstraints*>(data);
+            output += QString("Max memory footprint: ") + QString::number(hw_constraints->max_memory_footprint()) +
+                    QString("\n");
+            return output;
+        case sustainml::NodeID::ID_HW_RESOURCES:
+            hw_resources = static_cast<types::HWResource*>(data);
+            output += QString("Hardware description: ") +
+                    QString::fromStdString(hw_resources->hw_description()) + QString("\n");
+            output += QString("Power consumption: ") +
+                    QString::number(hw_resources->power_consumption()) + QString("\n");
+            output += QString("Latency: ") + QString::number(hw_resources->latency()) + QString("\n");
+            output += QString("Model memory footprint: ") +
+                    QString::number(hw_resources->memory_footprint_of_ml_model()) + QString("\n");
+            output += QString("Max hardware memory footprint: ") +
+                    QString::number(hw_resources->max_hw_memory_footprint()) + QString("\n");
+            return output;
+        case sustainml::NodeID::ID_ML_MODEL:
+            model = static_cast<types::MLModel*>(data);
+            output += QString("Model path: ") + QString::fromStdString(model->model_path()) + QString("\n");
+            output += QString("Model: ") + QString::fromStdString(model->model()) + QString("\n");
+            output += QString("Model properties path: ") +
+                    QString::fromStdString(model->model_properties_path()) + QString("\n");
+            output += QString("Model properties: ") + QString::fromStdString(model->model_properties()) + QString("\n");
+            output += "Input batch: ";
+            for (std::string input : model->input_batch())
+            {
+                output += QString::fromStdString(input) + QString(", ");
+            }
+            output += QString("\nTarget latency: ") + QString::number(model->target_latency()) + QString("\n");
+            return output;
+        case sustainml::NodeID::ID_ML_MODEL_METADATA:
+            metadata = static_cast<types::MLModelMetadata*>(data);
+            output += "Key words: ";
+            for (std::string keyword : metadata->keywords())
+            {
+                output += QString::fromStdString(keyword) + QString(", ");
+            }
+            output += "\nMetadata: ";
+            for (std::string meta : metadata->ml_model_metadata())
+            {
+                output += QString::fromStdString(meta) + QString(", ");
+            }
+            output += "\n";
+            return output;
+        case sustainml::NodeID::ID_ORCHESTRATOR:
+            input = static_cast<types::UserInput*>(data);
+            output += QString("Problem short description: ") +
+                    QString::fromStdString(input->problem_short_description()) + QString("\n");
+            output += QString("Problem definition: ") +
+                    QString::fromStdString(input->problem_definition()) + QString("\n");
+            output += QString("Modality: ") + QString::fromStdString(input->modality()) + QString("\n");
+            output += QString("Inputs: ");
+            for (std::string in : input->inputs())
+            {
+                output += QString::fromStdString(in) + QString(", ");
+            }
+            output += "\nOutputs: ";
+            for (std::string out : input->outputs())
+            {
+                output += QString::fromStdString(out) + QString(", ");
+            }
+            output += QString("\nMin samples: ") + QString::number(input->minimum_samples()) + QString("\n");
+            output += QString("Max samples: ") + QString::number(input->maximum_samples()) + QString("\n");
+            output += QString("Optimize automatically: ") +
+                    (input->optimize_carbon_footprint_auto() ? QString("true\n") : QString("false\n"));
+            output += QString("Optimize manually: ") +
+                    (input->optimize_carbon_footprint_manual() ? QString("true\n") : QString("false\n"));
+            output += QString("Previous iteration: ") + QString::number(input->previous_iteration()) + QString("\n");
+            output += QString("Desired carbon footprint: ") +
+                    QString::number(input->desired_carbon_footprint()) + QString("\n");
+            output += QString("Geo location continent: ") +
+                    QString::fromStdString(input->geo_location_continent()) + QString("\n");
+            output += QString("Geo location region: ") +
+                    QString::fromStdString(input->geo_location_region()) + QString("\n");
+            return output;
+        default:
+            return QString("Unknown node output\n");
+    }
 }
 
 QString Engine::update_node_status(

@@ -152,6 +152,10 @@ private:
     QString get_task_QString(
             const types::TaskId& task_id);
 
+    QString get_raw_output(
+            const sustainml::NodeID& id,
+            void* data);
+
     QString update_node_status(
             const sustainml::NodeID& id,
             const types::NodeStatus& status);
