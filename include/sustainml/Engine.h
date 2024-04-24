@@ -56,8 +56,7 @@ public:
 
     /**
      * @brief New node output callback
-     *
-     * @param id node identifier
+     * @param   id node identifier
      * @param data data received
      */
     void on_new_node_output(
@@ -77,26 +76,60 @@ public:
 public slots:
 
     /**
-     * @brief  launch dummy task
+     * @brief  launch task with user input data
      *
+     * @param problem_short_description short description of the problem
+     * @param modality modality of the problem
+     * @param problem_definition definition of the problem
+     * @param inputs inputs of the problem
+     * @param outputs outputs of the problem
+     * @param minimum_samples minimum samples
+     * @param maximum_samples maximum samples
+     * @param optimize_carbon_footprint_auto optimize carbon footprint automatically
+     * @param optimize_carbon_footprint_manual optimize carbon footprint manually
+     * @param previous_iteration previous iteration
+     * @param desired_carbon_footprint desired carbon footprint
+     * @param geo_location_continent continent of the location
+     * @param geo_location_region region of the location
+     * @param extra_data extra data
      */
-    void launch_task();
+    void launch_task(
+            QString problem_short_description,
+            QString modality,
+            QString problem_definition,
+            QString inputs,
+            QString outputs,
+            int minimum_samples,
+            int maximum_samples,
+            bool optimize_carbon_footprint_auto,
+            bool optimize_carbon_footprint_manual,
+            int previous_iteration,
+            double desired_carbon_footprint,
+            QString geo_location_continent,
+            QString geo_location_region,
+            QString extra_data);
 
 signals:
 
     void update_log(
             const QString& log);
 
-    void update_task_encoder_node_status(
+    void update_app_requirements_node_status(
             const QString& status);
 
-    void update_ml_model_node_status(
+    void update_carbon_footprint_node_status(
+            const QString& status);
+
+    void update_hw_constraints_node_status(
             const QString& status);
 
     void update_hw_resources_node_status(
             const QString& status);
 
-    void update_co2_footprint_node_status(
+    void update_ml_model_metadata_node_status(
+            const QString& status);
+
+    void update_ml_model_node_status(
             const QString& status);
 
 protected:
@@ -116,9 +149,22 @@ private:
     QString get_status_from_node(
             const types::NodeStatus& status);
 
+    QString get_task_QString(
+            const types::TaskId& task_id);
+
+    QString get_raw_output(
+            const sustainml::NodeID& id,
+            void* data);
+
     QString update_node_status(
             const sustainml::NodeID& id,
             const types::NodeStatus& status);
+
+    size_t split_string(
+            const std::string& string,
+            std::vector<std::string>& string_set,
+            char delimeter);
+
 
     sustainml::orchestrator::OrchestratorNode* orchestrator;
 };
