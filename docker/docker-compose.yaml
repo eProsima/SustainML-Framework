@@ -4,6 +4,7 @@ services:
   front_end:
     image: sustainml:v0.1.0
     container_name: front_end
+    privileged: true
     environment:
       - node=orchestrator
       - DISPLAY=${DISPLAY}

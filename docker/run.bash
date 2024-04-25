@@ -5,7 +5,7 @@ use_sustainml_modules=true
 source "/sustainml/install/setup.bash"
 
 if [[ ${node} == "orchestrator" ]]; then
-    /sustainml/build/sustainml/sustainml
+    sustainml
 elif [[ ${node} == "app_requirements" ]]; then
     if [[ $use_sustainml_modules ]]; then
         python3 /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/app_requirements_node.py
