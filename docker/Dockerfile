@@ -15,7 +15,8 @@ SHELL ["/bin/bash", "-c"]
 RUN apt update && apt install --yes --no-install-recommends \
         wget git cmake g++ build-essential python3 python3-pip libpython3-dev swig \
         libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
-        qtdeclarative5-dev libqt5charts5-dev qtquickcontrols2-5-dev libqt5svg5 qml-module-qtquick-controls qml-module-qtquick-controls2 && \
+        qtdeclarative5-dev libqt5charts5-dev qtquickcontrols2-5-dev libqt5svg5 qml-module-qtquick-controls \
+        qml-module-qtquick-controls2 && \
     pip3 install -U \
         colcon-common-extensions vcstool
 
