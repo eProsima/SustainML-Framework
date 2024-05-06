@@ -61,6 +61,13 @@ Item
         string extra_data
     );
 
+    // Background mouse area
+    MouseArea
+    {
+        anchors.fill: parent
+        onClicked: focus = true
+    }
+
     // Go home button
     SmlButton
     {
@@ -105,6 +112,13 @@ Item
             anchors.left: parent.left
             width: parent.width
             height: root.__scroll_view_content_height
+
+            // Background mouse area
+            MouseArea
+            {
+                anchors.fill: parent
+                onClicked: focus = true
+            }
 
             // Problem short description
             SmlText
@@ -585,7 +599,11 @@ Item
             horizontalCenter: parent.horizontalCenter
             horizontalCenterOffset: -root.__margin
         }
-        onClicked: root.prepare_task()
+        onClicked:
+        {
+            focus = true
+            root.prepare_task()
+        }
     }
 
     function prepare_task()
