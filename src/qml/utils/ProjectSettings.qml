@@ -49,6 +49,7 @@ QtObject {
     // ELEMENTS SPECIFICATIONS
     readonly property int input_default_rounded_radius: 20
     readonly property int input_default_border_width:    3
+    readonly property int scrollbar_default_size:       10
 
     // ANIMATIONS DURATION
     readonly property int background_movement_anim_duration:  400 //ms

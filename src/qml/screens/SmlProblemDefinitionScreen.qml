@@ -1,7 +1,7 @@
 // Library imports
 import QtQuick 2.15
 import QtQuick.Window 2.15
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.15
 
 // Project imports
 import eProsima.SustainML.Settings 1.0
@@ -89,11 +89,9 @@ Item
         onClicked: root.go_home()
     }
 
-    ScrollView
+    SmlScrollView
     {
         id: scroll_view
-        verticalScrollBarPolicy: Qt.ScrollBarAlwaysOn
-        horizontalScrollBarPolicy: Qt.ScrollBarAlwaysOff
 
         anchors
         {
@@ -104,479 +102,473 @@ Item
         }
         width: root.__scroll_view_width
         height: root.__scroll_view_height
+        content_width: root.__scroll_view_width
+        content_height: root.__scroll_view_content_height
+        //layout: SmlScrollBar.ScrollBarLayout.Horizontal
 
-        contentItem: Rectangle
+        // Background mouse area
+        MouseArea
         {
-            color: "transparent"
-            anchors.top: parent.top
-            anchors.left: parent.left
-            width: parent.width
-            height: root.__scroll_view_content_height
+            anchors.fill: parent
+            onClicked: focus = true
+        }
 
-            // Background mouse area
-            MouseArea
+        // Problem short description
+        SmlText
+        {
+            id: problem_short_description_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Problem short description"
+            anchors
             {
-                anchors.fill: parent
-                onClicked: focus = true
+                top: parent.top
+                left: parent.left
             }
+        }
+        SmlInput
+        {
+            id: problem_short_description_input
+            placeholder_text: "Resume briefly the objetive of the problem"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width
+            height: root.__input_height
+            anchors
+            {
+                top: problem_short_description_header.bottom
+                topMargin: Settings.spacing_small
+                left: problem_short_description_header.left
+            }
+            onText_changed:
+            {
+                root.__problem_short_description = text;
+            }
+        }
 
-            // Problem short description
-            SmlText
+        // Modality
+        SmlText
+        {
+            id: modality_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Modality"
+            anchors
             {
-                id: problem_short_description_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Problem short description"
-                anchors
-                {
-                    top: parent.top
-                    left: parent.left
-                }
+                top: problem_short_description_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: modality_input
+            placeholder_text: "Define the modality of the input data: image, video, audio, sensor..."
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width
+            height: root.__input_height
+            anchors
             {
-                id: problem_short_description_input
-                placeholder_text: "Resume briefly the objetive of the problem"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width
-                height: root.__input_height
-                anchors
-                {
-                    top: problem_short_description_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: problem_short_description_header.left
-                }
-                onText_changed:
-                {
-                    root.__problem_short_description = text;
-                }
+                top: modality_header.bottom
+                topMargin: Settings.spacing_small
+                left: modality_header.left
             }
+            onText_changed:
+            {
+                root.__modality = text;
+            }
+        }
 
-            // Modality
-            SmlText
+        // Problem definition
+        SmlText
+        {
+            id: problem_definition_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Problem definition"
+            anchors
             {
-                id: modality_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Modality"
-                anchors
-                {
-                    top: problem_short_description_input.bottom
-                    topMargin: Settings.spacing_normal
-                    left: parent.left
-                }
+                top: modality_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: problem_definition_input
+            placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width
+            height: root.__input_height_big
+            anchors
             {
-                id: modality_input
-                placeholder_text: "Define the modality of the input data: image, video, audio, sensor..."
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width
-                height: root.__input_height
-                anchors
-                {
-                    top: modality_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: modality_header.left
-                }
-                onText_changed:
-                {
-                    root.__modality = text;
-                }
+                top: problem_definition_header.bottom
+                topMargin: Settings.spacing_small
+                left: problem_definition_header.left
             }
+            onText_changed:
+            {
+                root.__problem_definition = text;
+            }
+        }
 
-            // Problem definition
-            SmlText
+        // Inputs
+        SmlText
+        {
+            id: inputs_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Inputs"
+            anchors
             {
-                id: problem_definition_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Problem definition"
-                anchors
-                {
-                    top: modality_input.bottom
-                    topMargin: Settings.spacing_normal
-                    left: parent.left
-                }
+                top: problem_definition_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: inputs_input
+            placeholder_text: "Describe a sequence of serialized batches of input data"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width
+            height: root.__input_height_big
+            anchors
             {
-                id: problem_definition_input
-                placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width
-                height: root.__input_height_big
-                anchors
-                {
-                    top: problem_definition_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: problem_definition_header.left
-                }
-                onText_changed:
-                {
-                    root.__problem_definition = text;
-                }
+                top: inputs_header.bottom
+                topMargin: Settings.spacing_small
+                left: inputs_header.left
             }
+            onText_changed:
+            {
+                root.__inputs = text;
+            }
+        }
 
-            // Inputs
-            SmlText
+        // Outputs
+        SmlText
+        {
+            id: outputs_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Outputs"
+            anchors
             {
-                id: inputs_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Inputs"
-                anchors
-                {
-                    top: problem_definition_input.bottom
-                    topMargin: Settings.spacing_normal
-                    left: parent.left
-                }
+                top: inputs_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: outputs_input
+            placeholder_text: "Describe a sequence of serialized batches of output data"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width
+            height: root.__input_height_big
+            anchors
             {
-                id: inputs_input
-                placeholder_text: "Describe a sequence of serialized batches of input data"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width
-                height: root.__input_height_big
-                anchors
-                {
-                    top: inputs_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: inputs_header.left
-                }
-                onText_changed:
-                {
-                    root.__inputs = text;
-                }
+                top: outputs_header.bottom
+                topMargin: Settings.spacing_small
+                left: outputs_header.left
             }
+            onText_changed:
+            {
+                root.__outputs = text;
+            }
+        }
 
-            // Outputs
-            SmlText
+        // Minimum samples
+        SmlText
+        {
+            id: minimum_samples_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Minimum samples"
+            anchors
             {
-                id: outputs_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Outputs"
-                anchors
-                {
-                    top: inputs_input.bottom
-                    topMargin: Settings.spacing_normal
-                    left: parent.left
-                }
+                top: outputs_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: minimum_samples_input
+            placeholder_text: "Min samples required"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_small
+            height: root.__input_height
+            anchors
             {
-                id: outputs_input
-                placeholder_text: "Describe a sequence of serialized batches of output data"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width
-                height: root.__input_height_big
-                anchors
-                {
-                    top: outputs_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: outputs_header.left
-                }
-                onText_changed:
-                {
-                    root.__outputs = text;
-                }
+                top: minimum_samples_header.bottom
+                topMargin: Settings.spacing_small
+                left: minimum_samples_header.left
             }
+            onText_changed:
+            {
+                root.__minimum_samples = parseInt(text);
+            }
+        }
 
-            // Minimum samples
-            SmlText
+        // Maximum samples
+        SmlText
+        {
+            id: maximum_samples_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Maximum samples"
+            anchors
             {
-                id: minimum_samples_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Minimum samples"
-                anchors
-                {
-                    top: outputs_input.bottom
-                    topMargin: Settings.spacing_normal
-                    left: parent.left
-                }
+                top: minimum_samples_header.top
+                left: minimum_samples_header.right
+                leftMargin: Settings.spacing_normal
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: maximum_samples_input
+            placeholder_text: "Max samples required"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_small
+            height: root.__input_height
+            anchors
             {
-                id: minimum_samples_input
-                placeholder_text: "Min samples required"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width_small
-                height: root.__input_height
-                anchors
-                {
-                    top: minimum_samples_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: minimum_samples_header.left
-                }
-                onText_changed:
-                {
-                    root.__minimum_samples = parseInt(text);
-                }
+                top: maximum_samples_header.bottom
+                topMargin: Settings.spacing_small
+                left: maximum_samples_header.left
             }
+            onText_changed:
+            {
+                root.__maximum_samples = parseInt(text);
+            }
+        }
 
-            // Maximum samples
-            SmlText
+        // Carbon footprint optimization
+        SmlText
+        {
+            id: optimize_carbon_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Carbon footprint optimization"
+            anchors
             {
-                id: maximum_samples_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Maximum samples"
-                anchors
+                top: maximum_samples_header.top
+                left: maximum_samples_header.right
+                leftMargin: Settings.spacing_normal
+            }
+        }
+        SmlCombobox
+        {
+            id: optimize_carbon_input
+            placeholder_text: "Select optimization iteration method"
+            model: ["Manual", "Auto"]
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: 360
+            height: root.__input_height
+            rounded_radius: Settings.input_default_rounded_radius
+            anchors
+            {
+                top: optimize_carbon_header.bottom
+                topMargin: Settings.spacing_small
+                left: optimize_carbon_header.left
+            }
+            onText_changed:
+            {
+                if (text === "Manual")
                 {
-                    top: minimum_samples_header.top
-                    left: minimum_samples_header.right
-                    leftMargin: Settings.spacing_normal
+                    root.__optimize_carbon_footprint_auto = false;
+                    root.__optimize_carbon_footprint_manual = true;
+                }
+                else if (text === "Auto")
+                {
+                    root.__optimize_carbon_footprint_auto = true;
+                    root.__optimize_carbon_footprint_manual = false;
+                }
+                else
+                {
+                    root.__optimize_carbon_footprint_auto = false;
+                    root.__optimize_carbon_footprint_manual = false;
                 }
             }
-            SmlInput
-            {
-                id: maximum_samples_input
-                placeholder_text: "Max samples required"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width_small
-                height: root.__input_height
-                anchors
-                {
-                    top: maximum_samples_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: maximum_samples_header.left
-                }
-                onText_changed:
-                {
-                    root.__maximum_samples = parseInt(text);
-                }
-            }
+        }
 
-            // Carbon footprint optimization
-            SmlText
+        // Previous iteration
+        SmlText
+        {
+            id: previous_iteration_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Previous iteration"
+            anchors
             {
-                id: optimize_carbon_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Carbon footprint optimization"
-                anchors
-                {
-                    top: maximum_samples_header.top
-                    left: maximum_samples_header.right
-                    leftMargin: Settings.spacing_normal
-                }
+                top: minimum_samples_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
             }
-            SmlCombobox
+        }
+        SmlInput
+        {
+            id: previous_iteration_input
+            placeholder_text: "Set previous iteration from which to perform the optimization (-1 takes last one)"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_split
+            height: root.__input_height
+            anchors
             {
-                id: optimize_carbon_input
-                placeholder_text: "Select optimization iteration method"
-                model: ["Manual", "Auto"]
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: 360
-                height: root.__input_height
-                rounded_radius: Settings.input_default_rounded_radius
-                anchors
-                {
-                    top: optimize_carbon_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: optimize_carbon_header.left
-                }
-                onText_changed:
-                {
-                    if (text === "Manual")
-                    {
-                        root.__optimize_carbon_footprint_auto = false;
-                        root.__optimize_carbon_footprint_manual = true;
-                    }
-                    else if (text === "Auto")
-                    {
-                        root.__optimize_carbon_footprint_auto = true;
-                        root.__optimize_carbon_footprint_manual = false;
-                    }
-                    else
-                    {
-                        root.__optimize_carbon_footprint_auto = false;
-                        root.__optimize_carbon_footprint_manual = false;
-                    }
-                }
+                top: previous_iteration_header.bottom
+                topMargin: Settings.spacing_small
+                left: previous_iteration_header.left
             }
+            onText_changed:
+            {
+                root.__previous_iteration = parseInt(text);
+            }
+        }
 
-            // Previous iteration
-            SmlText
+        // Desired carbon footprint
+        SmlText
+        {
+            id: desired_carbon_footprint_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Desired carbon footprint"
+            anchors
             {
-                id: previous_iteration_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Previous iteration"
-                anchors
-                {
-                    top: minimum_samples_input.bottom
-                    topMargin: Settings.spacing_normal
-                    left: parent.left
-                }
+                top: previous_iteration_header.top
+                left: previous_iteration_input.right
+                leftMargin: Settings.spacing_big
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: desired_carbon_footprint_input
+            placeholder_text: "Optimization aimed value for carbon footprint"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_split
+            height: root.__input_height
+            anchors
             {
-                id: previous_iteration_input
-                placeholder_text: "Set previous iteration from which to perform the optimization (-1 takes last one)"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width_split
-                height: root.__input_height
-                anchors
-                {
-                    top: previous_iteration_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: previous_iteration_header.left
-                }
-                onText_changed:
-                {
-                    root.__previous_iteration = parseInt(text);
-                }
+                top: desired_carbon_footprint_header.bottom
+                topMargin: Settings.spacing_small
+                left: desired_carbon_footprint_header.left
             }
+            onText_changed:
+            {
+                root.__desired_carbon_footprint = parseFloat(text);
+            }
+        }
 
-            // Desired carbon footprint
-            SmlText
+        // Geo location: continent
+        SmlText
+        {
+            id: geo_location_continent_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Geo location: continent"
+            anchors
             {
-                id: desired_carbon_footprint_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Desired carbon footprint"
-                anchors
-                {
-                    top: previous_iteration_header.top
-                    left: previous_iteration_input.right
-                    leftMargin: Settings.spacing_big
-                }
+                top: previous_iteration_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: geo_location_continent_input
+            placeholder_text: "Set continent for the geo location" // TODO combobox
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_split
+            height: root.__input_height
+            anchors
             {
-                id: desired_carbon_footprint_input
-                placeholder_text: "Optimization aimed value for carbon footprint"
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width_split
-                height: root.__input_height
-                anchors
-                {
-                    top: desired_carbon_footprint_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: desired_carbon_footprint_header.left
-                }
-                onText_changed:
-                {
-                    root.__desired_carbon_footprint = parseFloat(text);
-                }
+                top: geo_location_continent_header.bottom
+                topMargin: Settings.spacing_small
+                left: geo_location_continent_header.left
             }
+            onText_changed:
+            {
+                root.__geo_location_continent = text;
+            }
+        }
 
-            // Geo location: continent
-            SmlText
+        // Geo location: region
+        SmlText
+        {
+            id: geo_location_region_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Geo location: region"
+            anchors
             {
-                id: geo_location_continent_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Geo location: continent"
-                anchors
-                {
-                    top: previous_iteration_input.bottom
-                    topMargin: Settings.spacing_normal
-                    left: parent.left
-                }
+                top: geo_location_continent_header.top
+                left: geo_location_continent_input.right
+                leftMargin: Settings.spacing_big
             }
-            SmlInput
+        }
+        SmlInput
+        {
+            id: geo_location_region_input
+            placeholder_text: "Set region for the geo location" // TODO combobox
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_split
+            height: root.__input_height
+            anchors
             {
-                id: geo_location_continent_input
-                placeholder_text: "Set continent for the geo location" // TODO combobox
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width_split
-                height: root.__input_height
-                anchors
-                {
-                    top: geo_location_continent_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: geo_location_continent_header.left
-                }
-                onText_changed:
-                {
-                    root.__geo_location_continent = text;
-                }
+                top: geo_location_region_header.bottom
+                topMargin: Settings.spacing_small
+                left: geo_location_region_header.left
             }
-
-            // Geo location: region
-            SmlText
+            onText_changed:
             {
-                id: geo_location_region_header
-                text_kind: SmlText.TextKind.Header_3
-                text_value: "Geo location: region"
-                anchors
-                {
-                    top: geo_location_continent_header.top
-                    left: geo_location_continent_input.right
-                    leftMargin: Settings.spacing_big
-                }
-            }
-            SmlInput
-            {
-                id: geo_location_region_input
-                placeholder_text: "Set region for the geo location" // TODO combobox
-                border_color: Settings.app_color_green_3
-                border_editting_color: Settings.app_color_green_4
-                border_nightmode_color: Settings.app_color_green_1
-                border_nightmode_editting_color: Settings.app_color_green_2
-                background_color: Settings.app_color_light
-                background_nightmode_color: Settings.app_color_dark
-                width: root.__input_width_split
-                height: root.__input_height
-                anchors
-                {
-                    top: geo_location_region_header.bottom
-                    topMargin: Settings.spacing_small
-                    left: geo_location_region_header.left
-                }
-                onText_changed:
-                {
-                    root.__geo_location_region = text;
-                }
+                root.__geo_location_region = text;
             }
         }
     }
