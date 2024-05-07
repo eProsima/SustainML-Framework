@@ -33,16 +33,6 @@ Flickable
         policy: ScrollBar.AsNeeded
         layout: sustainml_custom_scrollview.layout
         visible: sustainml_custom_scrollview.layout === SmlScrollBar.ScrollBarLayout.Vertical
-
-        //background_color: Settings.app_color_green_2
-        //background_nightmode_color: Settings.app_color_green_2
-        //drag_color: Settings.app_color_light
-        //drag_nightmode_color: Settings.app_color_dark
-
-        background_color: Settings.app_color_light
-        background_nightmode_color: Settings.app_color_dark
-        drag_color: Settings.app_color_green_2
-        drag_nightmode_color: Settings.app_color_green_2
     }
 
     // Horizontal ScrollBar
@@ -55,11 +45,6 @@ Flickable
         policy: ScrollBar.AsNeeded
         layout: sustainml_custom_scrollview.layout
         visible: sustainml_custom_scrollview.layout === SmlScrollBar.ScrollBarLayout.Horizontal
-
-        background_color: Settings.app_color_green_1
-        background_nightmode_color: Settings.app_color_green_2
-        drag_color: Settings.app_color_green_3
-        drag_nightmode_color: Settings.app_color_green_4
     }
 
     MouseArea

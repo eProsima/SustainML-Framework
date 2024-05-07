@@ -104,7 +104,6 @@ Item
         height: root.__scroll_view_height
         content_width: root.__scroll_view_width
         content_height: root.__scroll_view_content_height
-        //layout: SmlScrollBar.ScrollBarLayout.Horizontal
 
         // Background mouse area
         MouseArea
