@@ -1,7 +1,7 @@
 // Library imports
 import QtQuick 2.15
 import QtQuick.Window 2.15
-import QtQuick.Controls 1.4
+import QtQuick.Controls 2.15
 
 // Project imports
 import eProsima.SustainML.Settings 1.0
@@ -145,9 +145,7 @@ Item
         }
 
         // Complete log
-        ScrollView {
-            verticalScrollBarPolicy: Qt.ScrollBarAsNeeded
-            horizontalScrollBarPolicy: Qt.ScrollBarAlwaysOff
+        SmlScrollView {
 
             anchors
             {
@@ -158,6 +156,8 @@ Item
             }
             width: 800
             height: 700
+            content_width: 800
+            content_height: log_item.height
 
             SmlText {
                 id: log_item

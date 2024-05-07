@@ -141,9 +141,6 @@ Window {
             {
                 id: home_screen_component
 
-                // Layout constraints
-                anchors.fill: parent
-
                 onGo_problem_definition: main_window.load_screen(ScreenManager.Screens.Definition)
             }
         }
@@ -156,9 +153,6 @@ Window {
             SmlProblemDefinitionScreen
             {
                 id: definition_screen_component
-
-                // Layout constraints
-                anchors.fill: parent
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onSend_task:
@@ -224,9 +218,6 @@ Window {
             SmlSettingsScreen
             {
                 id: log_screen_component
-
-                // Layout constraints
-                anchors.fill: parent
 
                 log: main_window.log
                 app: main_window.app_requirements_node_last_status

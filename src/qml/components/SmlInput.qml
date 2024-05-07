@@ -26,7 +26,6 @@ Item {
     readonly property string __font_size:   Settings.body_font_size
     readonly property string __font_color: ScreenManager.body_font_color
 
-
     // External signals
     signal text_changed(string text)
 
@@ -62,6 +61,7 @@ Item {
 
             onTextChanged: sustainml_custom_input.text_changed(text)
             onFocusChanged: sustainml_custom_input.__edited = focus
+            onActiveFocusChanged: sustainml_custom_input.__edited = activeFocus
 
             // Custom placeholder field
             SmlText
