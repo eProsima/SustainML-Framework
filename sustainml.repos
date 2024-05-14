@@ -14,7 +14,7 @@ repositories:
     dev-utils:
         type: git
         url: https://github.com/eProsima/dev-utils.git
-        version: 1.x
+        version: macos-compilation
     sustainml_lib:
         type: git
         url: https://github.com/eProsima/SustainML-Library.git
@@ -22,4 +22,4 @@ repositories:
     sustainml_framework:
         type: git
         url: https://github.com/eProsima/SustainML-Framework.git
-        version: main
+        version: macos-compilation
