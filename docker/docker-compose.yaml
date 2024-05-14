@@ -8,6 +8,7 @@ services:
     environment:
       - node=orchestrator
       - DISPLAY=${DISPLAY}
+      - QT_QUICK_BACKEND=software
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
     network_mode: host
