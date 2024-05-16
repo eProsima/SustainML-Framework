@@ -97,7 +97,7 @@ Item {
             rightPadding: combobox.indicator.width + combobox.spacing
             topPadding: Settings.spacing_normal
             horizontalAlignment: Text.AlignLeft
-            elide: Text.ElideRight
+            force_elide: true
         }
 
         // Combobox text shown in the popup
@@ -117,8 +117,8 @@ Item {
 
                     verticalAlignment: Text.AlignVCenter
                     horizontalAlignment: Text.AlignLeft
-                    elide: Text.ElideRight
 
+                    force_elide: true
                     forced_color: ScreenManager.night_mode
                                     ? sustainml_custom_combobox.border_nightmode_editting_color
                                     : sustainml_custom_combobox.border_editting_color

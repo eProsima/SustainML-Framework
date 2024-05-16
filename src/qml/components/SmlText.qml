@@ -5,7 +5,7 @@ import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
 
-Text {
+TextEdit {
     id: sustainml_custom_text
 
     enum TextKind
@@ -19,6 +19,7 @@ Text {
     // External properties
     property int text_kind: SmlText.TextKind.Body   // Body kind as default
     required property string text_value             // Required text introduced by the user
+    property bool force_elide: false
     property bool force_color: false
     property string forced_color: "black"
 
@@ -35,10 +36,21 @@ Text {
                                    sustainml_custom_text.text_kind === SmlText.TextKind.Body     ? ScreenManager.body_font_color :
                                                                                                      ScreenManager.title_font_color
     // Text components set up
-    text: sustainml_custom_text.text_value
+    text: sustainml_custom_text.force_elide ? elided_text.text : sustainml_custom_text.text_value
     font.bold: sustainml_custom_text.text_kind === SmlText.TextKind.App_name
     font.family: sustainml_custom_text.__font_family
     font.pixelSize: sustainml_custom_text.__font_size
     color: sustainml_custom_text.force_color ? sustainml_custom_text.forced_color : sustainml_custom_text.__font_color
     wrapMode: Text.WordWrap
+    readOnly: true
+    selectByMouse: true
+    selectByKeyboard: true
+    selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
+
+    TextMetrics {
+        id: elided_text
+        text: sustainml_custom_text.text_value
+        elide: Text.ElideRight
+        elideWidth: sustainml_custom_text.width - 10
+    }
 }

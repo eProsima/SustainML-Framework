@@ -29,6 +29,13 @@ Item {
     // External signals
     signal text_changed(string text)
 
+    SmlMouseArea
+    {
+        anchors.fill: parent
+        custom_cursor_shape: Qt.IBeamCursor
+        onClicked: input.forceActiveFocus()
+    }
+
     Rectangle
     {
         id: background
@@ -63,6 +70,10 @@ Item {
             onFocusChanged: sustainml_custom_input.__edited = focus
             onActiveFocusChanged: sustainml_custom_input.__edited = activeFocus
 
+            selectByMouse: true
+            focus: true
+            selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
+
             // Custom placeholder field
             SmlText
             {
@@ -74,14 +85,16 @@ Item {
                 force_color: true
                 forced_color: "#aaa"
                 visible: input.text === ""
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    custom_cursor_shape: Qt.IBeamCursor
+                    onClicked: input.forceActiveFocus()
+                }
             }
         }
     }
 
-    SmlMouseArea
-    {
-        anchors.fill: parent
-        custom_cursor_shape: Qt.IBeamCursor
-        onClicked: input.forceActiveFocus()
-    }
+
 }
