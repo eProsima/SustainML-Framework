@@ -7,6 +7,7 @@
         <file>qml/components/SmlCombobox.qml</file>
         <file>qml/components/SmlIcon.qml</file>
         <file>qml/components/SmlInput.qml</file>
+        <file>qml/components/SmlMouseArea.qml</file>
         <file>qml/components/SmlScrollBar.qml</file>
         <file>qml/components/SmlScrollView.qml</file>
         <file>qml/components/SmlText.qml</file>
