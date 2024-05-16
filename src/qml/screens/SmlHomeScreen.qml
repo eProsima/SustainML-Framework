@@ -19,12 +19,13 @@ Item
     {
         color: "transparent"
 
-        // Dummy Header
-        SmlText
+        // Header
+        Rectangle
         {
-            id: header_text
-            text_value: "eProsima. This would be a header with multiple options"
-            text_kind: SmlText.Header_2
+            id: header
+            color: "transparent"
+            height: Settings.logo_height * 1.5
+
 
             // Layout constraints
             anchors
@@ -33,6 +34,217 @@ Item
                 topMargin: Settings.spacing_big
                 left: parent.left
                 leftMargin: Settings.spacing_big
+            }
+
+            // eProsima Logo
+            Image
+            {
+                id: eProsima_logo
+
+                source: ScreenManager.night_mode ?   Settings.eProsima_nightmode_logo : Settings.eProsima_logo
+
+                // set image size
+                height: Settings.logo_height * 1.5
+
+                // Layout constraints
+                anchors
+                {
+                    left: parent.left
+                    leftMargin: -Settings.spacing_small
+                    top: parent.top
+                }
+
+                // Image smoothness
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    onClicked: Qt.openUrlExternally("https://www.eprosima.com/");
+                }
+            }
+            // dfki logo
+            Image
+            {
+                id: dfki_logo
+
+                source: ScreenManager.night_mode ?   Settings.dfki_nightmode_logo : Settings.dfki_logo
+
+                // set image size
+                height: Settings.logo_height * 0.8
+
+                // Layout constraints
+                anchors
+                {
+                    left: eProsima_logo.right
+                    leftMargin: Settings.spacing_big
+                    verticalCenter: eProsima_logo.verticalCenter
+                }
+
+                // Image smoothness
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    onClicked: Qt.openUrlExternally("https://www.dfki.de/en/web");
+                }
+            }
+            // ibm logo
+            Image
+            {
+                id: ibm_logo
+
+                source: ScreenManager.night_mode ?   Settings.ibm_nightmode_logo : Settings.ibm_logo
+
+                // set image size
+                height: Settings.logo_height * 1.5
+
+                // Layout constraints
+                anchors
+                {
+                    left: dfki_logo.right
+                    leftMargin: Settings.spacing_normal
+                    verticalCenter: dfki_logo.verticalCenter
+                }
+
+                // Image smoothness
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    onClicked: Qt.openUrlExternally("https://www.ibm.com/contact/global");
+                }
+            }
+            // inria logo
+            Image
+            {
+                id: inria_logo
+
+                source: ScreenManager.night_mode ?   Settings.inria_nightmode_logo : Settings.inria_logo
+
+                // set image size
+                height: Settings.logo_height
+
+                // Layout constraints
+                anchors
+                {
+                    left: ibm_logo.right
+                    leftMargin: Settings.spacing_normal
+                    verticalCenter: ibm_logo.verticalCenter
+                }
+
+                // Image smoothness
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    onClicked: Qt.openUrlExternally("https://www.inria.fr/en");
+                }
+            }
+            // ku logo
+            Image
+            {
+                id: ku_logo
+
+                source: ScreenManager.night_mode ?   Settings.ku_nightmode_logo : Settings.ku_logo
+
+                // set image size
+                height: Settings.logo_height * 3
+
+                // Layout constraints
+                anchors
+                {
+                    left: inria_logo.right
+                    leftMargin: Settings.spacing_normal -10
+                    verticalCenter: inria_logo.verticalCenter
+                }
+
+                // Image smoothness
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    onClicked: Qt.openUrlExternally("https://www.ku.dk/english/");
+                }
+            }
+            // rptu logo
+            Image
+            {
+                id: rptu_logo
+
+                source: ScreenManager.night_mode ?   Settings.rptu_nightmode_logo : Settings.rptu_logo
+
+                // set image size
+                height: Settings.logo_height
+
+                // Layout constraints
+                anchors
+                {
+                    left: ku_logo.right
+                    leftMargin: Settings.spacing_normal
+                    verticalCenter: ku_logo.verticalCenter
+                }
+
+                // Image smoothness
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    onClicked: Qt.openUrlExternally("https://rptu.de/en/");
+                }
+            }
+            // upmem logo
+            Image
+            {
+                id: upmem_logo
+
+                source: ScreenManager.night_mode ?   Settings.upmem_nightmode_logo : Settings.upmem_logo
+
+                // set image size
+                height: Settings.logo_height
+
+                // Layout constraints
+                anchors
+                {
+                    left: rptu_logo.right
+                    leftMargin: Settings.spacing_normal
+                    verticalCenter: rptu_logo.verticalCenter
+                }
+
+                // Image smoothness
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
+
+                SmlMouseArea
+                {
+                    anchors.fill: parent
+                    onClicked: Qt.openUrlExternally("https://www.upmem.com/");
+                }
             }
         }
 
@@ -51,7 +263,7 @@ Item
             {
                 left: parent.left
                 leftMargin: (Settings.app_width / 2) - Settings.spacing_normal
-                top: header_text.bottom
+                top: header.bottom
                 topMargin: Settings.spacing_big
             }
 
@@ -75,7 +287,7 @@ Item
             {
                 left: parent.left
                 leftMargin: Settings.spacing_big
-                top: header_text.bottom
+                top: header.bottom
                 topMargin: Settings.spacing_big
             }
         }
@@ -194,7 +406,7 @@ Item
             {
                 top: bullet_point_2.bottom
                 topMargin: Settings.spacing_big
-                left: header_text.left
+                left: header.left
                 leftMargin: Settings.spacing_big
             }
 

@@ -28,9 +28,26 @@ QtObject {
     readonly property int body_font_size:    20
 
     // IMAGES
-    readonly property string app_logo:      "qrc:/images/logo.svg"
+    readonly property string app_logo:      "qrc:/images/logos/sustainml.svg"
     readonly property string shape_light:   "qrc:/images/shape3.svg"
     readonly property string shape_dark:    "qrc:/images/shape3_dark.svg"
+
+    // LOGOS
+    readonly property string eProsima_logo:             "qrc:/images/logos/eprosima.png"
+    readonly property string eProsima_nightmode_logo:   "qrc:/images/logos/eprosima_w.png"
+    readonly property string dfki_logo:                 "qrc:/images/logos/dfki.jpeg"
+    readonly property string dfki_nightmode_logo:       "qrc:/images/logos/dfki.jpeg"
+    readonly property string ibm_logo:                  "qrc:/images/logos/ibm.svg"
+    readonly property string ibm_nightmode_logo:        "qrc:/images/logos/ibm_w.svg"
+    readonly property string inria_logo:                "qrc:/images/logos/inria.png"
+    readonly property string inria_nightmode_logo:      "qrc:/images/logos/inria.png"
+    readonly property string ku_logo:                   "qrc:/images/logos/ku.png"
+    readonly property string ku_nightmode_logo:         "qrc:/images/logos/ku_w.png"
+    readonly property string rptu_logo:                 "qrc:/images/logos/rptu.png"
+    readonly property string rptu_nightmode_logo:       "qrc:/images/logos/rptu_w.png"
+    readonly property string upmem_logo:                "qrc:/images/logos/upmem.jpeg"
+    readonly property string upmem_nightmode_logo:      "qrc:/images/logos/upmem.jpeg"
+    readonly property int logo_height:                  48
 
     // ICONS
     readonly property string back_icon_name:            "back"
