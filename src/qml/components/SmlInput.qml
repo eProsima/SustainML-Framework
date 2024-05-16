@@ -77,4 +77,11 @@ Item {
             }
         }
     }
+
+    SmlMouseArea
+    {
+        anchors.fill: parent
+        custom_cursor_shape: Qt.IBeamCursor
+        onClicked: input.forceActiveFocus()
+    }
 }

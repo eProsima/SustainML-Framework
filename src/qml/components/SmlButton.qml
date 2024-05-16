@@ -75,13 +75,15 @@ Item {
 
     MouseArea
     {
+        id: mouse_area
         anchors.centerIn: background
         hoverEnabled: true
         width: background.width * 1.5
         height: background.height * 1.5
-        onEntered: icon.start_animation();
         onPressed: { icon.pressed = true; text.force_color = true; }
         onReleased: { icon.pressed = false; text.force_color = false; }
         onClicked: sustainml_custom_button.clicked();
+        onEntered: { mouse_area.cursorShape = Qt.PointingHandCursor; icon.start_animation();}
+        onExited:  { mouse_area.cursorShape = Qt.ArrowCursor; }
     }
 }

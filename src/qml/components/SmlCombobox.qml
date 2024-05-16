@@ -36,7 +36,7 @@ Item {
         model: sustainml_custom_combobox.model
         currentIndex: -1
 
-        MouseArea
+        SmlMouseArea
         {
             anchors.fill: parent
             onWheel: { } // do nothing to avoid changing values while scrolling with the mouse wheel
@@ -128,6 +128,10 @@ Item {
             background: Rectangle {
                 color: "transparent"
             }
+
+            SmlMouseArea {
+                anchors.fill: parent
+            }
         }
 
         // Combobox selection popup
@@ -163,7 +167,7 @@ Item {
         indicator: SmlIcon {
             id: icon
             name: Settings.arrow_down_icon_name
-            size: Settings.spacing_normal 
+            size: Settings.spacing_normal
             color: sustainml_custom_combobox.__edited
                     ? sustainml_custom_combobox.border_editting_color
                     : sustainml_custom_combobox.border_color

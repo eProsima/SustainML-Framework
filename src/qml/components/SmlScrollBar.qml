@@ -41,4 +41,19 @@ ScrollBar {
                 ? sustainml_custom_scrollbar.background_nightmode_color
                 : sustainml_custom_scrollbar.background_color
     }
+
+    MouseArea {
+        id: drag_area
+        anchors.fill: parent
+        propagateComposedEvents: true
+        hoverEnabled: true
+
+        onEntered:  { drag_area.cursorShape = Qt.PointingHandCursor; }
+        onExited:   { drag_area.cursorShape = Qt.ArrowCursor; }
+        onPressed:  { mouse.accepted = false; }
+        onReleased: { mouse.accepted = false; }
+        onPressAndHold: { mouse.accepted = false; }
+        onClicked: { mouse.accepted = false; }
+        onDoubleClicked: { mouse.accepted = false; }
+    }
 }
