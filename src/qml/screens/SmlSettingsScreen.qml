@@ -110,7 +110,8 @@ Item
                 SmlText {
                     text_value: app
                     text_kind: SmlText.TextKind.Body
-                    font.pixelSize: root.__font_status_size
+                    force_size: true
+                    forced_size: root.__font_status_size
                     anchors.centerIn: parent
                     force_color: true
                     forced_color: Settings.app_color_light
@@ -147,7 +148,8 @@ Item
                 SmlText {
                     text_value: carbon
                     text_kind: SmlText.TextKind.Body
-                    font.pixelSize: root.__font_status_size
+                    force_size: true
+                    forced_size: root.__font_status_size
                     anchors.centerIn: parent
                     force_color: true
                     forced_color: Settings.app_color_light
@@ -184,7 +186,8 @@ Item
                 SmlText {
                     text_value: hw_constraints
                     text_kind: SmlText.TextKind.Body
-                    font.pixelSize: root.__font_status_size
+                    force_size: true
+                    forced_size: root.__font_status_size
                     anchors.centerIn: parent
                     force_color: true
                     forced_color: Settings.app_color_light
@@ -221,7 +224,8 @@ Item
                 SmlText {
                     text_value: hw_resources
                     text_kind: SmlText.TextKind.Body
-                    font.pixelSize: root.__font_status_size
+                    force_size: true
+                    forced_size: root.__font_status_size
                     anchors.centerIn: parent
                     force_color: true
                     forced_color: Settings.app_color_light
@@ -258,7 +262,8 @@ Item
                 SmlText {
                     text_value: model
                     text_kind: SmlText.TextKind.Body
-                    font.pixelSize: root.__font_status_size
+                    force_size: true
+                    forced_size: root.__font_status_size
                     anchors.centerIn: parent
                     force_color: true
                     forced_color: Settings.app_color_light
@@ -295,7 +300,8 @@ Item
                 SmlText {
                     text_value: metadata
                     text_kind: SmlText.TextKind.Body
-                    font.pixelSize: root.__font_status_size
+                    force_size: true
+                    forced_size: root.__font_status_size
                     anchors.centerIn: parent
                     force_color: true
                     forced_color: Settings.app_color_light
@@ -322,6 +328,8 @@ Item
                 id: log_item
                 text_value: root.log
                 text_kind: SmlText.TextKind.Body
+                force_elide: true
+                width: parent.width
             }
         }
     }
