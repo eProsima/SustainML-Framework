@@ -172,6 +172,7 @@ Window {
                             geo_location_continent,
                             geo_location_region,
                             extra_data)
+                    main_window.load_screen(ScreenManager.Screens.Log)
                 }
             }
         }
@@ -284,7 +285,7 @@ Window {
         x: Settings.app_width -  (size * 2)
         y: Settings.app_height - (size * 2)
 
-        MouseArea
+        SmlMouseArea
         {
             anchors.centerIn: parent
             hoverEnabled: true

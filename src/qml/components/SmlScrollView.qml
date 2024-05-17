@@ -118,4 +118,33 @@ Flickable
             mouse.accepted = sustainml_custom_scrollview.moving
         }
     }
+    function scroll_to(y)
+    {
+        // check bounds
+        if(y < 0)
+        {
+            y = 0
+        }
+        else if(y + Settings.spacing_big > contentHeight)
+        {
+            y = contentHeight
+        }
+
+        // check if already visible
+        if (y < contentY || y + Settings.spacing_big > contentY + height)
+        {
+            // scroll to y
+            scroll_animation.to = y
+            scroll_animation.start()
+        }
+    }
+    // scroll_to animation
+    NumberAnimation
+    {
+        id: scroll_animation
+        target: sustainml_custom_scrollview
+        property: "contentY"
+        easing.type: Easing.InOutQuad
+        to: 0
+    }
 }

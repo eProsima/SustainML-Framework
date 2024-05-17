@@ -5,7 +5,7 @@ import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
 
-TextEdit
+Text
 {
     id: sustainml_custom_text
 
@@ -52,10 +52,6 @@ TextEdit
     rightPadding: sustainml_custom_text.rightPadding
     topPadding: sustainml_custom_text.topPadding
     wrapMode: Text.WordWrap
-    readOnly: true
-    selectByMouse: true
-    selectByKeyboard: true
-    selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
 
     TextMetrics {
         id: elided_text

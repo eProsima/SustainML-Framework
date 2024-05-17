@@ -228,14 +228,14 @@ QString Engine::get_status_from_node(
     {
         case 0u: //Status::NODE_INACTIVE
             return QString("INACTIVE");
-        case 1u: //Status::NODE_INITIALIZING
-            return QString("INITIALIZING");
+        case 1u: //Status::NODE_ERROR
+            return QString("ERROR");
         case 2u: //Status::NODE_IDLE
             return QString("IDLE");
-        case 3u: //Status::NODE_RUNNING
+        case 3u: //Status::NODE_INITIALIZING
+            return QString("INITIALIZING");
+        case 4u: //Status::NODE_RUNNING
             return QString("RUNNING");
-        case 4u: //Status::NODE_ERROR
-            return QString("ERROR");
         case 5u: //Status::NODE_TERMINATING
             return QString("TERMINATING");
         default:

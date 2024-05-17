@@ -5,7 +5,7 @@ import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
 
-Item {
+TextInput {
     id: sustainml_custom_input
 
     // External properties
@@ -26,14 +26,22 @@ Item {
     readonly property string __font_size:   Settings.body_font_size
     readonly property string __font_color: ScreenManager.body_font_color
 
-    // External signals
-    signal text_changed(string text)
+    padding: Settings.spacing_normal
+    font.family: sustainml_custom_input.__font_family
+    font.pixelSize: sustainml_custom_input.__font_size
+    wrapMode: TextEdit.WordWrap
+    color: sustainml_custom_input.__font_color
+
+    //focus: sustainml_custom_input.focus
+    selectByMouse: true
+    selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
 
     Rectangle
     {
         id: background
 
         anchors.fill: parent
+        z:-1
 
         radius: rounded ? sustainml_custom_input.__radius : 0
         color: ScreenManager.night_mode
@@ -47,34 +55,44 @@ Item {
                     : sustainml_custom_input.border_color
         border.width: sustainml_custom_input.border_width
 
-        TextInput
+
+        // Custom placeholder field
+        SmlText
         {
-            id: input
+            id: placeholder_text
+            text_value: sustainml_custom_input.placeholder_text
 
-            anchors.fill: parent
-            anchors.margins: Settings.spacing_normal
+            width: sustainml_custom_input.width
+            leftPadding: sustainml_custom_input.padding
+            topPadding: sustainml_custom_input.padding
 
-            font.family: sustainml_custom_input.__font_family
-            font.pixelSize: sustainml_custom_input.__font_size
-            wrapMode: TextEdit.WordWrap
-            color: sustainml_custom_input.__font_color
+            force_color: true
+            forced_color: "#aaa"
+            visible: sustainml_custom_input.text === ""
 
-            onTextChanged: sustainml_custom_input.text_changed(text)
-            onFocusChanged: sustainml_custom_input.__edited = focus
-            onActiveFocusChanged: sustainml_custom_input.__edited = activeFocus
-
-            // Custom placeholder field
-            SmlText
+            SmlMouseArea
             {
-                id: placeholder_text
-                text: sustainml_custom_input.placeholder_text
+                anchors.fill: parent
+                custom_cursor_shape: Qt.IBeamCursor
 
-                width: sustainml_custom_input.width - 2 * Settings.spacing_normal
-
-                force_color: true
-                forced_color: "#aaa"
-                visible: input.text === ""
+                onPressed:  { sustainml_custom_input.forceActiveFocus(); }
+                onClicked: { sustainml_custom_input.forceActiveFocus(); }
+                onDoubleClicked: { sustainml_custom_input.forceActiveFocus(); }
             }
         }
+        SmlMouseArea
+        {
+            anchors.fill: parent
+            custom_cursor_shape: Qt.IBeamCursor
+            propagateComposedEvents: true
+
+            onPressed:  { mouse.accepted = false; }
+            onReleased: { mouse.accepted = false; }
+            onPressAndHold: { mouse.accepted = false; }
+            onClicked: { mouse.accepted = false; }
+            onDoubleClicked: { mouse.accepted = false; }
+        }
     }
+    onFocusChanged: sustainml_custom_input.__edited = focus
+    onActiveFocusChanged: sustainml_custom_input.__edited = activeFocus
 }

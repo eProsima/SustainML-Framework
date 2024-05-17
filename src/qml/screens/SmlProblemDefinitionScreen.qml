@@ -136,15 +136,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width
             height: root.__input_height
+            KeyNavigation.tab: modality_input
             anchors
             {
                 top: problem_short_description_header.bottom
                 topMargin: Settings.spacing_small
                 left: problem_short_description_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__problem_short_description = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(problem_short_description_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -173,15 +181,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width
             height: root.__input_height
+            KeyNavigation.tab: problem_definition_input
             anchors
             {
                 top: modality_header.bottom
                 topMargin: Settings.spacing_small
                 left: modality_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__modality = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(modality_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -210,15 +226,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width
             height: root.__input_height_big
+            KeyNavigation.tab: inputs_input
             anchors
             {
                 top: problem_definition_header.bottom
                 topMargin: Settings.spacing_small
                 left: problem_definition_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__problem_definition = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(problem_definition_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -247,15 +271,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width
             height: root.__input_height_big
+            KeyNavigation.tab: outputs_input
             anchors
             {
                 top: inputs_header.bottom
                 topMargin: Settings.spacing_small
                 left: inputs_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__inputs = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(inputs_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -284,15 +316,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width
             height: root.__input_height_big
+            KeyNavigation.tab: minimum_samples_input
             anchors
             {
                 top: outputs_header.bottom
                 topMargin: Settings.spacing_small
                 left: outputs_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__outputs = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(outputs_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -321,15 +361,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width_small
             height: root.__input_height
+            KeyNavigation.tab: maximum_samples_input
             anchors
             {
                 top: minimum_samples_header.bottom
                 topMargin: Settings.spacing_small
                 left: minimum_samples_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__minimum_samples = parseInt(text);
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(minimum_samples_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -358,15 +406,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width_small
             height: root.__input_height
+            KeyNavigation.tab: optimize_carbon_input
             anchors
             {
                 top: maximum_samples_header.bottom
                 topMargin: Settings.spacing_small
                 left: maximum_samples_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__maximum_samples = parseInt(text);
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(maximum_samples_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -385,6 +441,8 @@ Item
         }
         SmlCombobox
         {
+            activeFocusOnTab: true
+            focus: true
             id: optimize_carbon_input
             placeholder_text: "Select optimization iteration method"
             model: ["Manual", "Auto"]
@@ -397,6 +455,7 @@ Item
             width: 360
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
+            KeyNavigation.tab: previous_iteration_input
             anchors
             {
                 top: optimize_carbon_header.bottom
@@ -420,6 +479,15 @@ Item
                     root.__optimize_carbon_footprint_auto = false;
                     root.__optimize_carbon_footprint_manual = false;
                 }
+            }
+            onFocusChanged: {
+                if(focus === true){
+                    optimize_carbon_input.open()
+                    optimize_carbon_input.focus = true
+                }
+            }
+            onTab_pressed: {
+                previous_iteration_input.focus = true
             }
         }
 
@@ -448,15 +516,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width_split
             height: root.__input_height
+            KeyNavigation.tab: desired_carbon_footprint_input
             anchors
             {
                 top: previous_iteration_header.bottom
                 topMargin: Settings.spacing_small
                 left: previous_iteration_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__previous_iteration = parseInt(text);
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(previous_iteration_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -485,15 +561,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width_split
             height: root.__input_height
+            KeyNavigation.tab: geo_location_continent_input
             anchors
             {
                 top: desired_carbon_footprint_header.bottom
                 topMargin: Settings.spacing_small
                 left: desired_carbon_footprint_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__desired_carbon_footprint = parseFloat(text);
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(desired_carbon_footprint_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -522,15 +606,23 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width_split
             height: root.__input_height
+            KeyNavigation.tab: geo_location_region_input
             anchors
             {
                 top: geo_location_continent_header.bottom
                 topMargin: Settings.spacing_small
                 left: geo_location_continent_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__geo_location_continent = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(geo_location_continent_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -565,9 +657,16 @@ Item
                 topMargin: Settings.spacing_small
                 left: geo_location_region_header.left
             }
-            onText_changed:
+            onTextChanged:
             {
                 root.__geo_location_region = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(geo_location_region_input.y - Settings.spacing_big)
+                }
             }
         }
     }
