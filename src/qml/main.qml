@@ -172,6 +172,7 @@ Window {
                             geo_location_continent,
                             geo_location_region,
                             extra_data)
+                    main_window.load_screen(ScreenManager.Screens.Log)
                 }
             }
         }
