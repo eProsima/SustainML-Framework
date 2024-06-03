@@ -10,10 +10,16 @@
         <file>qml/components/SmlMouseArea.qml</file>
         <file>qml/components/SmlScrollBar.qml</file>
         <file>qml/components/SmlScrollView.qml</file>
+        <file>qml/components/SmlTabView.qml</file>
         <file>qml/components/SmlText.qml</file>
         <file>qml/components/SmlTextNoSelectable.qml</file>
+        <file>qml/fragments/SmlComparisonFragment.qml</file>
+        <file>qml/fragments/SmlGeneralFragment.qml</file>
+        <file>qml/fragments/SmlIterationFragment.qml</file>
+        <file>qml/fragments/SmlProblemFragment.qml</file>
         <file>qml/screens/SmlHomeScreen.qml</file>
         <file>qml/screens/SmlProblemDefinitionScreen.qml</file>
+        <file>qml/screens/SmlResultsScreen.qml</file>
         <file>qml/screens/SmlSettingsScreen.qml</file>
     </qresource>
 </RCC>
