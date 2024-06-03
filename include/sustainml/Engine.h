@@ -109,7 +109,18 @@ public slots:
             QString geo_location_region,
             QString extra_data);
 
+    /**
+     * @brief public method to request all nodes data
+     * @param retrieve_all retrieve all data or only last problem received
+     */
+    void request_current_data (
+            const bool& retrieve_all);
+
 signals:
+
+    void task_sent(
+            const int& problem_id,
+            const int& iteration_id);
 
     void update_log(
             const QString& log);
@@ -132,6 +143,48 @@ signals:
     void update_ml_model_node_status(
             const QString& status);
 
+    void new_app_requirements_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& app_requirements);
+
+    void new_hw_constraints_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& max_memory_footprint);
+
+    void new_ml_model_metadata_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& metadata,
+            const QString& keywords);
+
+    void new_ml_model_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& model,
+            const QString& model_path,
+            const QString& properties,
+            const QString& properties_path,
+            const QString& input_batch,
+            const QString& target_latency);
+
+    void new_hw_resources_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& hw_description,
+            const QString& power_consumption,
+            const QString& latency,
+            const QString& memory_footprint_of_ml_model,
+            const QString& max_hw_memory_footprint);
+
+    void new_carbon_footprint_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& carbon_footprint,
+            const QString& energy_consumption,
+            const QString& carbon_intensity);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -152,10 +205,6 @@ private:
     QString get_task_QString(
             const types::TaskId& task_id);
 
-    QString get_raw_output(
-            const sustainml::NodeID& id,
-            void* data);
-
     QString update_node_status(
             const sustainml::NodeID& id,
             const types::NodeStatus& status);
@@ -165,8 +214,13 @@ private:
             std::vector<std::string>& string_set,
             char delimeter);
 
+    void print_results(
+            const sustainml::NodeID& id,
+            void* data,
+            const bool& update_logs);
 
     sustainml::orchestrator::OrchestratorNode* orchestrator;
+    std::vector<types::TaskId> received_task_ids;
 };
 
 #endif //_EPROSIMA_SUSTAINML_ENGINE_H

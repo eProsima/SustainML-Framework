@@ -63,8 +63,8 @@ void Engine::on_new_node_output(
         const sustainml::NodeID& id,
         void* data)
 {
-    emit update_log(QString("Output received. Task ") + get_task_from_data(id, data) + (",\tnode ") +
-            get_name_from_node_id(id) + ":\n" + get_raw_output(id, data));
+    // specialized methods to print results
+    print_results(id, data, true);
 }
 
 void Engine::on_node_status_change(
@@ -79,6 +79,56 @@ void Engine::on_node_status_change(
     else
     {
         update_node_status(id, status);
+    }
+}
+
+void Engine::request_current_data(
+        const bool& retrieve_all)
+{
+    void * data = nullptr;
+    int iterator_start = received_task_ids.size() == 0 ? 0 : received_task_ids.size() - 1;
+    if (retrieve_all)
+    {
+        iterator_start = 0;
+    }
+
+    for (int i = iterator_start; i < received_task_ids.size(); i++)
+    {
+        if (sustainml::RetCode_t::RETCODE_NO_DATA != orchestrator->get_task_data(received_task_ids.at(i),
+                sustainml::NodeID::ID_APP_REQUIREMENTS, data))
+        {
+            print_results(sustainml::NodeID::ID_APP_REQUIREMENTS, data, false);
+            data = nullptr;
+        }
+        if (sustainml::RetCode_t::RETCODE_NO_DATA != orchestrator->get_task_data(received_task_ids.at(i),
+                sustainml::NodeID::ID_CARBON_FOOTPRINT, data))
+        {
+            print_results(sustainml::NodeID::ID_CARBON_FOOTPRINT, data, false);
+            data = nullptr;
+        }
+        if (sustainml::RetCode_t::RETCODE_NO_DATA != orchestrator->get_task_data(received_task_ids.at(i),
+                sustainml::NodeID::ID_HW_CONSTRAINTS, data))
+        {
+            print_results(sustainml::NodeID::ID_HW_CONSTRAINTS, data, false);
+            data = nullptr;
+        }
+        if (sustainml::RetCode_t::RETCODE_NO_DATA != orchestrator->get_task_data(received_task_ids.at(i),
+                sustainml::NodeID::ID_HW_RESOURCES, data))
+        {
+            print_results(sustainml::NodeID::ID_HW_RESOURCES, data, false);
+            data = nullptr;
+        }
+        if (sustainml::RetCode_t::RETCODE_NO_DATA != orchestrator->get_task_data(received_task_ids.at(i),
+                sustainml::NodeID::ID_ML_MODEL_METADATA, data))
+        {
+            print_results(sustainml::NodeID::ID_ML_MODEL_METADATA, data, false);
+            data = nullptr;
+        }
+        if (sustainml::RetCode_t::RETCODE_NO_DATA != orchestrator->get_task_data(received_task_ids.at(i),
+                sustainml::NodeID::ID_ML_MODEL, data))
+        {
+            print_results(sustainml::NodeID::ID_ML_MODEL, data, false);
+        }
     }
 }
 
@@ -139,6 +189,8 @@ void Engine::launch_task(
     std::vector<uint8_t> raw_data(extra_data.toStdString().begin(), extra_data.toStdString().end());
 
     auto task = orchestrator->prepare_new_task();
+    auto last_task_id = task.first;
+    received_task_ids.push_back(last_task_id);
     task.second->task_id(task.first);
     task.second->modality(modality.toStdString());
     task.second->problem_short_description(problem_short_description.toStdString());
@@ -155,6 +207,179 @@ void Engine::launch_task(
     task.second->geo_location_region(geo_location_region.toStdString());
     task.second->extra_data(raw_data);
     orchestrator->start_task(task.first, task.second);
+
+    emit task_sent(static_cast<int>(task.first.problem_id()), static_cast<int>(task.first.iteration_id()));
+}
+
+void Engine::print_results(
+        const sustainml::NodeID& id,
+        void* data,
+        const bool& print_log)
+{
+    QString output = "";
+    QString list_of_inputs = "";
+    QString list_of_keywords = "";
+    QString list_of_reqs = "";
+    QString metas = "";
+    types::AppRequirements* requirements = nullptr;
+    types::CO2Footprint* carbon = nullptr;
+    types::HWConstraints* hw_constraints = nullptr;
+    types::HWResource* hw_resources = nullptr;
+    types::MLModel* model = nullptr;
+    types::MLModelMetadata* metadata = nullptr;
+    types::UserInput* input = nullptr;
+
+    switch (id)
+    {
+        case sustainml::NodeID::ID_APP_REQUIREMENTS:
+            requirements = static_cast<types::AppRequirements*>(data);
+            for (std::string req : requirements->app_requirements())
+            {
+                if (list_of_reqs != "")
+                {
+                    list_of_reqs += QString(", ");
+                }
+                list_of_reqs += QString::fromStdString(req);
+            }
+            output += "App requirements: " + list_of_reqs + "\n";
+            emit new_app_requirements_node_output(
+                    requirements->task_id().problem_id(),
+                    requirements->task_id().iteration_id(),
+                    list_of_reqs);
+            break;
+        case sustainml::NodeID::ID_CARBON_FOOTPRINT:
+            carbon = static_cast<types::CO2Footprint*>(data);
+            output += QString("Carbon footprint: ") + QString::number(carbon->carbon_footprint()) + QString("\n");
+            output += QString("Energy consumption: ") + QString::number(carbon->energy_consumption()) + QString("\n");
+            output += QString("Carbon intensity: ") + QString::number(carbon->carbon_intensity()) + QString("\n");
+            emit new_carbon_footprint_node_output(
+                    carbon->task_id().problem_id(),
+                    carbon->task_id().iteration_id(),
+                    QString::number(carbon->carbon_footprint()),
+                    QString::number(carbon->energy_consumption()),
+                    QString::number(carbon->carbon_intensity()));
+            break;
+        case sustainml::NodeID::ID_HW_CONSTRAINTS:
+            hw_constraints = static_cast<types::HWConstraints*>(data);
+            output += QString("Max memory footprint: ") + QString::number(hw_constraints->max_memory_footprint()) +
+                    QString("\n");
+            emit new_hw_constraints_node_output(
+                    hw_constraints->task_id().problem_id(),
+                    hw_constraints->task_id().iteration_id(),
+                    QString::number(hw_constraints->max_memory_footprint()));
+            break;
+        case sustainml::NodeID::ID_HW_RESOURCES:
+            hw_resources = static_cast<types::HWResource*>(data);
+            output += QString("Hardware description: ") +
+                    QString::fromStdString(hw_resources->hw_description()) + QString("\n");
+            output += QString("Power consumption: ") +
+                    QString::number(hw_resources->power_consumption()) + QString("\n");
+            output += QString("Latency: ") + QString::number(hw_resources->latency()) + QString("\n");
+            output += QString("Model memory footprint: ") +
+                    QString::number(hw_resources->memory_footprint_of_ml_model()) + QString("\n");
+            output += QString("Max hardware memory footprint: ") +
+                    QString::number(hw_resources->max_hw_memory_footprint()) + QString("\n");
+            emit new_hw_resources_node_output(
+                    hw_resources->task_id().problem_id(),
+                    hw_resources->task_id().iteration_id(),
+                    QString::fromStdString(hw_resources->hw_description()),
+                    QString::number(hw_resources->power_consumption()),
+                    QString::number(hw_resources->latency()),
+                    QString::number(hw_resources->memory_footprint_of_ml_model()),
+                    QString::number(hw_resources->max_hw_memory_footprint()));
+            break;
+        case sustainml::NodeID::ID_ML_MODEL:
+            model = static_cast<types::MLModel*>(data);
+            output += QString("Model path: ") + QString::fromStdString(model->model_path()) + QString("\n");
+            output += QString("Model: ") + QString::fromStdString(model->model()) + QString("\n");
+            output += QString("Model properties path: ") +
+                    QString::fromStdString(model->model_properties_path()) + QString("\n");
+            output += QString("Model properties: ") + QString::fromStdString(model->model_properties()) + QString("\n");
+            for (std::string input : model->input_batch())
+            {
+                if (list_of_inputs != "")
+                {
+                    list_of_inputs += QString(", ");
+                }
+                list_of_inputs += QString::fromStdString(input);
+            }
+            output += "Input batch: " + list_of_inputs + "\nTarget latency: " +
+                    QString::number(model->target_latency()) + QString("\n");
+            emit new_ml_model_node_output(
+                    model->task_id().problem_id(),
+                    model->task_id().iteration_id(),
+                    QString::fromStdString(model->model()),
+                    QString::fromStdString(model->model_path()),
+                    QString::fromStdString(model->model_properties()),
+                    QString::fromStdString(model->model_properties_path()),
+                    list_of_inputs,
+                    QString::number(model->target_latency()));
+            break;
+        case sustainml::NodeID::ID_ML_MODEL_METADATA:
+            metadata = static_cast<types::MLModelMetadata*>(data);
+            for (std::string keyword : metadata->keywords())
+            {
+                if (list_of_keywords != "")
+                {
+                    list_of_keywords += QString(", ");
+                }
+                list_of_keywords += QString::fromStdString(keyword);
+            }
+            for (std::string meta : metadata->ml_model_metadata())
+            {
+                if (metas != "")
+                {
+                    metas += QString(", ");
+                }
+                metas += QString::fromStdString(meta);
+            }
+
+            output += "Key words: " + list_of_keywords + "\nMetadata: " + metas + "\n";
+            emit new_ml_model_metadata_node_output(
+                    metadata->task_id().problem_id(),
+                    metadata->task_id().iteration_id(),
+                    list_of_keywords,
+                    metas);
+            break;
+        case sustainml::NodeID::ID_ORCHESTRATOR:
+            input = static_cast<types::UserInput*>(data);
+            output += QString("Problem short description: ") +
+                    QString::fromStdString(input->problem_short_description()) + QString("\n");
+            output += QString("Problem definition: ") +
+                    QString::fromStdString(input->problem_definition()) + QString("\n");
+            output += QString("Modality: ") + QString::fromStdString(input->modality()) + QString("\n");
+            output += QString("Inputs: ");
+            for (std::string in : input->inputs())
+            {
+                output += QString::fromStdString(in) + QString(", ");
+            }
+            output += "\nOutputs: ";
+            for (std::string out : input->outputs())
+            {
+                output += QString::fromStdString(out) + QString(", ");
+            }
+            output += QString("\nMin samples: ") + QString::number(input->minimum_samples()) + QString("\n");
+            output += QString("Max samples: ") + QString::number(input->maximum_samples()) + QString("\n");
+            output += QString("Optimize automatically: ") +
+                    (input->optimize_carbon_footprint_auto() ? QString("true\n") : QString("false\n"));
+            output += QString("Optimize manually: ") +
+                    (input->optimize_carbon_footprint_manual() ? QString("true\n") : QString("false\n"));
+            output += QString("Previous iteration: ") + QString::number(input->previous_iteration()) + QString("\n");
+            output += QString("Desired carbon footprint: ") +
+                    QString::number(input->desired_carbon_footprint()) + QString("\n");
+            output += QString("Geo location continent: ") +
+                    QString::fromStdString(input->geo_location_continent()) + QString("\n");
+            output += QString("Geo location region: ") +
+                    QString::fromStdString(input->geo_location_region()) + QString("\n");
+            break;
+        default:
+            output += "Unknown node output\n";
+    }
+    if (print_log)
+    {
+        emit update_log(QString("Output received. ") + get_task_from_data(id, data) +
+                (", node ") + get_name_from_node_id(id) + ":\n" + output);
+    }
 }
 
 QString Engine::get_name_from_node_id(
@@ -246,119 +471,8 @@ QString Engine::get_status_from_node(
 QString Engine::get_task_QString(
         const types::TaskId& task_id)
 {
-    return QString("Task {") + QString::number(task_id.problem_id()) + QString(",") +
-            QString::number(task_id.iteration_id()) + QString("}");
-}
-
-QString Engine::get_raw_output(
-        const sustainml::NodeID& id,
-        void* data)
-{
-    QString output = "";
-    types::AppRequirements* requirements = nullptr;
-    types::CO2Footprint* carbon = nullptr;
-    types::HWConstraints* hw_constraints = nullptr;
-    types::HWResource* hw_resources = nullptr;
-    types::MLModel* model = nullptr;
-    types::MLModelMetadata* metadata = nullptr;
-    types::UserInput* input = nullptr;
-
-    switch (id)
-    {
-        case sustainml::NodeID::ID_APP_REQUIREMENTS:
-            requirements = static_cast<types::AppRequirements*>(data);
-            output += "App requirements: ";
-            for (std::string req : requirements->app_requirements())
-            {
-                output += QString::fromStdString(req) + QString(", ");
-            }
-            output += "\n";
-            return output;
-        case sustainml::NodeID::ID_CARBON_FOOTPRINT:
-            carbon = static_cast<types::CO2Footprint*>(data);
-            output += QString("Carbon footprint: ") + QString::number(carbon->carbon_footprint()) + QString("\n");
-            output += QString("Energy consumption: ") + QString::number(carbon->energy_consumption()) + QString("\n");
-            output += QString("Carbon intensity: ") + QString::number(carbon->carbon_intensity()) + QString("\n");
-            return output;
-        case sustainml::NodeID::ID_HW_CONSTRAINTS:
-            hw_constraints = static_cast<types::HWConstraints*>(data);
-            output += QString("Max memory footprint: ") + QString::number(hw_constraints->max_memory_footprint()) +
-                    QString("\n");
-            return output;
-        case sustainml::NodeID::ID_HW_RESOURCES:
-            hw_resources = static_cast<types::HWResource*>(data);
-            output += QString("Hardware description: ") +
-                    QString::fromStdString(hw_resources->hw_description()) + QString("\n");
-            output += QString("Power consumption: ") +
-                    QString::number(hw_resources->power_consumption()) + QString("\n");
-            output += QString("Latency: ") + QString::number(hw_resources->latency()) + QString("\n");
-            output += QString("Model memory footprint: ") +
-                    QString::number(hw_resources->memory_footprint_of_ml_model()) + QString("\n");
-            output += QString("Max hardware memory footprint: ") +
-                    QString::number(hw_resources->max_hw_memory_footprint()) + QString("\n");
-            return output;
-        case sustainml::NodeID::ID_ML_MODEL:
-            model = static_cast<types::MLModel*>(data);
-            output += QString("Model path: ") + QString::fromStdString(model->model_path()) + QString("\n");
-            output += QString("Model: ") + QString::fromStdString(model->model()) + QString("\n");
-            output += QString("Model properties path: ") +
-                    QString::fromStdString(model->model_properties_path()) + QString("\n");
-            output += QString("Model properties: ") + QString::fromStdString(model->model_properties()) + QString("\n");
-            output += "Input batch: ";
-            for (std::string input : model->input_batch())
-            {
-                output += QString::fromStdString(input) + QString(", ");
-            }
-            output += QString("\nTarget latency: ") + QString::number(model->target_latency()) + QString("\n");
-            return output;
-        case sustainml::NodeID::ID_ML_MODEL_METADATA:
-            metadata = static_cast<types::MLModelMetadata*>(data);
-            output += "Key words: ";
-            for (std::string keyword : metadata->keywords())
-            {
-                output += QString::fromStdString(keyword) + QString(", ");
-            }
-            output += "\nMetadata: ";
-            for (std::string meta : metadata->ml_model_metadata())
-            {
-                output += QString::fromStdString(meta) + QString(", ");
-            }
-            output += "\n";
-            return output;
-        case sustainml::NodeID::ID_ORCHESTRATOR:
-            input = static_cast<types::UserInput*>(data);
-            output += QString("Problem short description: ") +
-                    QString::fromStdString(input->problem_short_description()) + QString("\n");
-            output += QString("Problem definition: ") +
-                    QString::fromStdString(input->problem_definition()) + QString("\n");
-            output += QString("Modality: ") + QString::fromStdString(input->modality()) + QString("\n");
-            output += QString("Inputs: ");
-            for (std::string in : input->inputs())
-            {
-                output += QString::fromStdString(in) + QString(", ");
-            }
-            output += "\nOutputs: ";
-            for (std::string out : input->outputs())
-            {
-                output += QString::fromStdString(out) + QString(", ");
-            }
-            output += QString("\nMin samples: ") + QString::number(input->minimum_samples()) + QString("\n");
-            output += QString("Max samples: ") + QString::number(input->maximum_samples()) + QString("\n");
-            output += QString("Optimize automatically: ") +
-                    (input->optimize_carbon_footprint_auto() ? QString("true\n") : QString("false\n"));
-            output += QString("Optimize manually: ") +
-                    (input->optimize_carbon_footprint_manual() ? QString("true\n") : QString("false\n"));
-            output += QString("Previous iteration: ") + QString::number(input->previous_iteration()) + QString("\n");
-            output += QString("Desired carbon footprint: ") +
-                    QString::number(input->desired_carbon_footprint()) + QString("\n");
-            output += QString("Geo location continent: ") +
-                    QString::fromStdString(input->geo_location_continent()) + QString("\n");
-            output += QString("Geo location region: ") +
-                    QString::fromStdString(input->geo_location_region()) + QString("\n");
-            return output;
-        default:
-            return QString("Unknown node output\n");
-    }
+    return QString("Problem ID: ") + QString::number(task_id.problem_id()) + QString(", Iteration ID: ") +
+            QString::number(task_id.iteration_id());
 }
 
 QString Engine::update_node_status(

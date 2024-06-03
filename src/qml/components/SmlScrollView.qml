@@ -16,9 +16,12 @@ Flickable
     property int content_width: 0
     property int content_height: 0
     property int layout: SmlScrollBar.ScrollBarLayout.Vertical
+    property string scrollbar_backgound_color: "transparent"
+    property string scrollbar_backgound_nightmodel_color: "transparent"
 
     contentWidth: sustainml_custom_scrollview.content_width
     contentHeight: sustainml_custom_scrollview.content_height
+    boundsBehavior: Flickable.StopAtBounds
 
     clip: true
     interactive: false
@@ -31,8 +34,10 @@ Flickable
         anchors.right: sustainml_custom_scrollview.right
 
         policy: ScrollBar.AsNeeded
+        background_color: sustainml_custom_scrollview.scrollbar_backgound_color
+        background_nightmode_color: sustainml_custom_scrollview.scrollbar_backgound_nightmodel_color
         layout: sustainml_custom_scrollview.layout
-        visible: sustainml_custom_scrollview.layout === SmlScrollBar.ScrollBarLayout.Vertical
+        visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Horizontal
     }
 
     // Horizontal ScrollBar
@@ -43,8 +48,10 @@ Flickable
         anchors.bottom: sustainml_custom_scrollview.bottom
 
         policy: ScrollBar.AsNeeded
+        background_color: sustainml_custom_scrollview.scrollbar_backgound_color
+        background_nightmode_color: sustainml_custom_scrollview.scrollbar_backgound_nightmodel_color
         layout: sustainml_custom_scrollview.layout
-        visible: sustainml_custom_scrollview.layout === SmlScrollBar.ScrollBarLayout.Horizontal
+        visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Vertical
     }
 
     MouseArea
@@ -65,6 +72,10 @@ Flickable
         property real stepWeight: 2
         property real maxVelocity: 2400
         property real minVelocity: -2400
+
+        // scroll management
+        property bool is_shift_pressed: false
+
         Timer
         {
             id: timer
@@ -80,7 +91,14 @@ Flickable
 
             var velocity = -sustainml_custom_scrollview.verticalVelocity + nextVelocity
             sustainml_custom_scrollview.flickDeceleration = Math.abs(velocity) * 2.7
-            sustainml_custom_scrollview.flick(0, velocity)
+            if (is_shift_pressed)
+            {
+                sustainml_custom_scrollview.flick(velocity, 0)
+            }
+            else
+            {
+                sustainml_custom_scrollview.flick(0, velocity)
+            }
             nextVelocity = 0
             curWeight = baseWeight
         }
@@ -88,8 +106,18 @@ Flickable
         onWheel:
         {
             wheel.accepted = true
-            var deltay = wheel.angleDelta.y
-            nextVelocity += curWeight * deltay
+            // if pressing shift, move horizontally
+            if (wheel.modifiers & Qt.ShiftModifier)
+            {
+                is_shift_pressed = true
+            }
+            // else move vertically
+            else
+            {
+                is_shift_pressed = false
+            }
+            var delta = wheel.angleDelta.y
+            nextVelocity += curWeight * delta
 
             if(nextVelocity > maxVelocity)
                 nextVelocity = maxVelocity
@@ -118,23 +146,36 @@ Flickable
             mouse.accepted = sustainml_custom_scrollview.moving
         }
     }
-    function scroll_to(y)
+    function scroll_to(target)
     {
         // check bounds
-        if(y < 0)
+        if(target < 0)
         {
-            y = 0
+            target = 0
         }
-        else if(y + Settings.spacing_big > contentHeight)
+        else if(!mousearea.is_shift_pressed && (target + Settings.spacing_big > contentHeight))
         {
-            y = contentHeight
+            target = contentHeight
+        }
+        else if(mousearea.is_shift_pressed && (target + Settings.spacing_big > contentWidth))
+        {
+            target = contentWidth
         }
 
+
         // check if already visible
-        if (y < contentY || y + Settings.spacing_big > contentY + height)
+        if (!mousearea.is_shift_pressed && (target < contentY || target + Settings.spacing_big > contentY + height))
         {
             // scroll to y
-            scroll_animation.to = y
+            scroll_animation.to = target
+            scroll_animation.property= "contentY"
+            scroll_animation.start()
+        }
+        else if (mousearea.is_shift_pressed && (target < contentX || target + Settings.spacing_big > contentX + width))
+        {
+            // scroll to x
+            scroll_animation.to = target
+            scroll_animation.property= "contentX"
             scroll_animation.start()
         }
     }

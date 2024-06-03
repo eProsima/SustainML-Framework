@@ -25,6 +25,13 @@
         <file>images/icons/back/back_4.svg</file>
         <file>images/icons/back/back_w.svg</file>
 
+        <file>images/icons/cross/cross.svg</file>
+        <file>images/icons/cross/cross_1.svg</file>
+        <file>images/icons/cross/cross_2.svg</file>
+        <file>images/icons/cross/cross_3.svg</file>
+        <file>images/icons/cross/cross_4.svg</file>
+        <file>images/icons/cross/cross_w.svg</file>
+
         <file>images/icons/down/down.svg</file>
         <file>images/icons/down/down_1.svg</file>
         <file>images/icons/down/down_2.svg</file>
@@ -52,6 +59,13 @@
         <file>images/icons/leaf/leaf_3.svg</file>
         <file>images/icons/leaf/leaf_4.svg</file>
         <file>images/icons/leaf/leaf_w.svg</file>
+
+        <file>images/icons/plus/plus.svg</file>
+        <file>images/icons/plus/plus_1.svg</file>
+        <file>images/icons/plus/plus_2.svg</file>
+        <file>images/icons/plus/plus_3.svg</file>
+        <file>images/icons/plus/plus_4.svg</file>
+        <file>images/icons/plus/plus_w.svg</file>
 
     </qresource>
 </RCC>
