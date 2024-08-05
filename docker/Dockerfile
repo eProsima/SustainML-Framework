@@ -58,6 +58,8 @@ RUN wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sus
         cd src/sustainml_framework && git checkout ${sustainml_framework_branch} && cd ../.. ; \
     fi
 
+# Initialize the sustainml library submodules
+RUN cd /sustainml/src/sustainml_lib && git submodule update --init --recursive && cd /sustainml
 # Install the submodules dependencies
 RUN pip3 install -r /sustainml/src/sustainml_lib/sustainml_modules/requirements.txt
 # Build the projects
