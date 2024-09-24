@@ -26,7 +26,7 @@ set(MODULE_CPP_VERSION 14)
 
 set(MODULE_FIND_PACKAGES
         fastcdr
-        fastrtps
+        fastdds
         cpp_utils
         sustainml_cpp
     )

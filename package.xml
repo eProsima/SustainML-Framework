@@ -18,7 +18,7 @@
   <url type="repository">https://github.com/eProsima/SustainML-Frontend</url>
 
   <depend>fastcdr</depend>
-  <depend>fastrtps</depend>
+  <depend>fastdds</depend>
   <depend>dev-utils</depend>
   <depend>cmake_utils</depend>
   <depend>sustainml_cpp</depend>
