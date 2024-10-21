@@ -40,7 +40,7 @@ ARG sustainml_lib_branch
 ARG sustainml_framework_branch
 
 # Clone the repositories and checkout the branches if set
-RUN wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sustainml.repos && \
+RUN wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/hotifx/21906/sustainml.repos && \
     mkdir src && vcs import src < sustainml.repos && \
     if [ -z ${fastcdr_branch} ]; then \
         cd src/fastcdr && git checkout ${fastcdr_branch} && cd ../.. ; \
