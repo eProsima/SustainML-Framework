@@ -43,7 +43,7 @@ QObject* Engine::enable()
     load(QUrl(QLatin1String("qrc:/qml/main.qml")));
 
     // Initialize orchestrator node
-    orchestrator = new sustainml::orchestrator::OrchestratorNode(shared_from_this());
+    orchestrator = new sustainml::orchestrator::OrchestratorNode(*this);
 
     // Set enable as True
     enabled_ = true;
