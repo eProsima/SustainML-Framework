@@ -1,48 +1,24 @@
 #!/bin/bash
-use_sustainml_modules=true
-
 # source sustainml environment
 source "/sustainml/install/setup.bash"
-cd /sustainml/src/sustainml_lib/
+cd /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/
 
-if [[ ${node} == "orchestrator" ]]; then
-    sustainml
+if [[ ${node} == "back-end" ]]; then
+    python3 sustainml-wp5/backend_node.py
+elif [[ ${node} == "front-end" ]]; then
+    python3 sustainml-wp4/frontend_node.py
 elif [[ ${node} == "app_requirements" ]]; then
-    if [[ $use_sustainml_modules ]]; then
-        python3 sustainml_modules/sustainml_modules/sustainml-wp1/app_requirements_node.py
-    else
-        python3 sustainml_py/examples/app_requirements_node.py
-    fi
+    python3 sustainml-wp1/app_requirements_node.py
 elif [[ ${node} == "carbon_tracker" ]]; then
-    if [[ $use_sustainml_modules ]]; then
-        python3 sustainml_modules/sustainml_modules/sustainml-wp3/carbon_footprint_node.py
-    else
-        python3 sustainml_py/examples/co2_node.py
-    fi
+    python3 sustainml-wp3/carbon_footprint_node.py
 elif [[ ${node} == "hw_constraints" ]]; then
-    if [[ $use_sustainml_modules ]]; then
-        python3 sustainml_modules/sustainml_modules/sustainml-wp2/hw_constraints_node.py
-    else
-        python3 sustainml_py/examples/hw_constraints_node.py
-    fi
+    python3 sustainml-wp2/hw_constraints_node.py
 elif [[ ${node} == "hw_resources" ]]; then
-    if [[ $use_sustainml_modules ]]; then
-        python3 sustainml_modules/sustainml_modules/sustainml-wp2/hw_resources_provider_node.py
-    else
-        python3 sustainml_py/examples/hw_resources_node.py
-    fi
+    python3 sustainml-wp2/hw_resources_provider_node.py
 elif [[ ${node} == "ml_model_metadata" ]]; then
-    if [[ $use_sustainml_modules ]]; then
-        python3 sustainml_modules/sustainml_modules/sustainml-wp1/ml_model_metadata_node.py
-    else
-        python3 sustainml_py/examples/ml_metadata_node.py
-    fi
+    python3 sustainml-wp1/ml_model_metadata_node.py
 elif [[ ${node} == "ml_model" ]]; then
-    if [[ $use_sustainml_modules ]]; then
-        python3 sustainml_modules/sustainml_modules/sustainml-wp1/ml_model_provider_node.py
-    else
-        python3 sustainml_py/examples/ml_model_node.py
-    fi
+    python3 sustainml-wp1/ml_model_provider_node.py
 else
     echo "Unknown node: ${node}"
     exit 1
