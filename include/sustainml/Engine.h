@@ -142,7 +142,9 @@ protected:
 
 private slots:
 
-    void replyFinished(QNetworkReply *reply);
+    void user_input_response(QNetworkReply *reply);
+
+    void node_response(QNetworkReply* reply);
 
 private:
 
@@ -179,7 +181,8 @@ private:
             QJsonArray& string_array,
             char delimeter);
 
-    QNetworkAccessManager* network_manager_;
+    QNetworkAccessManager* user_input_request_;
+    std::array<QNetworkAccessManager*, static_cast<size_t>(sustainml::NodeID::MAX)> node_responses_;
     sustainml::orchestrator::OrchestratorNode* orchestrator;
 };
 

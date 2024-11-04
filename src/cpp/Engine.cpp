@@ -50,9 +50,16 @@ QObject* Engine::enable()
     // Initialize orchestrator node
     orchestrator = new sustainml::orchestrator::OrchestratorNode(*this);
 
-    // Initialize Network Manager
-    network_manager_ = new QNetworkAccessManager(this);
-    //connect(network_manager_, &QNetworkAccessManager::finished, this, &Engine::replyFinished);
+    // Initialize user input request manager
+    user_input_request_ = new QNetworkAccessManager(this);
+    connect(user_input_request_, SIGNAL(finished(QNetworkReply*)), this, SLOT(user_input_response(QNetworkReply*)));
+
+    // Initialize node responses
+    for (size_t i = 0; i < static_cast<size_t>(sustainml::NodeID::MAX); ++i)
+    {
+        node_responses_[i] = new QNetworkAccessManager(this);
+        connect(node_responses_[i], SIGNAL(finished(QNetworkReply*)), this, SLOT(node_response(QNetworkReply*)));
+    }
 
     // Set enable as True
     enabled_ = true;
@@ -105,17 +112,15 @@ void Engine::launch_task(
         double desired_carbon_footprint,
         QString geo_location_continent,
         QString geo_location_region,
-        QString extra_data_)
+        QString /*extra_data_*/)
 {
-    QJsonObject jsonData;
-    QJsonObject extra_data;
     QJsonArray ins;
     QJsonArray outs;
-
     split_string(inputs.toStdString(), ins, ' ');
     split_string(outputs.toStdString(), outs, ' ');
+
     uint32_t min = 1;
-    uint32_t max = sizeof(uint32_t)-1;
+    uint32_t max = sizeof(uint32_t) - 1;
     if (minimum_samples > 0)
     {
         try
@@ -148,63 +153,55 @@ void Engine::launch_task(
         emit update_log(QString("Error: maximum samples (") + QString::number(maximum_samples) +
                 QString(") must be greater than 0. Using default value " + QString::number(max)));
     }
-    std::vector<uint8_t> raw_data(extra_data_.toStdString().begin(), extra_data_.toStdString().end());
+    //std::vector<uint8_t> raw_data(extra_data_.toStdString().begin(), extra_data_.toStdString().end());
 
-    //auto task = orchestrator->prepare_new_task();
-    //task.second->task_id(task.first);
-    //task.second->modality(modality.toStdString());
-    //task.second->problem_short_description(problem_short_description.toStdString());
-    //task.second->problem_definition(problem_definition.toStdString());
-    //task.second->minimum_samples(min);
-    //task.second->maximum_samples(max);
-    //task.second->optimize_carbon_footprint_auto(optimize_carbon_footprint_auto);
-    //task.second->optimize_carbon_footprint_manual(optimize_carbon_footprint_manual);
-    //task.second->previous_iteration(previous_iteration);
-    //task.second->desired_carbon_footprint(desired_carbon_footprint);
-    //task.second->geo_location_continent(geo_location_continent.toStdString());
-    //task.second->geo_location_region(geo_location_region.toStdString());
-    //task.second->extra_data(raw_data);
-    //orchestrator->start_task(task.first, task.second);
-
+    // Prepare user input request
     QString query_url_ = server_url_ + "/user_input";
     QUrl url(query_url_.toStdString().c_str());
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    QNetworkRequest ui_request(url);
+    ui_request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
+    QJsonObject extra_data;
     extra_data["hardware_required"] = "PIM_AI_1chip";
     extra_data["max_memory_footprint"] = 100;
-    jsonData["problem_short_description"] = problem_short_description;
-    jsonData["modality"] = modality;
-    jsonData["problem_definition"] = problem_definition;
-    jsonData["inputs"] = ins;
-    jsonData["outputs"] = outs;
-    jsonData["minimum_samples"] = int(min);
-    jsonData["maximum_samples"] = int(max);
-    jsonData["optimize_carbon_footprint_auto"] = optimize_carbon_footprint_auto;
-    jsonData["optimize_carbon_footprint_manual"] = optimize_carbon_footprint_manual;
-    jsonData["previous_iteration"] = previous_iteration;
-    jsonData["desired_carbon_footprint"] = desired_carbon_footprint;
-    jsonData["geo_location_continent"] = geo_location_continent;
-    jsonData["geo_location_region"] = geo_location_region;
-    jsonData["extra_data"] = extra_data;
+    QJsonObject json_data;
+    json_data["problem_short_description"] = problem_short_description;
+    json_data["modality"] = modality;
+    json_data["problem_definition"] = problem_definition;
+    json_data["inputs"] = ins;
+    json_data["outputs"] = outs;
+    json_data["minimum_samples"] = int(min);
+    json_data["maximum_samples"] = int(max);
+    json_data["optimize_carbon_footprint_auto"] = optimize_carbon_footprint_auto;
+    json_data["optimize_carbon_footprint_manual"] = optimize_carbon_footprint_manual;
+    json_data["previous_iteration"] = previous_iteration;
+    json_data["desired_carbon_footprint"] = desired_carbon_footprint;
+    json_data["geo_location_continent"] = geo_location_continent;
+    json_data["geo_location_region"] = geo_location_region;
+    json_data["extra_data"] = extra_data;
+    QJsonDocument doc(json_data);
+    QByteArray json_data_bytes = doc.toJson();
 
+    // Launch user input request
+    user_input_request_->post(ui_request, json_data_bytes);
 
-    QJsonDocument doc(jsonData);
-    QByteArray jsonDataBytes = doc.toJson();
+    // Prepare node results requests
+    QString node_query_url_ = server_url_ + "/results";
+    QUrl node_url(node_query_url_.toStdString().c_str());
+    std::array<QNetworkRequest, static_cast<size_t>(sustainml::NodeID::MAX)> requests;
+    std::array<QByteArray, static_cast<size_t>(sustainml::NodeID::MAX)> node_raw_data;
+    for (size_t i = 0; i < static_cast<size_t>(sustainml::NodeID::MAX); ++i)
+    {
+        QJsonObject node_json_data;
+        node_json_data["node_id"] = static_cast<int>(i);
+        QJsonDocument node_doc(node_json_data);
+        node_raw_data[i] = node_doc.toJson();
+        requests[i].setUrl(node_url);
+        requests[i].setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    /*connect(network_manager_, &QNetworkAccessManager::finished,
-            this, [](QNetworkReply *reply) {
-                std::cout << "Reply received" << std::endl;
-                if (reply->error() == QNetworkReply::NoError) {
-                    QByteArray responseData = reply->readAll();
-                    // Process the response
-                } else {
-                    // Handle error
-                }
-                reply->deleteLater();
-            });*/
-
-    network_manager_->post(request, jsonDataBytes);
+        // Launch node results requests
+        node_responses_[i]->post(requests[i], node_raw_data[i]);
+    }
 }
 
 QString Engine::get_name_from_node_id(
@@ -297,7 +294,7 @@ QString Engine::get_task_QString(
         const types::TaskId& task_id)
 {
     return QString("Task {") + QString::number(task_id.problem_id()) + QString(",") +
-            QString::number(task_id.iteration_id()) + QString("}");
+           QString::number(task_id.iteration_id()) + QString("}");
 }
 
 QString Engine::get_raw_output(
@@ -339,7 +336,7 @@ QString Engine::get_raw_output(
             {
                 output += QString::fromStdString(hw_req) + QString(", ");
             }
-            output += QString("\n");;
+            output += QString("\n");
             return output;
         case sustainml::NodeID::ID_HW_RESOURCES:
             hw_resources = static_cast<types::HWResource*>(data);
@@ -484,12 +481,22 @@ size_t Engine::split_string(
         initial_position = position + 1;
         position = string.find(delimeter, initial_position);
     }
-    string_array.push_back(string.substr(initial_position, std::min(position, string.size()) - initial_position + 1).c_str());
+    string_array.push_back(string.substr(initial_position, std::min(position,
+            string.size()) - initial_position + 1).c_str());
 
     return string_array.size();
 }
 
-void Engine::replyFinished(QNetworkReply* /*reply*/)
+void Engine::user_input_response(
+        QNetworkReply* /*reply*/)
 {
     // todo foo
+    std::cout << "user input request has been processed" << std::endl;
+}
+
+void Engine::node_response(
+        QNetworkReply* /*reply*/)
+{
+    // todo foo
+    std::cout << "node results has been received" << std::endl;
 }
