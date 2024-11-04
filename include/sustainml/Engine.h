@@ -24,14 +24,16 @@
 
 #include <memory>
 
+#include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
 #include <QQueue>
 #include <QtCharts/QVXYModelMapper>
 #include <QThread>
 #include <QWaitCondition>
 
+#include <sustainml_cpp/core/Constants.hpp>
 #include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
-#include <sustainml_cpp/types/types.h>
+#include <sustainml_cpp/types/types.hpp>
 
 class Engine : public QQmlApplicationEngine,
     public sustainml::orchestrator::OrchestratorNodeHandle,
@@ -72,6 +74,7 @@ public:
     void on_node_status_change(
             const sustainml::NodeID& id,
             const types::NodeStatus& status) override;
+
 
 public slots:
 
@@ -137,7 +140,13 @@ protected:
     //! Set to true if the engine is being enabled
     bool enabled_;
 
+private slots:
+
+    void replyFinished(QNetworkReply *reply);
+
 private:
+
+    const QString server_url_ = "http://127.0.0.1:5001";
 
     QString get_name_from_node_id(
             const sustainml::NodeID& id);
@@ -165,7 +174,12 @@ private:
             std::vector<std::string>& string_set,
             char delimeter);
 
+    size_t split_string(
+            const std::string& string,
+            QJsonArray& string_array,
+            char delimeter);
 
+    QNetworkAccessManager* network_manager_;
     sustainml::orchestrator::OrchestratorNode* orchestrator;
 };
 

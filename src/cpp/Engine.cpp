@@ -18,14 +18,19 @@
 #include <iostream>
 #include <memory>
 
+#include <QJsonDocument>
+#include <QJsonValue>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QQmlApplicationEngine>
 #include <qqmlcontext.h>
 #include <QString>
+#include <QUrl>
 
 #include <sustainml/Engine.h>
 
 #include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
-#include <sustainml_cpp/types/types.h>
+#include <sustainml_cpp/types/types.hpp>
 
 #define PRINT_STATUS_LOG false
 
@@ -44,6 +49,10 @@ QObject* Engine::enable()
 
     // Initialize orchestrator node
     orchestrator = new sustainml::orchestrator::OrchestratorNode(*this);
+
+    // Initialize Network Manager
+    network_manager_ = new QNetworkAccessManager(this);
+    //connect(network_manager_, &QNetworkAccessManager::finished, this, &Engine::replyFinished);
 
     // Set enable as True
     enabled_ = true;
@@ -96,12 +105,15 @@ void Engine::launch_task(
         double desired_carbon_footprint,
         QString geo_location_continent,
         QString geo_location_region,
-        QString extra_data)
+        QString extra_data_)
 {
-    std::vector<std::string> input_set;
-    std::vector<std::string> output_set;
-    split_string(inputs.toStdString(), input_set, ' ');
-    split_string(outputs.toStdString(), output_set, ' ');
+    QJsonObject jsonData;
+    QJsonObject extra_data;
+    QJsonArray ins;
+    QJsonArray outs;
+
+    split_string(inputs.toStdString(), ins, ' ');
+    split_string(outputs.toStdString(), outs, ' ');
     uint32_t min = 1;
     uint32_t max = sizeof(uint32_t)-1;
     if (minimum_samples > 0)
@@ -136,25 +148,63 @@ void Engine::launch_task(
         emit update_log(QString("Error: maximum samples (") + QString::number(maximum_samples) +
                 QString(") must be greater than 0. Using default value " + QString::number(max)));
     }
-    std::vector<uint8_t> raw_data(extra_data.toStdString().begin(), extra_data.toStdString().end());
+    std::vector<uint8_t> raw_data(extra_data_.toStdString().begin(), extra_data_.toStdString().end());
 
-    auto task = orchestrator->prepare_new_task();
-    task.second->task_id(task.first);
-    task.second->modality(modality.toStdString());
-    task.second->problem_short_description(problem_short_description.toStdString());
-    task.second->problem_definition(problem_definition.toStdString());
-    task.second->inputs(input_set);
-    task.second->outputs(output_set);
-    task.second->minimum_samples(min);
-    task.second->maximum_samples(max);
-    task.second->optimize_carbon_footprint_auto(optimize_carbon_footprint_auto);
-    task.second->optimize_carbon_footprint_manual(optimize_carbon_footprint_manual);
-    task.second->previous_iteration(previous_iteration);
-    task.second->desired_carbon_footprint(desired_carbon_footprint);
-    task.second->geo_location_continent(geo_location_continent.toStdString());
-    task.second->geo_location_region(geo_location_region.toStdString());
-    task.second->extra_data(raw_data);
-    orchestrator->start_task(task.first, task.second);
+    //auto task = orchestrator->prepare_new_task();
+    //task.second->task_id(task.first);
+    //task.second->modality(modality.toStdString());
+    //task.second->problem_short_description(problem_short_description.toStdString());
+    //task.second->problem_definition(problem_definition.toStdString());
+    //task.second->minimum_samples(min);
+    //task.second->maximum_samples(max);
+    //task.second->optimize_carbon_footprint_auto(optimize_carbon_footprint_auto);
+    //task.second->optimize_carbon_footprint_manual(optimize_carbon_footprint_manual);
+    //task.second->previous_iteration(previous_iteration);
+    //task.second->desired_carbon_footprint(desired_carbon_footprint);
+    //task.second->geo_location_continent(geo_location_continent.toStdString());
+    //task.second->geo_location_region(geo_location_region.toStdString());
+    //task.second->extra_data(raw_data);
+    //orchestrator->start_task(task.first, task.second);
+
+    QString query_url_ = server_url_ + "/user_input";
+    QUrl url(query_url_.toStdString().c_str());
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    extra_data["hardware_required"] = "PIM_AI_1chip";
+    extra_data["max_memory_footprint"] = 100;
+    jsonData["problem_short_description"] = problem_short_description;
+    jsonData["modality"] = modality;
+    jsonData["problem_definition"] = problem_definition;
+    jsonData["inputs"] = ins;
+    jsonData["outputs"] = outs;
+    jsonData["minimum_samples"] = int(min);
+    jsonData["maximum_samples"] = int(max);
+    jsonData["optimize_carbon_footprint_auto"] = optimize_carbon_footprint_auto;
+    jsonData["optimize_carbon_footprint_manual"] = optimize_carbon_footprint_manual;
+    jsonData["previous_iteration"] = previous_iteration;
+    jsonData["desired_carbon_footprint"] = desired_carbon_footprint;
+    jsonData["geo_location_continent"] = geo_location_continent;
+    jsonData["geo_location_region"] = geo_location_region;
+    jsonData["extra_data"] = extra_data;
+
+
+    QJsonDocument doc(jsonData);
+    QByteArray jsonDataBytes = doc.toJson();
+
+    /*connect(network_manager_, &QNetworkAccessManager::finished,
+            this, [](QNetworkReply *reply) {
+                std::cout << "Reply received" << std::endl;
+                if (reply->error() == QNetworkReply::NoError) {
+                    QByteArray responseData = reply->readAll();
+                    // Process the response
+                } else {
+                    // Handle error
+                }
+                reply->deleteLater();
+            });*/
+
+    network_manager_->post(request, jsonDataBytes);
 }
 
 QString Engine::get_name_from_node_id(
@@ -284,6 +334,12 @@ QString Engine::get_raw_output(
             hw_constraints = static_cast<types::HWConstraints*>(data);
             output += QString("Max memory footprint: ") + QString::number(hw_constraints->max_memory_footprint()) +
                     QString("\n");
+            output += "Hardware required: ";
+            for (std::string hw_req : hw_constraints->hardware_required())
+            {
+                output += QString::fromStdString(hw_req) + QString(", ");
+            }
+            output += QString("\n");;
             return output;
         case sustainml::NodeID::ID_HW_RESOURCES:
             hw_resources = static_cast<types::HWResource*>(data);
@@ -411,4 +467,29 @@ size_t Engine::split_string(
     string_set.push_back(string.substr(initial_position, std::min(position, string.size()) - initial_position + 1));
 
     return string_set.size();
+}
+
+size_t Engine::split_string(
+        const std::string& string,
+        QJsonArray& string_array,
+        char delimeter)
+{
+    size_t position = string.find(delimeter);
+    size_t initial_position = 0;
+
+    // Split loop
+    while (position != std::string::npos)
+    {
+        string_array.push_back(string.substr(initial_position, position - initial_position).c_str());
+        initial_position = position + 1;
+        position = string.find(delimeter, initial_position);
+    }
+    string_array.push_back(string.substr(initial_position, std::min(position, string.size()) - initial_position + 1).c_str());
+
+    return string_array.size();
+}
+
+void Engine::replyFinished(QNetworkReply* /*reply*/)
+{
+    // todo foo
 }
