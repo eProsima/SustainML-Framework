@@ -35,9 +35,7 @@
 #include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
 #include <sustainml_cpp/types/types.hpp>
 
-class Engine : public QQmlApplicationEngine,
-    public sustainml::orchestrator::OrchestratorNodeHandle,
-    public std::enable_shared_from_this<Engine>
+class Engine : public QQmlApplicationEngine
 {
     Q_OBJECT
 
@@ -55,25 +53,6 @@ public:
      * @return Engine pointer
      */
     QObject* enable();
-
-    /**
-     * @brief New node output callback
-     * @param   id node identifier
-     * @param data data received
-     */
-    void on_new_node_output(
-            const sustainml::NodeID& id,
-            void* data) override;
-
-    /**
-     * @brief Node status change callback
-     *
-     * @param id node identifier
-     * @param status new status
-     */
-    void on_node_status_change(
-            const sustainml::NodeID& id,
-            const types::NodeStatus& status) override;
 
 public slots:
 
@@ -196,7 +175,6 @@ private:
 
     QNetworkAccessManager* user_input_request_;
     std::array<QNetworkAccessManager*, static_cast<size_t>(sustainml::NodeID::MAX)> node_responses_;
-    sustainml::orchestrator::OrchestratorNode* orchestrator;
 };
 
 #endif //_EPROSIMA_SUSTAINML_ENGINE_H

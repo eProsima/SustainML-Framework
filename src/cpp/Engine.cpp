@@ -48,9 +48,6 @@ QObject* Engine::enable()
     // Load main GUI
     load(QUrl(QLatin1String("qrc:/qml/main.qml")));
 
-    // Initialize orchestrator node
-    orchestrator = new sustainml::orchestrator::OrchestratorNode(*this);
-
     // Initialize user input request manager
     user_input_request_ = new QNetworkAccessManager(this);
     connect(user_input_request_, SIGNAL(finished(QNetworkReply*)), this, SLOT(user_input_response(QNetworkReply*)));
@@ -70,33 +67,6 @@ QObject* Engine::enable()
 
 Engine::~Engine()
 {
-    if  (enabled_)
-    {
-        delete orchestrator;
-    }
-}
-
-void Engine::on_new_node_output(
-        const sustainml::NodeID& id,
-        void* data)
-{
-    //emit update_log(QString("Output received. Task ") + get_task_from_data(id, data) + (",\tnode ") +
-    //        get_name_from_node_id(id) + ":\n" + get_raw_output(id, data));
-}
-
-void Engine::on_node_status_change(
-        const sustainml::NodeID& id,
-        const types::NodeStatus& status)
-{
-    if (PRINT_STATUS_LOG)
-    {
-        emit update_log(get_name_from_node_id(id) + QString(" node status changed to ") +
-                update_node_status(id, status));
-    }
-    else
-    {
-        update_node_status(id, status);
-    }
 }
 
 void Engine::launch_task(
