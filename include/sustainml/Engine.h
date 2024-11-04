@@ -32,7 +32,6 @@
 #include <QWaitCondition>
 
 #include <sustainml_cpp/core/Constants.hpp>
-#include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
 #include <sustainml_cpp/types/types.hpp>
 
 class Engine : public QQmlApplicationEngine
@@ -139,10 +138,6 @@ private:
     sustainml::NodeID get_node_from_json(
             const QJsonObject& json);
 
-    QString get_task_from_data(
-            const sustainml::NodeID& id,
-            void* data);
-
     QString get_task_from_json(
             const QJsonObject& json);
 
@@ -153,20 +148,11 @@ private:
             const types::TaskId& task_id);
 
     QString get_raw_output(
-            const sustainml::NodeID& id,
-            void* data);
-
-    QString get_raw_output_json(
             const QJsonObject& json);
 
     QString update_node_status(
             const sustainml::NodeID& id,
             const types::NodeStatus& status);
-
-    size_t split_string(
-            const std::string& string,
-            std::vector<std::string>& string_set,
-            char delimeter);
 
     size_t split_string(
             const std::string& string,
