@@ -75,7 +75,6 @@ public:
             const sustainml::NodeID& id,
             const types::NodeStatus& status) override;
 
-
 public slots:
 
     /**
@@ -142,9 +141,11 @@ protected:
 
 private slots:
 
-    void user_input_response(QNetworkReply *reply);
+    void user_input_response(
+            QNetworkReply* reply);
 
-    void node_response(QNetworkReply* reply);
+    void node_response(
+            QNetworkReply* reply);
 
 private:
 
@@ -153,9 +154,18 @@ private:
     QString get_name_from_node_id(
             const sustainml::NodeID& id);
 
+    sustainml::NodeID get_node_id_from_name(
+            const QString& name);
+
+    sustainml::NodeID get_node_from_json(
+            const QJsonObject& json);
+
     QString get_task_from_data(
             const sustainml::NodeID& id,
             void* data);
+
+    QString get_task_from_json(
+            const QJsonObject& json);
 
     QString get_status_from_node(
             const types::NodeStatus& status);
@@ -166,6 +176,9 @@ private:
     QString get_raw_output(
             const sustainml::NodeID& id,
             void* data);
+
+    QString get_raw_output_json(
+            const QJsonObject& json);
 
     QString update_node_status(
             const sustainml::NodeID& id,

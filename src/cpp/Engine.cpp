@@ -22,6 +22,7 @@
 #include <QJsonValue>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QNetworkReply>
 #include <QQmlApplicationEngine>
 #include <qqmlcontext.h>
 #include <QString>
@@ -79,8 +80,8 @@ void Engine::on_new_node_output(
         const sustainml::NodeID& id,
         void* data)
 {
-    emit update_log(QString("Output received. Task ") + get_task_from_data(id, data) + (",\tnode ") +
-            get_name_from_node_id(id) + ":\n" + get_raw_output(id, data));
+    //emit update_log(QString("Output received. Task ") + get_task_from_data(id, data) + (",\tnode ") +
+    //        get_name_from_node_id(id) + ":\n" + get_raw_output(id, data));
 }
 
 void Engine::on_node_status_change(
@@ -228,6 +229,57 @@ QString Engine::get_name_from_node_id(
     }
 }
 
+sustainml::NodeID Engine::get_node_id_from_name(
+        const QString& name)
+{
+    if (name == QString("APP_REQUIREMENTS"))
+    {
+        return sustainml::NodeID::ID_APP_REQUIREMENTS;
+    }
+    else if (name == QString("CARBON_FOOTPRINT"))
+    {
+        return sustainml::NodeID::ID_CARBON_FOOTPRINT;
+    }
+    else if (name == QString("HW_CONSTRAINTS"))
+    {
+        return sustainml::NodeID::ID_HW_CONSTRAINTS;
+    }
+    else if (name == QString("HW_RESOURCES"))
+    {
+        return sustainml::NodeID::ID_HW_RESOURCES;
+    }
+    else if (name == QString("ML_MODEL"))
+    {
+        return sustainml::NodeID::ID_ML_MODEL;
+    }
+    else if (name == QString("ML_MODEL_METADATA"))
+    {
+        return sustainml::NodeID::ID_ML_MODEL_METADATA;
+    }
+    else if (name == QString("ORCHESTRATOR"))
+    {
+        return sustainml::NodeID::ID_ORCHESTRATOR;
+    }
+    else
+    {
+        return sustainml::NodeID::UNKNOWN;
+    }
+}
+
+sustainml::NodeID Engine::get_node_from_json(
+        const QJsonObject& json)
+{
+
+    if (json.keys().size() == 1)
+    {
+        return get_node_id_from_name(json.keys()[0]);
+    }
+    else
+    {
+        return sustainml::NodeID::UNKNOWN;
+    }
+}
+
 QString Engine::get_task_from_data(
         const sustainml::NodeID& id,
         void* data)
@@ -265,6 +317,20 @@ QString Engine::get_task_from_data(
             return get_task_QString(input->task_id());
         default:
             return QString("UNKNOWN");
+    }
+}
+
+QString Engine::get_task_from_json(
+        const QJsonObject& json)
+{
+    if (json.contains("task_id"))
+    {
+        QJsonObject task_id = json["task_id"].toObject();
+        return get_task_QString(types::TaskId(task_id["problem_id"].toInt(), task_id["iteration_id"].toInt()));
+    }
+    else
+    {
+        return QString("UNKNOWN");
     }
 }
 
@@ -414,6 +480,78 @@ QString Engine::get_raw_output(
     }
 }
 
+QString Engine::get_raw_output_json(
+        const QJsonObject& json_obj)
+{
+    QString output = "";
+
+    if (json_obj.contains(get_name_from_node_id(sustainml::NodeID::ID_APP_REQUIREMENTS)))
+    {
+        QJsonObject node_json = json_obj[get_name_from_node_id(sustainml::NodeID::ID_APP_REQUIREMENTS)].toObject();
+        output += "App requirements: ";
+        output += node_json["app_requirements"].toString() + QString("\n");
+    }
+    if (json_obj.contains(get_name_from_node_id(sustainml::NodeID::ID_CARBON_FOOTPRINT)))
+    {
+        QJsonObject node_json = json_obj[get_name_from_node_id(sustainml::NodeID::ID_CARBON_FOOTPRINT)].toObject();
+        output += QString("Carbon footprint: ") + QString::number(node_json["carbon_footprint"].toDouble()) + QString(
+            "\n");
+        output += QString("Energy consumption: ") + QString::number(node_json["energy_consumption"].toDouble()) +
+                QString("\n");
+        output += QString("Carbon intensity: ") + QString::number(node_json["carbon_intensity"].toDouble()) + QString(
+            "\n");
+    }
+    if (json_obj.contains(get_name_from_node_id(sustainml::NodeID::ID_HW_CONSTRAINTS)))
+    {
+        QJsonObject node_json = json_obj[get_name_from_node_id(sustainml::NodeID::ID_HW_CONSTRAINTS)].toObject();
+        output += QString("Max memory footprint: ") + QString::number(node_json["max_memory_footprint"].toInt()) +
+                QString("\n");
+        output += "Hardware required: ";
+        output += node_json["hardware_required"].toString() + QString("\n");
+    }
+    if (json_obj.contains(get_name_from_node_id(sustainml::NodeID::ID_HW_RESOURCES)))
+    {
+        QJsonObject node_json = json_obj[get_name_from_node_id(sustainml::NodeID::ID_HW_RESOURCES)].toObject();
+        output += QString("Hardware description: ") + node_json["hw_description"].toString() + QString("\n");
+        output += QString("Power consumption: ") + QString::number(node_json["power_consumption"].toDouble()) + QString(
+            "\n");
+        output += QString("Latency: ") + QString::number(node_json["latency"].toDouble()) + QString("\n");
+        output += QString("Model memory footprint: ") + QString::number(
+            node_json["memory_footprint_of_ml_model"].toDouble()) + QString("\n");
+        output += QString("Max hardware memory footprint: ") + QString::number(
+            node_json["max_hw_memory_footprint"].toDouble()) + QString("\n");
+    }
+    if (json_obj.contains(get_name_from_node_id(sustainml::NodeID::ID_ML_MODEL)))
+    {
+        QJsonObject node_json = json_obj[get_name_from_node_id(sustainml::NodeID::ID_ML_MODEL)].toObject();
+        output += QString("Model path: ") + node_json["model_path"].toString() + QString("\n");
+        output += QString("Model: ") + node_json["model"].toString() + QString("\n");
+        output += QString("Model properties path: ") + node_json["model_properties_path"].toString() + QString("\n");
+        output += QString("Model properties: ") + node_json["model_properties"].toString() + QString("\n");
+        output += "Input batch: ";
+        QJsonArray input_batch = node_json["input_batch"].toArray();
+        for (QJsonValue input : input_batch)
+        {
+            output += input.toString() + QString(", ");
+        }
+        output += QString("\nTarget latency: ") + QString::number(node_json["target_latency"].toDouble()) +
+                QString("\n");
+    }
+    if (json_obj.contains(get_name_from_node_id(sustainml::NodeID::ID_ML_MODEL_METADATA)))
+    {
+        QJsonObject node_json = json_obj[get_name_from_node_id(sustainml::NodeID::ID_ML_MODEL_METADATA)].toObject();
+        output += "Key words: ";
+        QJsonArray keywords = node_json["keywords"].toArray();
+        for (QJsonValue keyword : keywords)
+        {
+            output += keyword.toString() + QString(", ");
+        }
+        output += "\nMetadata: ";
+        output += node_json["metadata"].toString() + QString("\n");
+    }
+    return output;
+}
+
 QString Engine::update_node_status(
         const sustainml::NodeID& id,
         const types::NodeStatus& status)
@@ -488,15 +626,29 @@ size_t Engine::split_string(
 }
 
 void Engine::user_input_response(
-        QNetworkReply* /*reply*/)
+        QNetworkReply* reply_)
 {
-    // todo foo
-    std::cout << "user input request has been processed" << std::endl;
+    QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
+    QJsonObject json_obj = json_doc.object();
+    if (!json_obj.empty())
+    {
+        emit update_log(QString("User input send for ") + get_task_from_json(json_obj));
+    }
+    reply_->deleteLater();
 }
 
 void Engine::node_response(
-        QNetworkReply* /*reply*/)
+        QNetworkReply* reply_)
 {
-    // todo foo
-    std::cout << "node results has been received" << std::endl;
+    QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
+    QJsonObject json_obj = json_doc.object();
+
+    if (!json_obj.empty())
+    {
+        QString name = get_name_from_node_id(get_node_from_json(json_obj));
+        emit update_log(QString("Output received. Task ") + get_task_from_json(json_obj[name].toObject()) +
+                (",\tnode ") +
+                name + ":\n" + get_raw_output_json(json_obj));
+    }
+    reply_->deleteLater();
 }
