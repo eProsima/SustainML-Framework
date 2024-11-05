@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="375" height="374.999991" version="1.2"><rect id="backgroundrect" width="100%" height="100%" x="0" y="0" fill="none" stroke="none"/>
+<defs>
+<clipPath id="clip1">
+  <path d="M 1 0 L 374 0 L 374 374 L 1 374 Z M 1 0 " id="svg_1"/>
+</clipPath>
+<clipPath id="clip2">
+  <path d="M 187.496094 -9.414062 L 384.25 187.339844 L 187.496094 384.089844 L -9.257812 187.339844 Z M 187.496094 -9.414062 " id="svg_2"/>
+</clipPath>
+<clipPath id="clip3">
+  <path d="M 187.496094 -9.414062 L 384.25 187.339844 L 187.496094 384.089844 L -9.257812 187.339844 Z M 187.496094 -9.414062 " id="svg_3"/>
+</clipPath>
+<clipPath id="clip4">
+  <path d="M 187.496094 -9.414062 L 384.089844 187.179688 L 187.496094 383.777344 L -9.097656 187.179688 Z M 187.496094 -9.414062 " id="svg_4"/>
+</clipPath>
+</defs>
+
+<g class="currentLayer" style=""><title>Layer 1</title><g id="surface1" class="selected" fill-opacity="1" fill="#cbee19">
+<g clip-path="url(#clip1)" clip-rule="nonzero" id="svg_5" fill="#cbee19">
+<g clip-path="url(#clip2)" clip-rule="nonzero" id="svg_6" fill="#cbee19">
+<g clip-path="url(#clip3)" clip-rule="nonzero" id="svg_7" fill="#cbee19">
+<g clip-path="url(#clip4)" clip-rule="nonzero" id="svg_8" fill="#cbee19">
+<path style="stroke: none; fill-rule: nonzero; fill-opacity: 1;" d="M 373.730469 187.179688 C 373.75 176.902344 365.398438 168.550781 355.117188 168.566406 L 206.125 168.550781 L 206.125 19.574219 C 206.125 9.277344 197.792969 0.945312 187.496094 0.945312 C 177.199219 0.945312 168.863281 9.277344 168.863281 19.574219 L 168.863281 168.550781 L 19.890625 168.550781 C 9.59375 168.550781 1.257812 176.882812 1.257812 187.179688 C 1.257812 197.476562 9.59375 205.8125 19.890625 205.8125 L 168.882812 205.792969 L 168.882812 354.804688 C 168.863281 365.082031 177.214844 373.433594 187.496094 373.417969 C 197.773438 373.398438 206.109375 365.066406 206.125 354.785156 L 206.109375 205.792969 L 355.101562 205.8125 C 365.382812 205.792969 373.714844 197.460938 373.730469 187.179688 " id="svg_9" fill="#cbee19"/>
+</g>
+</g>
+</g>
+</g>
+</g></g></svg>

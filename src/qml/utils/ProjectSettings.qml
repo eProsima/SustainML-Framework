@@ -57,6 +57,8 @@ QtObject {
     readonly property string settings_icon_name:        "gear"
     readonly property string submit_icon_name:          "leaf"
     readonly property string arrow_down_icon_name:      "down"
+    readonly property string add_tab_icon_name:         "plus"
+    readonly property string close_tab_icon_name:       "cross"
 
     // ICON SIZES
     readonly property int button_icon_size:         30
