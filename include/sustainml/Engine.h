@@ -89,7 +89,18 @@ public slots:
             QString geo_location_region,
             QString extra_data);
 
+    /**
+     * @brief public method to request all nodes data
+     * @param retrieve_all retrieve all data or only last problem received
+     */
+    void request_current_data (
+            const bool& retrieve_all);
+
 signals:
+
+    void task_sent(
+            const int& problem_id,
+            const int& iteration_id);
 
     void update_log(
             const QString& log);
@@ -112,6 +123,49 @@ signals:
     void update_ml_model_node_status(
             const QString& status);
 
+    void new_app_requirements_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& app_requirements);
+
+    void new_hw_constraints_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& hardware_required,
+            const QString& max_memory_footprint);
+
+    void new_ml_model_metadata_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& metadata,
+            const QString& keywords);
+
+    void new_ml_model_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& model,
+            const QString& model_path,
+            const QString& properties,
+            const QString& properties_path,
+            const QString& input_batch,
+            const QString& target_latency);
+
+    void new_hw_resources_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& hw_description,
+            const QString& power_consumption,
+            const QString& latency,
+            const QString& memory_footprint_of_ml_model,
+            const QString& max_hw_memory_footprint);
+
+    void new_carbon_footprint_node_output(
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& carbon_footprint,
+            const QString& energy_consumption,
+            const QString& carbon_intensity);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -129,6 +183,16 @@ private:
 
     const QString server_url_ = "http://127.0.0.1:5001";
 
+    /**
+     * @brief private method to request results from the given node(s).
+     *
+     * @param task_id task identifier pointer
+     * @param node_id node identifier. If set as MAX, request all node results.
+     */
+    void request_results(
+            const types::TaskId& task_id,
+            const sustainml::NodeID& node_id);
+
     QString get_name_from_node_id(
             const sustainml::NodeID& id);
 
@@ -138,14 +202,14 @@ private:
     sustainml::NodeID get_node_from_json(
             const QJsonObject& json);
 
-    QString get_task_from_json(
+    types::TaskId* get_task_from_json(
             const QJsonObject& json);
 
     QString get_status_from_node(
             const types::NodeStatus& status);
 
     QString get_task_QString(
-            const types::TaskId& task_id);
+            const types::TaskId* task_id);
 
     QString get_raw_output(
             const QJsonObject& json);
@@ -159,8 +223,13 @@ private:
             QJsonArray& string_array,
             char delimeter);
 
+    void print_results(
+            const sustainml::NodeID& id,
+            const QJsonObject& json_obj);
+
     QNetworkAccessManager* user_input_request_;
     std::array<QNetworkAccessManager*, static_cast<size_t>(sustainml::NodeID::MAX)> node_responses_;
+    std::vector<types::TaskId*> received_task_ids;
 };
 
 #endif //_EPROSIMA_SUSTAINML_ENGINE_H
