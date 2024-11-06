@@ -24,7 +24,7 @@ RUN apt update && apt install --yes --no-install-recommends \
 WORKDIR /sustainml
 
 # default run node is the orchestrator
-ENV node orchestrator
+ENV node=back-end
 
 # Copy the bash script entrypoint file
 COPY run.bash /run.bash
