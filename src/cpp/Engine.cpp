@@ -86,6 +86,8 @@ void Engine::launch_task(
         bool optimize_carbon_footprint_manual,
         int previous_iteration,
         double desired_carbon_footprint,
+        int max_memory_footprint,
+        QString hardware_required,
         QString geo_location_continent,
         QString geo_location_region,
         QString /*extra_data_*/)
@@ -129,7 +131,6 @@ void Engine::launch_task(
         emit update_log(QString("Error: maximum samples (") + QString::number(maximum_samples) +
                 QString(") must be greater than 0. Using default value " + QString::number(max)));
     }
-    //std::vector<uint8_t> raw_data(extra_data_.toStdString().begin(), extra_data_.toStdString().end());
 
     // Prepare user input request
     QString query_url_ = server_url_ + "/user_input";
@@ -138,8 +139,8 @@ void Engine::launch_task(
     ui_request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
     QJsonObject extra_data;
-    extra_data["hardware_required"] = "PIM_AI_1chip";
-    extra_data["max_memory_footprint"] = 100;
+    extra_data["hardware_required"] = hardware_required;
+    extra_data["max_memory_footprint"] = max_memory_footprint;
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
     json_data["modality"] = modality;
