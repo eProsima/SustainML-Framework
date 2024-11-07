@@ -180,6 +180,8 @@ Window {
                             desired_carbon_footprint,
                             geo_location_continent,
                             geo_location_region,
+                            max_memory_footprint,
+                            hardware_required,
                             extra_data)
                 }
             }
