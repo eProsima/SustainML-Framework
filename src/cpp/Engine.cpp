@@ -29,6 +29,7 @@
 #include <QUrl>
 
 #include <sustainml/Engine.hpp>
+#include <sustainml/Utils.hpp>
 
 #include <sustainml_cpp/types/types.hpp>
 
@@ -91,8 +92,8 @@ void Engine::launch_task(
 {
     QJsonArray ins;
     QJsonArray outs;
-    split_string(inputs.toStdString(), ins, ' ');
-    split_string(outputs.toStdString(), outs, ' ');
+    Utils::split_string(inputs.toStdString(), ins, ' ');
+    Utils::split_string(outputs.toStdString(), outs, ' ');
 
     uint32_t min = 1;
     uint32_t max = sizeof(uint32_t) - 1;
@@ -260,47 +261,47 @@ void Engine::print_results(
         const sustainml::NodeID& id,
         const QJsonObject& json_obj)
 {
-    QJsonObject node_json = json_obj[get_name_from_node_id(id)].toObject();
-    types::TaskId* task_id = get_task_from_json(node_json);
+    QJsonObject node_json = json_obj[Utils::node_name(id)].toObject();
+    types::TaskId task_id = Utils::task_id(node_json);
     switch (id)
     {
         case sustainml::NodeID::ID_APP_REQUIREMENTS:
         {
             emit new_app_requirements_node_output(
-                    task_id->problem_id(),
-                    task_id->iteration_id(),
-                    node_json["app_requirements"].toString());
+                task_id.problem_id(),
+                task_id.iteration_id(),
+                node_json["app_requirements"].toString());
             break;
         }
         case sustainml::NodeID::ID_CARBON_FOOTPRINT:
         {
             emit new_carbon_footprint_node_output(
-                    task_id->problem_id(),
-                    task_id->iteration_id(),
-                    QString::number(node_json["carbon_footprint"].toDouble()),
-                    QString::number(node_json["energy_consumption"].toDouble()),
-                    QString::number(node_json["carbon_intensity"].toDouble()));
+                task_id.problem_id(),
+                task_id.iteration_id(),
+                QString::number(node_json["carbon_footprint"].toDouble()),
+                QString::number(node_json["energy_consumption"].toDouble()),
+                QString::number(node_json["carbon_intensity"].toDouble()));
             break;
         }
         case sustainml::NodeID::ID_HW_CONSTRAINTS:
         {
             emit new_hw_constraints_node_output(
-                    task_id->problem_id(),
-                    task_id->iteration_id(),
-                    node_json["hardware_required"].toString(),
-                    QString::number(node_json["max_memory_footprint"].toInt()));
+                task_id.problem_id(),
+                task_id.iteration_id(),
+                node_json["hardware_required"].toString(),
+                QString::number(node_json["max_memory_footprint"].toInt()));
             break;
         }
         case sustainml::NodeID::ID_HW_RESOURCES:
         {
             emit new_hw_resources_node_output(
-                    task_id->problem_id(),
-                    task_id->iteration_id(),
-                    node_json["hw_description"].toString(),
-                    QString::number(node_json["power_consumption"].toDouble()),
-                    QString::number(node_json["latency"].toDouble()),
-                    QString::number(node_json["memory_footprint_of_ml_model"].toDouble()),
-                    QString::number(node_json["max_hw_memory_footprint"].toDouble()));
+                task_id.problem_id(),
+                task_id.iteration_id(),
+                node_json["hw_description"].toString(),
+                QString::number(node_json["power_consumption"].toDouble()),
+                QString::number(node_json["latency"].toDouble()),
+                QString::number(node_json["memory_footprint_of_ml_model"].toDouble()),
+                QString::number(node_json["max_hw_memory_footprint"].toDouble()));
             break;
         }
         case sustainml::NodeID::ID_ML_MODEL:
@@ -316,14 +317,14 @@ void Engine::print_results(
                 list_of_inputs += input.toString();
             }
             emit new_ml_model_node_output(
-                    task_id->problem_id(),
-                    task_id->iteration_id(),
-                    node_json["model"].toString(),
-                    node_json["model_path"].toString(),
-                    node_json["model_properties"].toString(),
-                    node_json["model_properties_path"].toString(),
-                    list_of_inputs,
-                    QString::number(node_json["target_latency"].toDouble()));
+                task_id.problem_id(),
+                task_id.iteration_id(),
+                node_json["model"].toString(),
+                node_json["model_path"].toString(),
+                node_json["model_properties"].toString(),
+                node_json["model_properties_path"].toString(),
+                list_of_inputs,
+                QString::number(node_json["target_latency"].toDouble()));
             break;
         }
         case sustainml::NodeID::ID_ML_MODEL_METADATA:
@@ -339,17 +340,17 @@ void Engine::print_results(
                 list_of_keywords += keyword.toString();
             }
             emit new_ml_model_metadata_node_output(
-                    task_id->problem_id(),
-                    task_id->iteration_id(),
-                    list_of_keywords,
-                    node_json["metadata"].toString());
+                task_id.problem_id(),
+                task_id.iteration_id(),
+                list_of_keywords,
+                node_json["metadata"].toString());
             break;
         }
         default:
             break;
     }
-    emit update_log(QString("Output received. ") + get_task_QString(task_id) + QString(",node ") +
-            get_name_from_node_id(id) + QString(":\n") + get_raw_output(json_obj));
+    emit update_log(QString("Output received. ") + Utils::task_string(task_id) + QString(",node ") +
+            Utils::node_name(id) + QString(":\n") + Utils::raw_output(json_obj));
 }
 
 QString Engine::get_raw_output(
