@@ -67,11 +67,6 @@ QObject* Engine::enable()
 
 Engine::~Engine()
 {
-    delete user_input_request_;
-    for (size_t i = 0; i < static_cast<size_t>(sustainml::NodeID::MAX); ++i)
-    {
-        delete node_responses_[i];
-    }
 }
 
 void Engine::launch_task(
@@ -479,6 +474,16 @@ QString Engine::get_name_from_node_id(
             return QString("ORCHESTRATOR");
         default:
             return QString("UNKNOWN");
+    }
+    // Remove REST requester from queue
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            requesters_.erase(it);
+            (*it)->deleteLater();
+            break;
+        }
     }
 }
 
