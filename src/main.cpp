@@ -21,7 +21,7 @@
 #include <QtQml>
 #include <QtQuick/QQuickView>
 
-#include <sustainml/Engine.h>
+#include <sustainml/Engine.hpp>
 
 int main(
         int argc,

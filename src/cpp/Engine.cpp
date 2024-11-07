@@ -28,7 +28,7 @@
 #include <QString>
 #include <QUrl>
 
-#include <sustainml/Engine.h>
+#include <sustainml/Engine.hpp>
 
 #include <sustainml_cpp/types/types.hpp>
 
