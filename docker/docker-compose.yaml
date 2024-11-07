@@ -1,6 +1,19 @@
 version: '3'
 
 services:
+  desktop:
+    image: sustainml:v0.1.0
+    container_name: desktop
+    privileged: true
+    environment:
+      - node=desktop
+      - DISPLAY=${DISPLAY}
+      - QT_QUICK_BACKEND=software
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    network_mode: host
+    ipc: host
+
   front_end:
     image: sustainml:v0.1.0
     container_name: front_end
