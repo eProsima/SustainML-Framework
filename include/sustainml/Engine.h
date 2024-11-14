@@ -98,48 +98,124 @@ public slots:
 
 signals:
 
+    /**
+     * @brief Signal to notify that a task has been sent
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     */
     void task_sent(
             const int& problem_id,
             const int& iteration_id);
 
+    /**
+     * @brief Signal to add new records in the log
+     *
+     * @param log log message content to append in the displayed log entry
+     */
     void update_log(
             const QString& log);
 
+    /**
+     * @brief Signal to update the status of the app requirements node
+     *
+     * @param status status of the app requirements node
+     */
     void update_app_requirements_node_status(
             const QString& status);
 
+    /**
+     * @brief Signal to update the status of the carbon footprint node
+     *
+     * @param status status of the carbon footprint node
+     */
     void update_carbon_footprint_node_status(
             const QString& status);
 
+    /**
+     * @brief Signal to update the status of the hardware constraints node
+     *
+     * @param status status of the hardware constraints node
+     */
     void update_hw_constraints_node_status(
             const QString& status);
 
+    /**
+     * @brief Signal to update the status of the hardware resources node
+     *
+     * @param status status of the hardware resources node
+     */
     void update_hw_resources_node_status(
             const QString& status);
 
+    /**
+     * @brief Signal to update the status of the ml model metadata node
+     *
+     * @param status status of the ml model metadata node
+     */
     void update_ml_model_metadata_node_status(
             const QString& status);
 
+    /**
+     * @brief Signal to update the status of the ml model node
+     *
+     * @param status status of the ml model node
+     */
     void update_ml_model_node_status(
             const QString& status);
 
+    /**
+     * @brief Signal to notify the new app requirements node output
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param app_requirements app requirements
+     */
     void new_app_requirements_node_output(
             const int& problem_id,
             const int& iteration_id,
             const QString& app_requirements);
 
+    /**
+     * @brief Signal to notify the new carbon footprint node output
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param hardware_required hardware required
+     * @param max_memory_footprint max memory footprint
+     */
     void new_hw_constraints_node_output(
             const int& problem_id,
             const int& iteration_id,
             const QString& hardware_required,
             const QString& max_memory_footprint);
 
+    /**
+     * @brief Signal to notify the new ml model metadata node output
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param metadata metadata
+     * @param keywords keywords
+     */
     void new_ml_model_metadata_node_output(
             const int& problem_id,
             const int& iteration_id,
             const QString& metadata,
             const QString& keywords);
 
+    /**
+     * @brief Signal to notify the new ml model node output
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param model model
+     * @param model_path model path
+     * @param properties properties
+     * @param properties_path properties path
+     * @param input_batch input batch
+     * @param target_latency target latency
+     */
     void new_ml_model_node_output(
             const int& problem_id,
             const int& iteration_id,
@@ -150,6 +226,16 @@ signals:
             const QString& input_batch,
             const QString& target_latency);
 
+    /** @brief Signal to notify the new hardware resources node output
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param hw_description hardware description
+     * @param power_consumption power consumption
+     * @param latency latency
+     * @param memory_footprint_of_ml_model memory footprint of ml model
+     * @param max_hw_memory_footprint max hardware memory footprint
+    */
     void new_hw_resources_node_output(
             const int& problem_id,
             const int& iteration_id,
@@ -159,6 +245,15 @@ signals:
             const QString& memory_footprint_of_ml_model,
             const QString& max_hw_memory_footprint);
 
+    /**
+     * @brief Signal to notify the new carbon footprint node output
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param carbon_footprint carbon footprint
+     * @param energy_consumption energy consumption
+     * @param carbon_intensity carbon intensity
+     */
     void new_carbon_footprint_node_output(
             const int& problem_id,
             const int& iteration_id,
