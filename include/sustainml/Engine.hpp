@@ -2,13 +2,13 @@
 //
 // This file is part of eProsima SustainML front-end.
 //
-// eProsima Fast DDS Monitor is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
+// eProsima SustainML Framework Front-end is free software: you can redistribute it
+// and/or modify it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// eProsima Fast DDS Monitor is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// eProsima SustainML Framework Front-end is distributed in the hope that it will be
+// useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
@@ -16,11 +16,11 @@
 // along with eProsima SustainML front-end. If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * @file Engine.h
+ * @file Engine.hpp
  */
 
-#ifndef _EPROSIMA_SUSTAINML_ENGINE_H
-#define _EPROSIMA_SUSTAINML_ENGINE_H
+#ifndef EPROSIMA_SUSTAINML_ENGINE_HPP
+#define EPROSIMA_SUSTAINML_ENGINE_HPP
 
 #include <memory>
 
@@ -29,10 +29,14 @@
 #include <QQueue>
 #include <QtCharts/QVXYModelMapper>
 #include <QThread>
+#include <QTimer>
 #include <QWaitCondition>
 
 #include <sustainml_cpp/core/Constants.hpp>
 #include <sustainml_cpp/types/types.hpp>
+
+
+#include <sustainml/REST_requester.hpp>
 
 class Engine : public QQmlApplicationEngine
 {
@@ -69,6 +73,8 @@ public slots:
      * @param optimize_carbon_footprint_manual optimize carbon footprint manually
      * @param previous_iteration previous iteration
      * @param desired_carbon_footprint desired carbon footprint
+     * @param max_memory_footprint maximum memory footprint
+     * @param hardware_required hardware required
      * @param geo_location_continent continent of the location
      * @param geo_location_region region of the location
      * @param extra_data extra data
@@ -85,6 +91,8 @@ public slots:
             bool optimize_carbon_footprint_manual,
             int previous_iteration,
             double desired_carbon_footprint,
+            int max_memory_footprint,
+            QString hardware_required,
             QString geo_location_continent,
             QString geo_location_region,
             QString extra_data);
@@ -96,10 +104,16 @@ public slots:
     void request_current_data (
             const bool& retrieve_all);
 
+    /**
+     * @brief public method to request status periodically
+     *
+     */
+    void request_status();
+
 signals:
 
     /**
-     * @brief Signal to notify that a task has been sent
+     * @brief Task sent signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
@@ -109,67 +123,67 @@ signals:
             const int& iteration_id);
 
     /**
-     * @brief Signal to add new records in the log
+     * @brief Update log signal with raw string, appending new records in the displayed log
      *
-     * @param log log message content to append in the displayed log entry
+     * @param log log string to display
      */
     void update_log(
             const QString& log);
 
     /**
-     * @brief Signal to update the status of the app requirements node
+     * @brief Update app requirements node status signal to display in the GUI
      *
-     * @param status status of the app requirements node
+     * @param status status string to display
      */
     void update_app_requirements_node_status(
             const QString& status);
 
     /**
-     * @brief Signal to update the status of the carbon footprint node
+     * @brief Update carbon footprint node status signal to display in the GUI
      *
-     * @param status status of the carbon footprint node
+     * @param status status string to display
      */
     void update_carbon_footprint_node_status(
             const QString& status);
 
     /**
-     * @brief Signal to update the status of the hardware constraints node
+     * @brief Update hardware constraints node status signal to display in the GUI
      *
-     * @param status status of the hardware constraints node
+     * @param status status string to display
      */
     void update_hw_constraints_node_status(
             const QString& status);
 
     /**
-     * @brief Signal to update the status of the hardware resources node
+     * @brief Update hardware resources node status signal to display in the GUI
      *
-     * @param status status of the hardware resources node
+     * @param status status string to display
      */
     void update_hw_resources_node_status(
             const QString& status);
 
     /**
-     * @brief Signal to update the status of the ml model metadata node
+     * @brief Update ML model metadata node status signal to display in the GUI
      *
-     * @param status status of the ml model metadata node
+     * @param status status string to display
      */
     void update_ml_model_metadata_node_status(
             const QString& status);
 
     /**
-     * @brief Signal to update the status of the ml model node
+     * @brief Update ML model node status signal to display in the GUI
      *
-     * @param status status of the ml model node
+     * @param status status string to display
      */
     void update_ml_model_node_status(
             const QString& status);
 
     /**
-     * @brief Signal to notify the new app requirements node output
+     * @brief New app requirements node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
-     * @param app_requirements app requirements
+     * @param app_requirements app requirements string to display
      */
     void new_app_requirements_node_output(
             const int& problem_id,
@@ -177,12 +191,12 @@ signals:
             const QString& app_requirements);
 
     /**
-     * @brief Signal to notify the new carbon footprint node output
+     * @brief New carbon footprint node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
-     * @param hardware_required hardware required
-     * @param max_memory_footprint max memory footprint
+     * @param hardware_required hardware required string to display
+     * @param max_memory_footprint maximum memory footprint string to display
      */
     void new_hw_constraints_node_output(
             const int& problem_id,
@@ -191,12 +205,12 @@ signals:
             const QString& max_memory_footprint);
 
     /**
-     * @brief Signal to notify the new ml model metadata node output
+     * @brief New carbon footprint node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
-     * @param metadata metadata
-     * @param keywords keywords
+     * @param metadata metadata string to display
+     * @param keywords keywords string to display
      */
     void new_ml_model_metadata_node_output(
             const int& problem_id,
@@ -205,16 +219,16 @@ signals:
             const QString& keywords);
 
     /**
-     * @brief Signal to notify the new ml model node output
+     * @brief New ML model node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
-     * @param model model
-     * @param model_path model path
-     * @param properties properties
-     * @param properties_path properties path
-     * @param input_batch input batch
-     * @param target_latency target latency
+     * @param model model string to display
+     * @param model_path model path string to display
+     * @param properties properties string to display
+     * @param properties_path properties path string to display
+     * @param input_batch input batch string to display
+     * @param target_latency target latency string to display
      */
     void new_ml_model_node_output(
             const int& problem_id,
@@ -226,16 +240,17 @@ signals:
             const QString& input_batch,
             const QString& target_latency);
 
-    /** @brief Signal to notify the new hardware resources node output
+    /**
+     * @brief New HW resources node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
-     * @param hw_description hardware description
-     * @param power_consumption power consumption
-     * @param latency latency
-     * @param memory_footprint_of_ml_model memory footprint of ml model
-     * @param max_hw_memory_footprint max hardware memory footprint
-    */
+     * @param hw_description hardware description string to display
+     * @param power_consumption power consumption string to display
+     * @param latency latency string to display
+     * @param memory_footprint_of_ml_model memory footprint of ML model string to display
+     * @param max_hw_memory_footprint maximum hardware memory footprint string to display
+     */
     void new_hw_resources_node_output(
             const int& problem_id,
             const int& iteration_id,
@@ -246,13 +261,13 @@ signals:
             const QString& max_hw_memory_footprint);
 
     /**
-     * @brief Signal to notify the new carbon footprint node output
+     * @brief New carbon footprint node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
-     * @param carbon_footprint carbon footprint
-     * @param energy_consumption energy consumption
-     * @param carbon_intensity carbon intensity
+     * @param carbon_footprint carbon footprint string to display
+     * @param energy_consumption energy consumption string to display
+     * @param carbon_intensity carbon intensity string to display
      */
     void new_carbon_footprint_node_output(
             const int& problem_id,
@@ -266,17 +281,7 @@ protected:
     //! Set to true if the engine is being enabled
     bool enabled_;
 
-private slots:
-
-    void user_input_response(
-            QNetworkReply* reply);
-
-    void node_response(
-            QNetworkReply* reply);
-
 private:
-
-    const QString server_url_ = "http://127.0.0.1:5001";
 
     /**
      * @brief private method to request results from the given node(s).
@@ -288,43 +293,48 @@ private:
             const types::TaskId& task_id,
             const sustainml::NodeID& node_id);
 
-    QString get_name_from_node_id(
-            const sustainml::NodeID& id);
-
-    sustainml::NodeID get_node_id_from_name(
-            const QString& name);
-
-    sustainml::NodeID get_node_from_json(
-            const QJsonObject& json);
-
-    types::TaskId* get_task_from_json(
-            const QJsonObject& json);
-
-    QString get_status_from_node(
-            const types::NodeStatus& status);
-
-    QString get_task_QString(
-            const types::TaskId* task_id);
-
-    QString get_raw_output(
-            const QJsonObject& json);
-
-    QString update_node_status(
-            const sustainml::NodeID& id,
-            const types::NodeStatus& status);
-
-    size_t split_string(
-            const std::string& string,
-            QJsonArray& string_array,
-            char delimeter);
-
+    /**
+     * @brief private method to display status from the given node(s).
+     *
+     * @param id node identifier
+     * @param json_obj JSON object with the node status
+     */
     void print_results(
             const sustainml::NodeID& id,
             const QJsonObject& json_obj);
 
-    QNetworkAccessManager* user_input_request_;
-    std::array<QNetworkAccessManager*, static_cast<size_t>(sustainml::NodeID::MAX)> node_responses_;
-    std::vector<types::TaskId*> received_task_ids;
+    std::vector<types::TaskId> received_task_ids;
+    std::vector<REST_requester*> requesters_;
+
+    // --------------- REST requester --------------- //
+    //! Send user input to the Framework pipeline
+    void user_input_request(
+            const QJsonObject& json_obj);
+
+    //! Manage sent user input request response
+    void user_input_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Request results to the Framework
+    void node_results_request(
+            const QJsonObject& json_obj);
+
+    //! Receive and propagate results to the GUI
+    void node_results_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Request node status to the Framework
+    void node_status_request(
+            const QJsonObject& json_obj);
+
+    //! Receive and propagate node status to the GUI
+    void node_status_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    QTimer* node_status_timer_;
 };
 
-#endif //_EPROSIMA_SUSTAINML_ENGINE_H
+#endif //EPROSIMA_SUSTAINML_ENGINE_HPP
