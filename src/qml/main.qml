@@ -371,14 +371,55 @@ Window {
          }
     }
 
-    Button
+    Rectangle
     {
+        id: buttons_menu_box
+        color: "transparent"
+
         x: 1000
         y: 120
-        visible: false
-        text: "Go results screen, bottom-right"
-        onClicked: {
-            main_window.load_screen(ScreenManager.Screens.Results)
+        width: 100
+        height: 600
+
+        Button
+        {
+            id: button_menu_1
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "1"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen1TODOrename)
+            }
+        }
+        Button
+        {
+            id: button_menu_2
+            anchors.top: button_menu_1.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "2"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
+            }
+        }
+        Button
+        {
+            id: button_menu_3
+            anchors.top: button_menu_2.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "3"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen3TODOrename)
+            }
+        }
+        Button
+        {
+            id: button_menu_4
+            anchors.top: button_menu_3.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "4"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen4TODOrename)
+            }
         }
     }
 
