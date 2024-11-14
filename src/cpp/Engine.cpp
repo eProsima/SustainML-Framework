@@ -66,6 +66,11 @@ QObject* Engine::enable()
 
 Engine::~Engine()
 {
+    delete user_input_request_;
+    for (size_t i = 0; i < static_cast<size_t>(sustainml::NodeID::MAX); ++i)
+    {
+        delete node_responses_[i];
+    }
 }
 
 void Engine::launch_task(
