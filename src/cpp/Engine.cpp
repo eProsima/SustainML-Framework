@@ -159,142 +159,197 @@ void Engine::launch_task(
 
     // Launch user input request
     user_input_request_->post(ui_request, json_data_bytes);
+}
 
-    // Prepare node results requests
+void Engine::user_input_response(
+        QNetworkReply* reply_)
+{
+    QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
+    QJsonObject json_obj = json_doc.object();
+    if (!json_obj.empty())
+    {
+        types::TaskId* task_id = get_task_from_json(json_obj);
+        if (nullptr == task_id)
+        {
+            emit update_log(QString("Error: task id is nullptr"));
+        }
+        else
+        {
+            received_task_ids.push_back(task_id);
+            emit task_sent(static_cast<int>(task_id->problem_id()), static_cast<int>(task_id->iteration_id()));
+        }
+        // Request results for all nodes, last task id
+        request_results(*task_id, sustainml::NodeID::MAX);
+        emit update_log(QString("User input send for ") + get_task_QString(task_id));
+    }
+    reply_->deleteLater();
+}
+
+void Engine::node_response(
+        QNetworkReply* reply_)
+{
+    QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
+    QJsonObject json_obj = json_doc.object();
+    if (!json_obj.empty())
+    {
+        // specialized method to print results
+        print_results(get_node_from_json(json_obj), json_obj);
+    }
+    reply_->deleteLater();
+}
+
+void Engine::request_current_data(
+        const bool& retrieve_all)
+{
+    void * data = nullptr;
+    int iterator_start = received_task_ids.size() == 0 ? 0 : received_task_ids.size() - 1;
+    if (retrieve_all)
+    {
+        iterator_start = 0;
+    }
+
+    for (int i = iterator_start; i < received_task_ids.size(); i++)
+    {
+        // Request results for all nodes, for the given task ids
+        request_results(*(received_task_ids.at(i)), sustainml::NodeID::MAX);
+    }
+}
+
+void Engine::request_results(
+        const types::TaskId& task_id,
+        const sustainml::NodeID& node_id)
+{
+    // Node results requests
     QString node_query_url_ = server_url_ + "/results";
     QUrl node_url(node_query_url_.toStdString().c_str());
     std::array<QNetworkRequest, static_cast<size_t>(sustainml::NodeID::MAX)> requests;
     std::array<QByteArray, static_cast<size_t>(sustainml::NodeID::MAX)> node_raw_data;
-    for (size_t i = 0; i < static_cast<size_t>(sustainml::NodeID::MAX); ++i)
-    {
-        QJsonObject node_json_data;
-        node_json_data["node_id"] = static_cast<int>(i);
-        QJsonDocument node_doc(node_json_data);
-        node_raw_data[i] = node_doc.toJson();
-        requests[i].setUrl(node_url);
-        requests[i].setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    QJsonObject task_json;
+    task_json["problem_id"] = static_cast<int>(task_id.problem_id());
+    task_json["iteration_id"] = static_cast<int>(task_id.iteration_id());
 
-        // Launch node results requests
-        node_responses_[i]->post(requests[i], node_raw_data[i]);
+    // Determine the iteration to request
+    size_t initial = 0;
+    size_t final = static_cast<size_t>(sustainml::NodeID::MAX);
+    // Request all node data
+    if (sustainml::NodeID::MAX != node_id)
+    {
+        initial = static_cast<size_t>(node_id);
+        final = initial + 1;
+    }
+    // Launch node result requests
+    if (sustainml::NodeID::UNKNOWN != node_id)
+    {
+        for (size_t i = initial; i < final; ++i)
+        {
+            QJsonObject node_json_data;
+            node_json_data["node_id"] = static_cast<int>(i);
+            node_json_data["task_id"] = task_json;
+            QJsonDocument node_doc(node_json_data);
+            node_raw_data[i] = node_doc.toJson();
+            requests[i].setUrl(node_url);
+            requests[i].setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+            // Launch node results requests
+            node_responses_[i]->post(requests[i], node_raw_data[i]);
+        }
     }
 }
 
-QString Engine::get_name_from_node_id(
-        const sustainml::NodeID& id)
+void Engine::print_results(
+        const sustainml::NodeID& id,
+        const QJsonObject& json_obj)
 {
+    QJsonObject node_json = json_obj[get_name_from_node_id(id)].toObject();
+    types::TaskId* task_id = get_task_from_json(node_json);
     switch (id)
     {
         case sustainml::NodeID::ID_APP_REQUIREMENTS:
-            return QString("APP_REQUIREMENTS");
+        {
+            emit new_app_requirements_node_output(
+                    task_id->problem_id(),
+                    task_id->iteration_id(),
+                    node_json["app_requirements"].toString());
+            break;
+        }
         case sustainml::NodeID::ID_CARBON_FOOTPRINT:
-            return QString("CARBON_FOOTPRINT");
+        {
+            emit new_carbon_footprint_node_output(
+                    task_id->problem_id(),
+                    task_id->iteration_id(),
+                    QString::number(node_json["carbon_footprint"].toDouble()),
+                    QString::number(node_json["energy_consumption"].toDouble()),
+                    QString::number(node_json["carbon_intensity"].toDouble()));
+            break;
+        }
         case sustainml::NodeID::ID_HW_CONSTRAINTS:
-            return QString("HW_CONSTRAINTS");
+        {
+            emit new_hw_constraints_node_output(
+                    task_id->problem_id(),
+                    task_id->iteration_id(),
+                    node_json["hardware_required"].toString(),
+                    QString::number(node_json["max_memory_footprint"].toInt()));
+            break;
+        }
         case sustainml::NodeID::ID_HW_RESOURCES:
-            return QString("HW_RESOURCES");
+        {
+            emit new_hw_resources_node_output(
+                    task_id->problem_id(),
+                    task_id->iteration_id(),
+                    node_json["hw_description"].toString(),
+                    QString::number(node_json["power_consumption"].toDouble()),
+                    QString::number(node_json["latency"].toDouble()),
+                    QString::number(node_json["memory_footprint_of_ml_model"].toDouble()),
+                    QString::number(node_json["max_hw_memory_footprint"].toDouble()));
+            break;
+        }
         case sustainml::NodeID::ID_ML_MODEL:
-            return QString("ML_MODEL");
+        {
+            QJsonArray input_batch = node_json["input_batch"].toArray();
+            QString list_of_inputs = "";
+            for (QJsonValue input : input_batch)
+            {
+                if (!list_of_inputs.isEmpty())
+                {
+                    list_of_inputs += QString(", ");
+                }
+                list_of_inputs += input.toString();
+            }
+            emit new_ml_model_node_output(
+                    task_id->problem_id(),
+                    task_id->iteration_id(),
+                    node_json["model"].toString(),
+                    node_json["model_path"].toString(),
+                    node_json["model_properties"].toString(),
+                    node_json["model_properties_path"].toString(),
+                    list_of_inputs,
+                    QString::number(node_json["target_latency"].toDouble()));
+            break;
+        }
         case sustainml::NodeID::ID_ML_MODEL_METADATA:
-            return QString("ML_MODEL_METADATA");
-        case sustainml::NodeID::ID_ORCHESTRATOR:
-            return QString("ORCHESTRATOR");
+        {
+            QJsonArray keywords = node_json["keywords"].toArray();
+            QString list_of_keywords = "";
+            for (QJsonValue keyword : keywords)
+            {
+                if (!list_of_keywords.isEmpty())
+                {
+                    list_of_keywords += QString(", ");
+                }
+                list_of_keywords += keyword.toString();
+            }
+            emit new_ml_model_metadata_node_output(
+                    task_id->problem_id(),
+                    task_id->iteration_id(),
+                    list_of_keywords,
+                    node_json["metadata"].toString());
+            break;
+        }
         default:
-            return QString("UNKNOWN");
+            break;
     }
-}
-
-sustainml::NodeID Engine::get_node_id_from_name(
-        const QString& name)
-{
-    if (name == QString("APP_REQUIREMENTS"))
-    {
-        return sustainml::NodeID::ID_APP_REQUIREMENTS;
-    }
-    else if (name == QString("CARBON_FOOTPRINT"))
-    {
-        return sustainml::NodeID::ID_CARBON_FOOTPRINT;
-    }
-    else if (name == QString("HW_CONSTRAINTS"))
-    {
-        return sustainml::NodeID::ID_HW_CONSTRAINTS;
-    }
-    else if (name == QString("HW_RESOURCES"))
-    {
-        return sustainml::NodeID::ID_HW_RESOURCES;
-    }
-    else if (name == QString("ML_MODEL"))
-    {
-        return sustainml::NodeID::ID_ML_MODEL;
-    }
-    else if (name == QString("ML_MODEL_METADATA"))
-    {
-        return sustainml::NodeID::ID_ML_MODEL_METADATA;
-    }
-    else if (name == QString("ORCHESTRATOR"))
-    {
-        return sustainml::NodeID::ID_ORCHESTRATOR;
-    }
-    else
-    {
-        return sustainml::NodeID::UNKNOWN;
-    }
-}
-
-sustainml::NodeID Engine::get_node_from_json(
-        const QJsonObject& json)
-{
-
-    if (json.keys().size() == 1)
-    {
-        return get_node_id_from_name(json.keys()[0]);
-    }
-    else
-    {
-        return sustainml::NodeID::UNKNOWN;
-    }
-}
-
-QString Engine::get_task_from_json(
-        const QJsonObject& json)
-{
-    if (json.contains("task_id"))
-    {
-        QJsonObject task_id = json["task_id"].toObject();
-        return get_task_QString(types::TaskId(task_id["problem_id"].toInt(), task_id["iteration_id"].toInt()));
-    }
-    else
-    {
-        return QString("UNKNOWN");
-    }
-}
-
-QString Engine::get_status_from_node(
-        const types::NodeStatus& status)
-{
-    switch (status.node_status())
-    {
-        case static_cast<Status>(0): // Status::NODE_INACTIVE:
-            return QString("INACTIVE");
-        case static_cast<Status>(1): // Status::NODE_ERROR:
-            return QString("ERROR");
-        case static_cast<Status>(2): // Status::NODE_IDLE:
-            return QString("IDLE");
-        case static_cast<Status>(3): // Status::NODE_INITIALIZING:
-            return QString("INITIALIZING");
-        case static_cast<Status>(4): // Status::NODE_RUNNING:
-            return QString("RUNNING");
-        case static_cast<Status>(5): // Status::NODE_TERMINATING:
-            return QString("TERMINATING");
-        default:
-            return QString("UNKNOWN");
-    }
-}
-
-QString Engine::get_task_QString(
-        const types::TaskId& task_id)
-{
-    return QString("Task {") + QString::number(task_id.problem_id()) + QString(",") +
-           QString::number(task_id.iteration_id()) + QString("}");
+    emit update_log(QString("Output received. ") + get_task_QString(task_id) + QString(",node ") +
+            get_name_from_node_id(id) + QString(":\n") + get_raw_output(json_obj));
 }
 
 QString Engine::get_raw_output(
@@ -400,6 +455,136 @@ QString Engine::update_node_status(
     return status_value;
 }
 
+// ---------------------- Helper methods ----------------------
+QString Engine::get_name_from_node_id(
+        const sustainml::NodeID& id)
+{
+    switch (id)
+    {
+        case sustainml::NodeID::ID_APP_REQUIREMENTS:
+            return QString("APP_REQUIREMENTS");
+        case sustainml::NodeID::ID_CARBON_FOOTPRINT:
+            return QString("CARBON_FOOTPRINT");
+        case sustainml::NodeID::ID_HW_CONSTRAINTS:
+            return QString("HW_CONSTRAINTS");
+        case sustainml::NodeID::ID_HW_RESOURCES:
+            return QString("HW_RESOURCES");
+        case sustainml::NodeID::ID_ML_MODEL:
+            return QString("ML_MODEL");
+        case sustainml::NodeID::ID_ML_MODEL_METADATA:
+            return QString("ML_MODEL_METADATA");
+        case sustainml::NodeID::ID_ORCHESTRATOR:
+            return QString("ORCHESTRATOR");
+        default:
+            return QString("UNKNOWN");
+    }
+}
+
+sustainml::NodeID Engine::get_node_id_from_name(
+        const QString& name)
+{
+    if (name == QString("APP_REQUIREMENTS"))
+    {
+        return sustainml::NodeID::ID_APP_REQUIREMENTS;
+    }
+    else if (name == QString("CARBON_FOOTPRINT"))
+    {
+        return sustainml::NodeID::ID_CARBON_FOOTPRINT;
+    }
+    else if (name == QString("HW_CONSTRAINTS"))
+    {
+        return sustainml::NodeID::ID_HW_CONSTRAINTS;
+    }
+    else if (name == QString("HW_RESOURCES"))
+    {
+        return sustainml::NodeID::ID_HW_RESOURCES;
+    }
+    else if (name == QString("ML_MODEL"))
+    {
+        return sustainml::NodeID::ID_ML_MODEL;
+    }
+    else if (name == QString("ML_MODEL_METADATA"))
+    {
+        return sustainml::NodeID::ID_ML_MODEL_METADATA;
+    }
+    else if (name == QString("ORCHESTRATOR"))
+    {
+        return sustainml::NodeID::ID_ORCHESTRATOR;
+    }
+    else
+    {
+        return sustainml::NodeID::UNKNOWN;
+    }
+}
+
+sustainml::NodeID Engine::get_node_from_json(
+        const QJsonObject& json)
+{
+
+    if (json.keys().size() == 1)
+    {
+        return get_node_id_from_name(json.keys()[0]);
+    }
+    else
+    {
+        return sustainml::NodeID::UNKNOWN;
+    }
+}
+
+types::TaskId* Engine::get_task_from_json(
+        const QJsonObject& json)
+{
+    if (json.contains("task_id"))
+    {
+        QJsonObject task_id = json["task_id"].toObject();
+        return new types::TaskId(task_id["problem_id"].toInt(), task_id["iteration_id"].toInt());
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
+QString Engine::get_status_from_node(
+        const types::NodeStatus& status)
+{
+    switch (status.node_status())
+    {
+        case static_cast<Status>(0): // Status::NODE_INACTIVE:
+            return QString("INACTIVE");
+        case static_cast<Status>(1): // Status::NODE_ERROR:
+            return QString("ERROR");
+        case static_cast<Status>(2): // Status::NODE_IDLE:
+            return QString("IDLE");
+        case static_cast<Status>(3): // Status::NODE_INITIALIZING:
+            return QString("INITIALIZING");
+        case static_cast<Status>(4): // Status::NODE_RUNNING:
+            return QString("RUNNING");
+        case static_cast<Status>(5): // Status::NODE_TERMINATING:
+            return QString("TERMINATING");
+        default:
+            return QString("UNKNOWN");
+    }
+}
+
+QString Engine::get_task_QString(
+        const types::TaskId* task_id)
+{
+    if (nullptr == task_id)
+    {
+        return QString("Task {nullptr}");
+    }
+    return QString("Task {") + QString::number(task_id->problem_id()) + QString(",") +
+           QString::number(task_id->iteration_id()) + QString("}");
+    // TODO define which task representation is the correct one
+    //if (nullptr == task_id)
+    //{
+    //    return QString("Problem ID: nullptr, Iteration ID: nullptr");
+    //}
+    //return QString("Problem ID: ") + QString::number(task_id->problem_id()) + QString(", Iteration ID: ") +
+    //        QString::number(task_id->iteration_id());
+}
+
 size_t Engine::split_string(
         const std::string& string,
         QJsonArray& string_array,
@@ -419,31 +604,4 @@ size_t Engine::split_string(
             string.size()) - initial_position + 1).c_str());
 
     return string_array.size();
-}
-
-void Engine::user_input_response(
-        QNetworkReply* reply_)
-{
-    QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
-    QJsonObject json_obj = json_doc.object();
-    if (!json_obj.empty())
-    {
-        emit update_log(QString("User input send for ") + get_task_from_json(json_obj));
-    }
-    reply_->deleteLater();
-}
-
-void Engine::node_response(
-        QNetworkReply* reply_)
-{
-    QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
-    QJsonObject json_obj = json_doc.object();
-
-    if (!json_obj.empty())
-    {
-        QString name = get_name_from_node_id(get_node_from_json(json_obj));
-        emit update_log(QString("Output received. ") + get_task_from_json(json_obj[name].toObject()) +
-                (",\tnode ") + name + ":\n" + get_raw_output(json_obj));
-    }
-    reply_->deleteLater();
 }
