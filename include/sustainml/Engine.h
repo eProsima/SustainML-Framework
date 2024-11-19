@@ -24,18 +24,17 @@
 
 #include <memory>
 
+#include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
 #include <QQueue>
 #include <QtCharts/QVXYModelMapper>
 #include <QThread>
 #include <QWaitCondition>
 
-#include <sustainml_cpp/orchestrator/OrchestratorNode.hpp>
-#include <sustainml_cpp/types/types.h>
+#include <sustainml_cpp/core/Constants.hpp>
+#include <sustainml_cpp/types/types.hpp>
 
-class Engine : public QQmlApplicationEngine,
-    public sustainml::orchestrator::OrchestratorNodeHandle,
-    public std::enable_shared_from_this<Engine>
+class Engine : public QQmlApplicationEngine
 {
     Q_OBJECT
 
@@ -53,25 +52,6 @@ public:
      * @return Engine pointer
      */
     QObject* enable();
-
-    /**
-     * @brief New node output callback
-     * @param   id node identifier
-     * @param data data received
-     */
-    void on_new_node_output(
-            const sustainml::NodeID& id,
-            void* data) override;
-
-    /**
-     * @brief Node status change callback
-     *
-     * @param id node identifier
-     * @param status new status
-     */
-    void on_node_status_change(
-            const sustainml::NodeID& id,
-            const types::NodeStatus& status) override;
 
 public slots:
 
@@ -137,14 +117,29 @@ protected:
     //! Set to true if the engine is being enabled
     bool enabled_;
 
+private slots:
+
+    void user_input_response(
+            QNetworkReply* reply);
+
+    void node_response(
+            QNetworkReply* reply);
+
 private:
+
+    const QString server_url_ = "http://127.0.0.1:5001";
 
     QString get_name_from_node_id(
             const sustainml::NodeID& id);
 
-    QString get_task_from_data(
-            const sustainml::NodeID& id,
-            void* data);
+    sustainml::NodeID get_node_id_from_name(
+            const QString& name);
+
+    sustainml::NodeID get_node_from_json(
+            const QJsonObject& json);
+
+    QString get_task_from_json(
+            const QJsonObject& json);
 
     QString get_status_from_node(
             const types::NodeStatus& status);
@@ -153,8 +148,7 @@ private:
             const types::TaskId& task_id);
 
     QString get_raw_output(
-            const sustainml::NodeID& id,
-            void* data);
+            const QJsonObject& json);
 
     QString update_node_status(
             const sustainml::NodeID& id,
@@ -162,11 +156,11 @@ private:
 
     size_t split_string(
             const std::string& string,
-            std::vector<std::string>& string_set,
+            QJsonArray& string_array,
             char delimeter);
 
-
-    sustainml::orchestrator::OrchestratorNode* orchestrator;
+    QNetworkAccessManager* user_input_request_;
+    std::array<QNetworkAccessManager*, static_cast<size_t>(sustainml::NodeID::MAX)> node_responses_;
 };
 
 #endif //_EPROSIMA_SUSTAINML_ENGINE_H
