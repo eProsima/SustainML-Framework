@@ -104,6 +104,27 @@ Window {
             antialiasing: true
         }
 
+        // Background shape image #2
+        Image
+        {
+            id: background_2
+            source: ScreenManager.background_2_shape
+
+            // set image size two times the app size
+            width:  2 * Settings.app_width
+            height: 2 * Settings.app_height
+
+            // Initial position hidden
+            x: 2 * Settings.app_width
+            y: 2 * Settings.app_height
+
+            // Image smoothness
+            sourceSize.width: Settings.app_width
+            sourceSize.height: Settings.app_height
+            smooth: true
+            antialiasing: true
+        }
+
         // X axis movement motion animation
         NumberAnimation
         {
@@ -119,6 +140,26 @@ Window {
         {
             id: background_y_animation
             target: background
+            properties: "y"
+            duration: Settings.background_movement_anim_duration
+            to: Settings.app_height
+        }
+
+        // X axis movement motion animation #2
+        NumberAnimation
+        {
+            id: background_2_x_animation
+            target: background_2
+            properties: "x"
+            duration: Settings.background_movement_anim_duration
+            to: Settings.app_width
+        }
+
+        // Y axis movement motion animation #2
+        NumberAnimation
+        {
+            id: background_2_y_animation
+            target: background_2
             properties: "y"
             duration: Settings.background_movement_anim_duration
             to: Settings.app_height
@@ -232,6 +273,75 @@ Window {
             }
         }
 
+        // New empty screen 1 TO BE USED
+        Component
+        {
+            id: new_screen_1_todo_rename
+
+            Rectangle
+            {
+                color: "transparent"
+                SmlText
+                {
+                    text_value: "this is a new screen #1"
+                    text_kind: SmlText.TextKind.Body
+
+                    anchors.centerIn: parent
+                }
+            }
+        }
+        // New empty screen 2 TO BE USED
+        Component
+        {
+            id: new_screen_2_todo_rename
+
+            Rectangle
+            {
+                color: "transparent"
+                SmlText
+                {
+                    text_value: "this is a new screen #2"
+                    text_kind: SmlText.TextKind.Body
+
+                    anchors.centerIn: parent
+                }
+            }
+        }
+        // New empty screen 3 TO BE USED
+        Component
+        {
+            id: new_screen_3_todo_rename
+
+            Rectangle
+            {
+                color: "transparent"
+                SmlText
+                {
+                    text_value: "this is a new screen #3"
+                    text_kind: SmlText.TextKind.Body
+
+                    anchors.centerIn: parent
+                }
+            }
+        }
+        // New empty screen 4 TO BE USED
+        Component
+        {
+            id: new_screen_4_todo_rename
+
+            Rectangle
+            {
+                color: "transparent"
+                SmlText
+                {
+                    text_value: "this is a new screen #4"
+                    text_kind: SmlText.TextKind.Body
+
+                    anchors.centerIn: parent
+                }
+            }
+        }
+
         // Transition
         delegate: StackViewDelegate {
             function transitionFinished(properties)
@@ -261,14 +371,55 @@ Window {
          }
     }
 
-    Button
+    Rectangle
     {
+        id: buttons_menu_box
+        color: "transparent"
+
         x: 1000
         y: 120
-        visible: false
-        text: "Go results screen, bottom-right"
-        onClicked: {
-            main_window.load_screen(ScreenManager.Screens.Results)
+        width: 100
+        height: 600
+
+        Button
+        {
+            id: button_menu_1
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "1"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen1TODOrename)
+            }
+        }
+        Button
+        {
+            id: button_menu_2
+            anchors.top: button_menu_1.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "2"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
+            }
+        }
+        Button
+        {
+            id: button_menu_3
+            anchors.top: button_menu_2.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "3"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen3TODOrename)
+            }
+        }
+        Button
+        {
+            id: button_menu_4
+            anchors.top: button_menu_3.bottom
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "4"
+            onClicked: {
+                main_window.load_screen(ScreenManager.Screens.NewScreen4TODOrename)
+            }
         }
     }
 
@@ -344,6 +495,19 @@ Window {
                 case ScreenManager.Screens.Log:
                     screen_to_be_loaded = log_screen
                     break
+                // Add new screens here
+                case ScreenManager.Screens.NewScreen1TODOrename:
+                    screen_to_be_loaded = new_screen_1_todo_rename
+                    break
+                case ScreenManager.Screens.NewScreen2TODOrename:
+                    screen_to_be_loaded = new_screen_2_todo_rename
+                    break
+                case ScreenManager.Screens.NewScreen3TODOrename:
+                    screen_to_be_loaded = new_screen_3_todo_rename
+                    break
+                case ScreenManager.Screens.NewScreen4TODOrename:
+                    screen_to_be_loaded = new_screen_4_todo_rename
+                    break
                 default:
                 case ScreenManager.Screens.Home:
                     screen_to_be_loaded = home_screen
@@ -356,6 +520,8 @@ Window {
             // Set background animation
             background_x_animation.to = position_to_be_moved[0]
             background_y_animation.to = position_to_be_moved[1]
+            background_2_x_animation.to = position_to_be_moved[2]
+            background_2_y_animation.to = position_to_be_moved[3]
 
             // update current status variables
             ScreenManager.current_screen = screen
@@ -364,31 +530,66 @@ Window {
             stack_view.replace({item: screen_to_be_loaded, replace: true, destroyOnPop: true})
             background_x_animation.start()
             background_y_animation.start()
+            background_2_x_animation.start()
+            background_2_y_animation.start()
         }
     }
 
     // Detemine location of each screen
     function get_movement (screen)
     {
-        var movement = [0,0]
+        var movement = [0,0,0,0]
         switch (screen)
         {
             case ScreenManager.Screens.Definition:
                 movement[0] = Settings.background_x_final
                 movement[1] = Settings.background_y_initial
+                movement[2] = Settings.app_width * 5
+                movement[3] = Settings.app_height * 5
                 break
             case ScreenManager.Screens.Results:
                 movement[0] = Settings.background_x_final
                 movement[1] = Settings.background_y_final
+                movement[2] = Settings.app_width * 5
+                movement[3] = Settings.app_height * 5
                 break
             case ScreenManager.Screens.Log:
                 movement[0] = Settings.background_x_initial
                 movement[1] = Settings.background_y_final
+                movement[2] = Settings.app_width * 5
+                movement[3] = Settings.app_height * 5
+                break
+            // Add new screens here
+            case ScreenManager.Screens.NewScreen1TODOrename:
+                movement[0] = Settings.app_width * 5
+                movement[1] = Settings.app_height * 5
+                movement[2] = Settings.background_2_x_initial
+                movement[3] = Settings.background_2_y_initial
+                break
+            case ScreenManager.Screens.NewScreen2TODOrename:
+                movement[0] = Settings.app_width * 5
+                movement[1] = Settings.app_height * 5
+                movement[2] = Settings.background_2_x_initial
+                movement[3] = Settings.background_2_y_final
+                break
+            case ScreenManager.Screens.NewScreen3TODOrename:
+                movement[0] = Settings.app_width * 5
+                movement[1] = Settings.app_height * 5
+                movement[2] = Settings.background_2_x_final
+                movement[3] = Settings.background_2_y_initial
+                break
+            case ScreenManager.Screens.NewScreen4TODOrename:
+                movement[0] = Settings.app_width * 5
+                movement[1] = Settings.app_height * 5
+                movement[2] = Settings.background_2_x_final
+                movement[3] = Settings.background_2_y_final
                 break
             default:
             case ScreenManager.Screens.Home:
                 movement[0] = Settings.background_x_initial
                 movement[1] = Settings.background_y_initial
+                movement[2] = Settings.app_width * 5
+                movement[3] = Settings.app_height * 5
                 break
         }
         return movement
