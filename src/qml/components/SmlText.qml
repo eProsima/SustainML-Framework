@@ -51,7 +51,7 @@ TextEdit
     padding: sustainml_custom_text.padding
     rightPadding: sustainml_custom_text.rightPadding
     topPadding: sustainml_custom_text.topPadding
-    wrapMode: Text.WordWrap
+    wrapMode: TextEdit.WordWrap
     readOnly: true
     selectByMouse: true
     selectByKeyboard: true

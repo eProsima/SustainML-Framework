@@ -24,6 +24,8 @@ Window {
     property string hw_resources_node_last_status: "INACTIVE"
     property string ml_model_node_last_status: "INACTIVE"
     property string ml_model_metadata_node_last_status: "INACTIVE"
+    property int current_problem_id: -1
+    property int current_iteration_id: -1
 
     // Main view properties
     width:  Settings.app_width
@@ -34,6 +36,13 @@ Window {
     Connections
     {
         target: engine
+        function onTask_sent(problem_id, iteration_id)
+        {
+            main_window.current_problem_id = problem_id
+            main_window.current_iteration_id = iteration_id
+            main_window.load_screen(ScreenManager.Screens.Results)
+        }
+
         function onUpdate_log(new_log)
         {
             main_window.log = main_window.log + "\n" + new_log
@@ -172,7 +181,6 @@ Window {
                             geo_location_continent,
                             geo_location_region,
                             extra_data)
-                    main_window.load_screen(ScreenManager.Screens.Log)
                 }
             }
         }
@@ -182,31 +190,16 @@ Window {
         {
             id: results_screen
 
-            Rectangle{
-                color: "transparent"
-
-                SmlText {
-                    text_value: "this is the results screen, where results are displayed to the user."
-                    text_kind: SmlText.TextKind.Body
-
-                    x: 50
-                    y: 90
-                }
-
-                SmlText {
-                    text_value: "CO2 footprint"
-                    text_kind: SmlText.TextKind.Header_2
-
-                    x: 50
-                    y: 150
-                }
-
-                SmlText {
-                    text_value: "180 g"
-                    text_kind: SmlText.TextKind.Body
-
-                    x: 50
-                    y: 200
+            SmlResultsScreen
+            {
+                id: results_screen_component
+                current_problem_id: -1
+                onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
+                onGo_back: main_window.load_screen(ScreenManager.Screens.Definition) // todo update this
+                onResults_screen_loaded:
+                {
+                    results_screen_component.current_problem_id = main_window.current_problem_id
+                    engine.request_current_data(true)
                 }
             }
         }
@@ -259,17 +252,6 @@ Window {
                 }
             }
          }
-    }
-
-    Button
-    {
-        x: 1000
-        y: 120
-        visible: false
-        text: "Go results screen, bottom-right"
-        onClicked: {
-            main_window.load_screen(ScreenManager.Screens.Results)
-        }
     }
 
     SmlIcon

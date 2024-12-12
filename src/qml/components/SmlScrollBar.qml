@@ -12,7 +12,8 @@ ScrollBar {
 
     enum ScrollBarLayout {
         Vertical,
-        Horizontal
+        Horizontal,
+        Both
     }
 
     // External properties
@@ -26,20 +27,50 @@ ScrollBar {
 
     // Content draggable item
     contentItem: Rectangle {
-        implicitWidth: sustainml_custom_scrollbar.drag_width
         radius: sustainml_custom_scrollbar.rounded_radius
         color: ScreenManager.night_mode
                 ? sustainml_custom_scrollbar.drag_nightmode_color
                 : sustainml_custom_scrollbar.drag_color
+
+        Binding {
+            target: parent
+            property: "implicitWidth"
+            value: sustainml_custom_scrollbar.drag_width
+            when: sustainml_custom_scrollbar.layout !== SmlScrollBar.ScrollBarLayout.Horizontal
+        }
+
+        Binding {
+            target: parent
+            property: "implicitHeight"
+            value: sustainml_custom_scrollbar.drag_width
+            when: sustainml_custom_scrollbar.layout !== SmlScrollBar.ScrollBarLayout.Vertical
+        }
     }
 
     // Background item
     background: Rectangle {
-        implicitWidth: sustainml_custom_scrollbar.drag_width
-        radius: sustainml_custom_scrollbar.rounded_radius
+        implicitWidth: sustainml_custom_scrollbar.layout === SmlScrollBar.ScrollBarLayout.Horizontal
+                ? parent.width : sustainml_custom_scrollbar.drag_width
+        implicitHeight: sustainml_custom_scrollbar.layout === SmlScrollBar.ScrollBarLayout.Vertical
+                ? parent.height : sustainml_custom_scrollbar.drag_width
+        //radius: sustainml_custom_scrollbar.rounded_radius
         color: ScreenManager.night_mode
                 ? sustainml_custom_scrollbar.background_nightmode_color
                 : sustainml_custom_scrollbar.background_color
+
+        Binding {
+            target: parent
+            property: "implicitWidth"
+            value: sustainml_custom_scrollbar.drag_width
+            when: sustainml_custom_scrollbar.layout !== SmlScrollBar.ScrollBarLayout.Horizontal
+        }
+
+        Binding {
+            target: parent
+            property: "implicitHeight"
+            value: sustainml_custom_scrollbar.drag_width
+            when: sustainml_custom_scrollbar.layout !== SmlScrollBar.ScrollBarLayout.Vertical
+        }
     }
 
     MouseArea {
