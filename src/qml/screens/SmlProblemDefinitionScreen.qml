@@ -19,7 +19,7 @@ Item
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_width: 1000
     readonly property int __scroll_view_height: 600
-    readonly property int __scroll_view_content_height: 1680
+    readonly property int __scroll_view_content_height: 1880
     readonly property int __input_height: 80
     readonly property int __input_height_big: 200
     readonly property int __input_width: 900
@@ -38,6 +38,8 @@ Item
     property bool __optimize_carbon_footprint_manual: false
     property int __previous_iteration: 0
     property double __desired_carbon_footprint: 0.0
+    property int __max_memory_footprint: 0
+    property string __hardware_required: ""
     property string __geo_location_continent: ""
     property string __geo_location_region: ""
     property string __extra_data: ""
@@ -58,6 +60,8 @@ Item
         double desired_carbon_footprint,
         string geo_location_continent,
         string geo_location_region,
+        string max_memory_footprint,
+        string hardware_required,
         string extra_data
     );
 
@@ -561,7 +565,7 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width_split
             height: root.__input_height
-            KeyNavigation.tab: geo_location_continent_input
+            KeyNavigation.tab: max_mem_footprint_input
             anchors
             {
                 top: desired_carbon_footprint_header.bottom
@@ -581,6 +585,102 @@ Item
             }
         }
 
+        // Max mem footprint
+        SmlText
+        {
+            id: max_mem_footprint_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Max memory footprint"
+            anchors
+            {
+                top: previous_iteration_input.bottom
+                topMargin: Settings.spacing_normal
+                left: parent.left
+            }
+        }
+        SmlInput
+        {
+            id: max_mem_footprint_input
+            placeholder_text: "Set maximum memory footprint allowed"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_split
+            height: root.__input_height
+            KeyNavigation.tab: required_hardware_input
+            anchors
+            {
+                top: max_mem_footprint_header.bottom
+                topMargin: Settings.spacing_small
+                left: max_mem_footprint_header.left
+            }
+            onTextChanged:
+            {
+                root.__max_memory_footprint = parseInt(text);
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(max_mem_footprint_input.y - Settings.spacing_big)
+                }
+            }
+        }
+
+        // Hardware required
+        SmlText
+        {
+            id: required_hardware_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Required hardware"
+            anchors
+            {
+                top: max_mem_footprint_header.top
+                left: max_mem_footprint_input.right
+                leftMargin: Settings.spacing_big
+            }
+        }
+        SmlCombobox
+        {
+            activeFocusOnTab: true
+            focus: true
+            id: required_hardware_input
+            placeholder_text: "Select hardware"
+            model: ["DGX100", "H100_x5", "H100_x8", "H100_x3", "H100_x2", "A800", "H20", "H200", "H100", "A6000", "PIM_AI_1dimm", "PIM_AI_4dimm", "PIM_AI_16dimm", "PIM_AI_8dimm", "PIM_AI_10dimm", "PIM_AI_6dimm", "CXL_PIM_BC", "CXL_PIM_nBC", "PIM_AI_12dimm", "PIM_AI_24dimm"]
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: 360
+            height: root.__input_height
+            rounded_radius: Settings.input_default_rounded_radius
+            KeyNavigation.tab: geo_location_continent_input
+            anchors
+            {
+                top: required_hardware_header.bottom
+                topMargin: Settings.spacing_small
+                left: required_hardware_header.left
+            }
+            onText_changed:
+            {
+                root.__hardware_required = text;
+            }
+            onFocusChanged: {
+                if(focus === true){
+                    required_hardware_input.open()
+                    required_hardware_input.focus = true
+                }
+            }
+            onTab_pressed: {
+                geo_location_continent_input.focus = true
+            }
+        }
+
         // Geo location: continent
         SmlText
         {
@@ -589,7 +689,7 @@ Item
             text_value: "Geo location: continent"
             anchors
             {
-                top: previous_iteration_input.bottom
+                top: max_mem_footprint_input.bottom
                 topMargin: Settings.spacing_normal
                 left: parent.left
             }
@@ -712,6 +812,8 @@ Item
                 root.__desired_carbon_footprint,
                 root.__geo_location_continent,
                 root.__geo_location_region,
+                root.__max_memory_footprint,
+                root.__hardware_required,
                 root.__extra_data);
     }
 }
