@@ -306,7 +306,10 @@ void Engine::user_input_request(
         REST_requester::RequestType::SEND_USER_INPUT,
         json_obj);
 
-    requesters_.push_back(requester);
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
 }
 
 void Engine::user_input_response(
@@ -330,13 +333,15 @@ void Engine::user_input_response(
         emit update_log(QString("User input send for ") + Utils::task_string(task_id));
     }
     // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
     for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
     {
         if (*it == requester)
         {
+            auto ptr = *it;
             requesters_.erase(it);
-            (*it)->disconnect();
-            (*it)->deleteLater();
+            (ptr)->disconnect();
+            (ptr)->deleteLater();
             break;
         }
     }
@@ -350,7 +355,10 @@ void Engine::node_results_request(
         REST_requester::RequestType::REQUEST_RESULTS,
         json_obj);
 
-    requesters_.push_back(requester);
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
 }
 
 void Engine::node_results_response(
@@ -363,13 +371,15 @@ void Engine::node_results_response(
         print_results(Utils::node_id(json_obj), json_obj);
     }
     // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
     for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
     {
         if (*it == requester)
         {
+            auto ptr = *it;
             requesters_.erase(it);
-            (*it)->disconnect();
-            (*it)->deleteLater();
+            (ptr)->disconnect();
+            (ptr)->deleteLater();
             break;
         }
     }
@@ -383,7 +393,10 @@ void Engine::node_status_request(
         REST_requester::RequestType::REQUEST_NODE_STATUS,
         json_obj);
 
-    requesters_.push_back(requester);
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
 }
 
 void Engine::node_status_response(
@@ -433,13 +446,15 @@ void Engine::node_status_response(
         }
     }
     // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
     for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
     {
         if (*it == requester)
         {
+            auto ptr = *it;
             requesters_.erase(it);
-            (*it)->disconnect();
-            (*it)->deleteLater();
+            (ptr)->disconnect();
+            (ptr)->deleteLater();
             break;
         }
     }

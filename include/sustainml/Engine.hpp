@@ -305,6 +305,7 @@ private:
 
     std::vector<types::TaskId> received_task_ids;
     std::vector<REST_requester*> requesters_;
+    std::mutex requesters_mutex_;
 
     // --------------- REST requester --------------- //
     //! Send user input to the Framework pipeline
