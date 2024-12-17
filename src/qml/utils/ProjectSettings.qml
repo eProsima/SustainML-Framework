@@ -31,6 +31,8 @@ QtObject {
     readonly property string app_logo:      "qrc:/images/logos/sustainml.svg"
     readonly property string shape_light:   "qrc:/images/shape3.svg"
     readonly property string shape_dark:    "qrc:/images/shape3_dark.svg"
+    readonly property string shape_2_light: "qrc:/images/shape1.svg"
+    readonly property string shape_2_dark:  "qrc:/images/shape1_dark.svg"
 
     // LOGOS
     readonly property string eProsima_logo:             "qrc:/images/logos/eprosima.png"
@@ -84,4 +86,11 @@ QtObject {
     readonly property int background_y_medium:      -350
     readonly property int background_y_final:       -750
     readonly property int button_movement_anim_angle: 30
+    // Background 2 initially has the same coordinates as the main background
+    readonly property int background_2_x_initial: background_x_initial
+    readonly property int background_2_x_medium:  background_x_medium
+    readonly property int background_2_x_final:   background_x_final
+    readonly property int background_2_y_initial: background_y_initial
+    readonly property int background_2_y_medium:  background_y_medium
+    readonly property int background_2_y_final:   background_y_final
 }
