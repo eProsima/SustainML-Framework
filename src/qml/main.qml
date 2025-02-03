@@ -26,6 +26,7 @@ Window {
     property string ml_model_metadata_node_last_status: "INACTIVE"
     property int current_problem_id: -1
     property int current_iteration_id: -1
+    property var modality_list: []
 
     // Main view properties
     width:  Settings.app_width
@@ -76,6 +77,11 @@ Window {
         function onUpdate_ml_model_metadata_node_status(new_status)
         {
             main_window.ml_model_metadata_node_last_status = new_status
+        }
+
+        function onModalities_available(list_modalities)
+        {
+            main_window.modality_list = list_modalities
         }
     }
 
@@ -204,6 +210,9 @@ Window {
             {
                 id: definition_screen_component
 
+                // Pass modalities
+                __modality_list: main_window.modality_list
+
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onSend_task:
                 {
@@ -219,12 +228,13 @@ Window {
                             optimize_carbon_footprint_manual,
                             previous_iteration,
                             desired_carbon_footprint,
-                            geo_location_continent,
-                            geo_location_region,
                             max_memory_footprint,
                             hardware_required,
+                            geo_location_continent,
+                            geo_location_region,
                             extra_data)
                 }
+                onRefresh: engine.request_modalities()
             }
         }
 
@@ -376,8 +386,8 @@ Window {
         nightmode_color_pressed:  Settings.app_color_green_3
         size: Settings.button_big_icon_size
 
-        x: Settings.app_width -  (size * 2)
-        y: Settings.app_height - (size * 2)
+        x: parent.width -  (size * 2)
+        y: parent.height - (size * 2)
 
         SmlMouseArea
         {

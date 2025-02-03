@@ -110,6 +110,11 @@ public slots:
      */
     void request_status();
 
+    /**
+     * @brief public method to request modalities of ML
+     */
+    void request_modalities ();
+
 signals:
 
     /**
@@ -276,6 +281,14 @@ signals:
             const QString& energy_consumption,
             const QString& carbon_intensity);
 
+    /**
+     * @brief Modalities received signal to display in the GUI
+     *
+     * @param modalities list of possible modalities
+     */
+    void modalities_available(
+            const QStringList& modalities);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -335,7 +348,19 @@ private:
             const REST_requester* requester,
             const QJsonObject& json_obj);
 
+    //! Request configuration of a Node
+    void config_request(
+            const QJsonObject& json_obj,
+            std::function<void(const QJsonObject&)> callback);
+
+    //! Receive and propagate the node configuration
+    void config_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
     QTimer* node_status_timer_;
+
+    std::function<void(const QJsonObject&)> config_callback_;
 };
 
 #endif //EPROSIMA_SUSTAINML_ENGINE_HPP

@@ -19,7 +19,7 @@ Item
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_width: 1000
     readonly property int __scroll_view_height: 600
-    readonly property int __scroll_view_content_height: 1880
+    readonly property int __scroll_view_content_height: 1800
     readonly property int __input_height: 80
     readonly property int __input_height_big: 200
     readonly property int __input_width: 900
@@ -29,6 +29,7 @@ Item
     // Input values
     property string __problem_short_description: ""
     property string __modality: ""
+    property var __metrics_values: {}
     property string __problem_definition: ""
     property string __inputs: ""
     property string __outputs: ""
@@ -44,6 +45,10 @@ Item
     property string __geo_location_region: ""
     property string __extra_data: ""
 
+    // Private properties
+    property var __modality_list: []
+    property var __metrics: []
+
     // External signals
     signal go_home();
     signal send_task(
@@ -58,12 +63,13 @@ Item
         bool optimize_carbon_footprint_manual,
         int previous_iteration,
         double desired_carbon_footprint,
-        string geo_location_continent,
-        string geo_location_region,
         string max_memory_footprint,
         string hardware_required,
+        string geo_location_continent,
+        string geo_location_region,
         string extra_data
     );
+    signal refresh();
 
     // Background mouse area
     MouseArea
@@ -97,17 +103,20 @@ Item
     {
         id: scroll_view
 
+        anchors.fill: parent
+
         anchors
         {
-            top: parent.top
             topMargin: root.__margin
-            left: parent.left
             leftMargin: root.__margin
+            rightMargin: root.__margin
+            bottomMargin: root.__margin
         }
+
         width: root.__scroll_view_width
         height: root.__scroll_view_height
         content_width: root.__scroll_view_width
-        content_height: root.__scroll_view_content_height
+        content_height: root.__scroll_view_content_height + metrics_list.height
 
         // Background mouse area
         MouseArea
@@ -138,7 +147,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
             height: root.__input_height
             KeyNavigation.tab: modality_input
             anchors
@@ -173,18 +182,22 @@ Item
                 left: parent.left
             }
         }
-        SmlInput
+        SmlCombobox
         {
+            activeFocusOnTab: true
+            focus: true
             id: modality_input
-            placeholder_text: "Define the modality of the input data: image, video, audio, sensor..."
+            placeholder_text: "Select the modality of the input data"
+            model: root.__modality_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width
-            height: root.__input_height
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            height: 60
+            rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: problem_definition_input
             anchors
             {
@@ -192,17 +205,116 @@ Item
                 topMargin: Settings.spacing_small
                 left: modality_header.left
             }
-            onTextChanged:
+            onModelChanged:
+            {
+                modality_input.currentIndex = -1
+            }
+            onText_changed:
             {
                 root.__modality = text;
+                root.__metrics = []
+
+
+                // TODO: Get metrics with request of metrics given the modality
+                if (text === "TextData")
+                {
+                    root.__metrics = ["Longiness", "Emptyness", "Something", "Metricable"]
+                }
+                if (text === "ImageData")
+                {
+                    root.__metrics = ["PSNR", "SSIM", "MSE"]
+                }                                                    // Testing
+
+                root.__metrics_values = {}  // clear old data
+                for (var i = 0; i < root.__metrics.length; i++) {
+                    var metric = root.__metrics[i]
+                    root.__metrics_values[metric] = ""
+                }
             }
             onFocusChanged:
             {
                 if(focus === true)
                 {
-                    scroll_view.scroll_to(modality_input.y - Settings.spacing_big)
+                    modality_input.open()
+                    modality_input.focus = true
                 }
             }
+            onTab_pressed: {
+                problem_definition_input.focus = true
+            }
+        }
+
+        // Metrics
+        SmlText
+        {
+            id: metrics_header
+            visible: root.__metrics.length > 0
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Metrics"
+            anchors
+            {
+                top: modality_input.bottom
+                topMargin: root.__metrics.length > 0 ? Settings.spacing_normal : 0
+                left: parent.left
+            }
+        }
+
+        // Metric Item
+        Component
+        {
+            id: metric_item
+
+            Row {
+                required property string modelData
+                spacing: Settings.spacing_normal
+
+                SmlText {
+                    id: metric_text
+                    text_kind: SmlText.TextKind.Header_3
+                    text_value: modelData
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                SmlInput {
+                    id: metric_input
+                    placeholder_text: "Enter value for " + modelData
+                    border_color: Settings.app_color_green_3
+                    border_editting_color: Settings.app_color_green_4
+                    border_nightmode_color: Settings.app_color_green_1
+                    border_nightmode_editting_color: Settings.app_color_green_2
+                    background_color: Settings.app_color_light
+                    background_nightmode_color: Settings.app_color_dark
+                    width: root.__input_width_split
+                    height: root.__input_height
+                    anchors.verticalCenter: parent.verticalCenter
+                    onTextChanged: {
+                        root.__metrics_values[modelData] = text;
+                        // console.log(root.__metrics_values)
+                    }
+                    onFocusChanged: {
+                        if (focus === true) {
+                            scroll_view.scroll_to(y - Settings.spacing_big)
+                        }
+                    }
+                }
+            }
+        }
+
+        ListView {
+            id: metrics_list
+            visible: root.__metrics.length > 0
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            height: root.__metrics.length * (root.__input_height + Settings.spacing_normal)
+            spacing: Settings.spacing_normal
+            anchors
+            {
+                top: metrics_header.bottom
+                topMargin: root.__metrics.length > 0 ? Settings.spacing_small : 0
+                left: parent.left
+                leftMargin: Settings.spacing_big
+            }
+            model: root.__metrics
+            delegate: metric_item
         }
 
         // Problem definition
@@ -213,7 +325,7 @@ Item
             text_value: "Problem definition"
             anchors
             {
-                top: modality_input.bottom
+                top: root.__metrics.length > 0 ? metrics_list.bottom : modality_input.bottom
                 topMargin: Settings.spacing_normal
                 left: parent.left
             }
@@ -228,7 +340,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
             height: root.__input_height_big
             KeyNavigation.tab: inputs_input
             anchors
@@ -273,7 +385,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
             height: root.__input_height_big
             KeyNavigation.tab: outputs_input
             anchors
@@ -318,7 +430,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
             height: root.__input_height_big
             KeyNavigation.tab: minimum_samples_input
             anchors
@@ -394,7 +506,7 @@ Item
             anchors
             {
                 top: minimum_samples_header.top
-                left: minimum_samples_header.right
+                left: minimum_samples_input.right
                 leftMargin: Settings.spacing_normal
             }
         }
@@ -439,7 +551,7 @@ Item
             anchors
             {
                 top: maximum_samples_header.top
-                left: maximum_samples_header.right
+                left: maximum_samples_input.right
                 leftMargin: Settings.spacing_normal
             }
         }
@@ -810,10 +922,40 @@ Item
                 root.__optimize_carbon_footprint_manual,
                 root.__previous_iteration,
                 root.__desired_carbon_footprint,
-                root.__geo_location_continent,
-                root.__geo_location_region,
                 root.__max_memory_footprint,
                 root.__hardware_required,
+                root.__geo_location_continent,
+                root.__geo_location_region,
                 root.__extra_data);
+    }
+
+    // Refresh button
+    SmlIcon
+    {
+        id: refresh_button
+        name:   Settings.refresh_icon_name
+        color:  Settings.app_color_green_1
+        color_pressed:  Settings.app_color_green_2
+        nightmode_color:  Settings.app_color_green_4
+        nightmode_color_pressed:  Settings.app_color_green_3
+        size: Settings.button_icon_size
+
+        x: scroll_view.width + (size * 1.5)
+        y: (size * 2)
+
+        SmlMouseArea
+        {
+            anchors.centerIn: parent
+            hoverEnabled: true
+            width: parent.width * 1.5
+            height: parent.height * 1.5
+            onEntered: refresh_button.start_animation();
+            onPressed: refresh_button.pressed = true;
+            onReleased: refresh_button.pressed = false;
+            onClicked:
+            {
+                root.refresh()
+            }
+        }
     }
 }

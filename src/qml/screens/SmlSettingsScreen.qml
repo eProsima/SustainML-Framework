@@ -87,7 +87,7 @@ Item
             {
                 top: header.bottom
                 topMargin: Settings.spacing_normal
-                left: parent.left
+                left: header.left
                 leftMargin: Settings.spacing_normal
             }
 
@@ -126,7 +126,7 @@ Item
             {
                 top: app_item.bottom
                 topMargin: Settings.spacing_normal
-                left: parent.left
+                left: header.left
                 leftMargin: Settings.spacing_normal
             }
             Rectangle
@@ -164,7 +164,7 @@ Item
             {
                 top: carbon_item.bottom
                 topMargin: Settings.spacing_normal
-                left: parent.left
+                left: header.left
                 leftMargin: Settings.spacing_normal
             }
             Rectangle
@@ -202,7 +202,7 @@ Item
             {
                 top: constraints_item.bottom
                 topMargin: Settings.spacing_normal
-                left: parent.left
+                left: header.left
                 leftMargin: Settings.spacing_normal
             }
             Rectangle
@@ -240,7 +240,7 @@ Item
             {
                 top: resources_item.bottom
                 topMargin: Settings.spacing_normal
-                left: parent.left
+                left: header.left
                 leftMargin: Settings.spacing_normal
             }
             Rectangle
@@ -278,7 +278,7 @@ Item
             {
                 top: model_item.bottom
                 topMargin: Settings.spacing_normal
-                left: parent.left
+                left: header.left
                 leftMargin: Settings.spacing_normal
             }
             Rectangle
@@ -315,12 +315,15 @@ Item
             anchors
             {
                 top: parent.top
-                topMargin: Settings.spacing_big
-                left: header.right
-                leftMargin: root.__margin
+                topMargin: root.__margin * 1.5
+                left: app_item.right
+                leftMargin: root.__margin * 3
+                right: parent.right
+                rightMargin: root.__margin
+                bottom: parent.bottom
+                bottomMargin: root.__margin
             }
-            width: 800
-            height: 700
+            height: 600
             content_width: 800
             content_height: log_item.height
 

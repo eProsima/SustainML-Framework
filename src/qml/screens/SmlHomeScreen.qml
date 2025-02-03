@@ -19,12 +19,15 @@ Item
     {
         color: "transparent"
 
+        anchors.fill: parent
+
         // Header
         Rectangle
         {
             id: header
             color: "transparent"
             height: Settings.logo_height * 1.5
+            width: (eProsima_logo.width + dfki_logo.width + ibm_logo.width + inria_logo.width + ku_logo.width + rptu_logo.width + upmem_logo.width + Settings.spacing_big + Settings.spacing_normal * 5 - 10)
 
 
             // Layout constraints
@@ -32,8 +35,7 @@ Item
             {
                 top: parent.top
                 topMargin: Settings.spacing_big
-                left: parent.left
-                leftMargin: Settings.spacing_big
+                horizontalCenter: parent.horizontalCenter
             }
 
             // eProsima Logo
@@ -248,170 +250,184 @@ Item
             }
         }
 
-        // SustainML Logo
-        Image
+        // Body
+        Rectangle
         {
-            id: sustainML_logo
-
-            source: Settings.app_logo
-
-            // set image size
+            id: body
+            color: "transparent"
             height: Settings.app_height / 2
+            width: (sustainML_logo.width * 2 + Settings.spacing_big)
 
             // Layout constraints
             anchors
             {
-                left: parent.left
-                leftMargin: (Settings.app_width / 2) - Settings.spacing_normal
-                top: header.bottom
-                topMargin: Settings.spacing_big
+                verticalCenter: parent.verticalCenter
+                horizontalCenter: parent.horizontalCenter
             }
 
-            // Image smoothness
-            sourceSize.width: width
-            sourceSize.height: height
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            antialiasing: true
-        }
-
-        // SustainML Title
-        SmlText
-        {
-            id: sustainML_text
-            text_value: "SustainML"
-            text_kind: SmlText.App_name
-
-            // Layout constraints
-            anchors
+            // SustainML Logo
+            Image
             {
-                left: parent.left
-                leftMargin: Settings.spacing_big
-                top: header.bottom
-                topMargin: Settings.spacing_big
+                id: sustainML_logo
+
+                source: Settings.app_logo
+
+                // set image size
+                height: parent.height * 1.1
+
+                // Layout constraints
+                anchors
+                {
+                    right: parent.right
+                    topMargin: Settings.spacing_big
+                    verticalCenter: parent.verticalCenter
+                }
+
+                // Image smoothness
+                sourceSize.width: width
+                sourceSize.height: height
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                antialiasing: true
             }
-        }
 
-        // SustainML subtitle
-        SmlText
-        {
-            id: title_text
-            text_value: "AI serving to reduce the footprint"
-            text_kind: SmlText.Header_3
-
-            // Layout constraints
-            anchors
+            // SustainML Title
+            SmlText
             {
-                top: sustainML_text.bottom
-                topMargin: -Settings.spacing_small
-                left: sustainML_text.left
+                id: sustainML_text
+                text_value: "SustainML"
+                text_kind: SmlText.App_name
+
+                // Layout constraints
+                anchors
+                {
+                    left: parent.left
+                    leftMargin: Settings.spacing_big
+                    top: header.bottom
+                    topMargin: Settings.spacing_big
+                }
             }
-        }
 
-        // SustainML introduction text
-        SmlText
-        {
-            id: subtitle_text
-            text_value: "Sustainable and interactive ML framework"
-            text_kind: SmlText.Body
-
-            // Layout constraints
-            anchors
+            // SustainML subtitle
+            SmlText
             {
-                top: title_text.bottom
-                topMargin: Settings.spacing_small
-                left: title_text.left
+                id: title_text
+                text_value: "AI serving to reduce the footprint"
+                text_kind: SmlText.Header_3
+
+                // Layout constraints
+                anchors
+                {
+                    top: sustainML_text.bottom
+                    topMargin: -Settings.spacing_small
+                    left: sustainML_text.left
+                }
             }
-        }
 
-        // Bullet points
-        SmlIcon
-        {
-            id: bullet_point_1
-            name: Settings.bullet_point_icon_name
-            color: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_3
-            size: Settings.bullet_point_icon_size
-
-            // Layout constraints
-            anchors
+            // SustainML introduction text
+            SmlText
             {
-                top: subtitle_text.bottom
-                topMargin: Settings.spacing_normal
-                left: subtitle_text.left
-            }
-        }
-        SmlText
-        {
-            id: bullet_point_1_text
-            text_value: "Comprehensively prioritize and advocate energy\nefficiency across the  lifecycle of an application"
-            text_kind: SmlText.Body
+                id: subtitle_text
+                text_value: "Sustainable and interactive ML framework"
+                text_kind: SmlText.Body
 
-            // Layout constraints
-            anchors
+                // Layout constraints
+                anchors
+                {
+                    top: title_text.bottom
+                    topMargin: Settings.spacing_small
+                    left: title_text.left
+                }
+            }
+
+            // Bullet points
+            SmlIcon
             {
-                top: bullet_point_1.top
-                topMargin: -3
-                left: bullet_point_1.right
-                leftMargin: Settings.spacing_small
-            }
-        }
-        SmlIcon
-        {
-            id: bullet_point_2
-            name: Settings.bullet_point_icon_name
-            color: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_3
-            size: Settings.bullet_point_icon_size
+                id: bullet_point_1
+                name: Settings.bullet_point_icon_name
+                color: Settings.app_color_green_1
+                nightmode_color: Settings.app_color_green_3
+                size: Settings.bullet_point_icon_size
 
-            // Layout constraints
-            anchors
+                // Layout constraints
+                anchors
+                {
+                    top: subtitle_text.bottom
+                    topMargin: Settings.spacing_normal
+                    left: subtitle_text.left
+                }
+            }
+            SmlText
             {
-                top: bullet_point_1_text.bottom
-                topMargin: Settings.spacing_small
-                left: bullet_point_1.left
-            }
-        }
-        SmlText
-        {
-            text_value: "Avoid AI-waste and reduce the carbon footprint"
-            text_kind: SmlText.Body
+                id: bullet_point_1_text
+                text_value: "Comprehensively prioritize and advocate energy\nefficiency across the  lifecycle of an application"
+                text_kind: SmlText.Body
 
-            // Layout constraints
-            anchors
+                // Layout constraints
+                anchors
+                {
+                    top: bullet_point_1.top
+                    topMargin: -3
+                    left: bullet_point_1.right
+                    leftMargin: Settings.spacing_small
+                }
+            }
+            SmlIcon
             {
-                top: bullet_point_2.top
-                topMargin: -3
-                left: bullet_point_2.right
-                leftMargin: Settings.spacing_small
+                id: bullet_point_2
+                name: Settings.bullet_point_icon_name
+                color: Settings.app_color_green_1
+                nightmode_color: Settings.app_color_green_3
+                size: Settings.bullet_point_icon_size
+
+                // Layout constraints
+                anchors
+                {
+                    top: bullet_point_1_text.bottom
+                    topMargin: Settings.spacing_small
+                    left: bullet_point_1.left
+                }
             }
-        }
-
-        // Start button
-        SmlButton
-        {
-            id: start_button
-            icon_name: Settings.start_icon_name
-            text_kind: SmlText.Header_2
-            text_value: "Start now"
-            rounded: true
-            color: Settings.app_color_green_3
-            color_pressed: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_1
-            nightmode_color_pressed: Settings.app_color_green_3
-            size: Settings.button_big_icon_size
-
-            // Layout constraints
-            anchors
+            SmlText
             {
-                top: bullet_point_2.bottom
-                topMargin: Settings.spacing_big
-                left: header.left
-                leftMargin: Settings.spacing_big
+                text_value: "Avoid AI-waste and reduce the carbon footprint"
+                text_kind: SmlText.Body
+
+                // Layout constraints
+                anchors
+                {
+                    top: bullet_point_2.top
+                    topMargin: -3
+                    left: bullet_point_2.right
+                    leftMargin: Settings.spacing_small
+                }
             }
 
-            // Button actions
-            onClicked: root.go_problem_definition();
+            // Start button
+            SmlButton
+            {
+                id: start_button
+                icon_name: Settings.start_icon_name
+                text_kind: SmlText.Header_2
+                text_value: "Start now"
+                rounded: true
+                color: Settings.app_color_green_3
+                color_pressed: Settings.app_color_green_1
+                nightmode_color: Settings.app_color_green_1
+                nightmode_color_pressed: Settings.app_color_green_3
+                size: Settings.button_big_icon_size
+
+                // Layout constraints
+                anchors
+                {
+                    top: bullet_point_2.bottom
+                    topMargin: Settings.spacing_big
+                    horizontalCenter: subtitle_text.horizontalCenter
+                }
+
+                // Button actions
+                onClicked: root.go_problem_definition();
+            }
         }
     }
 }

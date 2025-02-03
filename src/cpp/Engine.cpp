@@ -58,6 +58,9 @@ QObject* Engine::enable()
     // Start timer
     node_status_timer_->start();
 
+    // Request modalities
+    request_modalities();
+
     return rootObjects().value(0);
 }
 
@@ -169,6 +172,31 @@ void Engine::request_current_data(
 void Engine::request_status()
 {
     node_status_request(QJsonObject());
+}
+
+void Engine::request_modalities()
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 4;
+    json_config["transaction_id"] = 0;
+    json_config["configuration"] = "modality";
+
+    config_request(json_config, [this](const QJsonObject& json_obj) {
+        QJsonObject response_obj = json_obj["response"].toObject();
+        if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+        {
+            QJsonDocument config_doc = QJsonDocument::fromJson(response_obj["configuration"].toString().toUtf8());
+            if (config_doc.isObject())
+            {
+                QJsonObject config_obj = config_doc.object();
+                if (config_obj.contains("modalities") && config_obj["modalities"].isString())
+                {
+                    QStringList modalities = config_obj["modalities"].toString().split(", ");
+                    emit modalities_available(modalities);
+                }
+            }
+        }
+    });
 }
 
 void Engine::request_results(
@@ -443,6 +471,52 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA)).toString();
             emit update_ml_model_metadata_node_status(status_value);
+        }
+    }
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            (ptr)->disconnect();
+            (ptr)->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::config_request(
+        const QJsonObject& json_obj,
+        std::function<void(const QJsonObject&)> callback)
+{
+    config_callback_ = callback;
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::config_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::REQUEST_CONFIG,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::config_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    if (!json_obj.empty())
+    {
+        std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() << std::endl;
+
+        if (config_callback_)
+        {
+            config_callback_(json_obj);
+            config_callback_ = nullptr; // Empty the callback
         }
     }
     // Remove REST requester from queue

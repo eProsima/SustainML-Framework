@@ -76,6 +76,9 @@ QString REST_requester::request_type_to_url(
         case RequestType::REQUEST_NODE_STATUS:
             url += "/status";
             break;
+        case RequestType::REQUEST_CONFIG:
+            url += "/config_request";
+            break;
     }
     return url;
 }

@@ -159,14 +159,12 @@ Item
         id: tab_view
         anchors
         {
-            top: parent.top
-            topMargin: root.__margin
-            left: parent.left
-            leftMargin: root.__margin
+            horizontalCenter: parent.horizontalCenter
+            verticalCenter: parent.verticalCenter
         }
 
-        width: root.__tab_view_width
-        height: root.__tab_view_height
+        width: parent.width * 0.75
+        height: parent.height * 0.75
         clip: true
 
         allowed_stack_components: {"problem_view": "qrc:/qml/fragments/SmlProblemFragment.qml"}
