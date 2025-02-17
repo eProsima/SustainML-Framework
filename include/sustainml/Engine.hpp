@@ -88,6 +88,7 @@ public slots:
             int minimum_samples,
             int maximum_samples,
             bool optimize_carbon_footprint_auto,
+            QString goal,
             bool optimize_carbon_footprint_manual,
             int previous_iteration,
             double desired_carbon_footprint,
@@ -113,7 +114,12 @@ public slots:
     /**
      * @brief public method to request modalities of ML
      */
-    void request_modalities ();
+    void request_model();
+
+    /**
+     * @brief public method to request hardwares
+     */
+    void request_hardwares ();
 
 signals:
 
@@ -282,12 +288,32 @@ signals:
             const QString& carbon_intensity);
 
     /**
+     * @brief Update qml tasking bool signal as task end
+     */
+    void task_end();
+
+    /**
+     * @brief Update qml refreshing bool signal to display in the GUI
+     */
+    void refreshing_on();
+
+    /**
      * @brief Modalities received signal to display in the GUI
      *
      * @param modalities list of possible modalities
+     * @param goals list of possible goals
      */
     void modalities_available(
-            const QStringList& modalities);
+            const QStringList& modalities,
+            const QStringList& goals);
+
+    /**
+     * @brief Hardwares received signal to display in the GUI
+     *
+     * @param hardwares list of possible hardwares
+     */
+    void hardwares_available(
+            const QStringList& hardwares);
 
 protected:
 
@@ -360,7 +386,10 @@ private:
 
     QTimer* node_status_timer_;
 
-    std::function<void(const QJsonObject&)> config_callback_;
+    std::map<int, std::function<void(const QJsonObject&)>> config_callbacks_;
+
+    bool ml_model_idle = true;
+    bool hw_idle = true;
 };
 
 #endif //EPROSIMA_SUSTAINML_ENGINE_HPP

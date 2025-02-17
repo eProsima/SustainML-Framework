@@ -58,9 +58,6 @@ QObject* Engine::enable()
     // Start timer
     node_status_timer_->start();
 
-    // Request modalities
-    request_modalities();
-
     return rootObjects().value(0);
 }
 
@@ -80,6 +77,7 @@ void Engine::launch_task(
         int minimum_samples,
         int maximum_samples,
         bool optimize_carbon_footprint_auto,
+        QString goal,
         bool optimize_carbon_footprint_manual,
         int previous_iteration,
         double desired_carbon_footprint,
@@ -141,6 +139,7 @@ void Engine::launch_task(
     json_data["minimum_samples"] = int(min);
     json_data["maximum_samples"] = int(max);
     json_data["optimize_carbon_footprint_auto"] = optimize_carbon_footprint_auto;
+    json_data["goal"] = goal;
     json_data["optimize_carbon_footprint_manual"] = optimize_carbon_footprint_manual;
     json_data["previous_iteration"] = previous_iteration;
     json_data["desired_carbon_footprint"] = desired_carbon_footprint;
@@ -174,29 +173,59 @@ void Engine::request_status()
     node_status_request(QJsonObject());
 }
 
-void Engine::request_modalities()
+void Engine::request_model()
 {
     QJsonObject json_config;
     json_config["node_id"] = 4;
     json_config["transaction_id"] = 0;
     json_config["configuration"] = "modality";
 
-    config_request(json_config, [this](const QJsonObject& json_obj) {
-        QJsonObject response_obj = json_obj["response"].toObject();
-        if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-        {
-            QJsonDocument config_doc = QJsonDocument::fromJson(response_obj["configuration"].toString().toUtf8());
-            if (config_doc.isObject())
+    config_request(json_config, [this](const QJsonObject& json_obj)
             {
-                QJsonObject config_obj = config_doc.object();
-                if (config_obj.contains("modalities") && config_obj["modalities"].isString())
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
                 {
-                    QStringList modalities = config_obj["modalities"].toString().split(", ");
-                    emit modalities_available(modalities);
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("modalities") && config_obj["modalities"].isString())
+                        {
+                            QStringList modalities = config_obj["modalities"].toString().split(", ");
+                            QStringList goals = config_obj["goals"].toString().split(", ");
+                            emit modalities_available(modalities, goals);
+                        }
+                    }
                 }
-            }
-        }
-    });
+            });
+}
+
+void Engine::request_hardwares()
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 3;
+    json_config["transaction_id"] = 0;
+    json_config["configuration"] = "hardwares";
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("hardwares") && config_obj["hardwares"].isString())
+                        {
+                            QStringList hardwares = config_obj["hardwares"].toString().split(", ");
+                            emit hardwares_available(hardwares);
+                        }
+                    }
+                }
+            });
 }
 
 void Engine::request_results(
@@ -248,6 +277,7 @@ void Engine::print_results(
         }
         case sustainml::NodeID::ID_CARBON_FOOTPRINT:
         {
+            emit task_end();
             emit new_carbon_footprint_node_output(
                 task_id.problem_id(),
                 task_id.iteration_id(),
@@ -439,37 +469,55 @@ void Engine::node_status_response(
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_APP_REQUIREMENTS)))
         {
             QString status_value = nodes_json.value(
-                Utils::node_name(sustainml::NodeID::ID_APP_REQUIREMENTS)).toString();
+                Utils::node_name(sustainml::NodeID::ID_APP_REQUIREMENTS))
+                            .toString();
             emit update_app_requirements_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_CARBON_FOOTPRINT)))
         {
             QString status_value = nodes_json.value(
-                Utils::node_name(sustainml::NodeID::ID_CARBON_FOOTPRINT)).toString();
+                Utils::node_name(sustainml::NodeID::ID_CARBON_FOOTPRINT))
+                            .toString();
             emit update_carbon_footprint_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_HW_CONSTRAINTS)))
         {
             QString status_value = nodes_json.value(
-                Utils::node_name(sustainml::NodeID::ID_HW_CONSTRAINTS)).toString();
+                Utils::node_name(sustainml::NodeID::ID_HW_CONSTRAINTS))
+                            .toString();
+            if (status_value.toStdString() == "IDLE" && hw_idle)
+            {
+                emit refreshing_on();
+                request_hardwares();
+                hw_idle = false;
+            }
             emit update_hw_constraints_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_HW_RESOURCES)))
         {
             QString status_value = nodes_json.value(
-                Utils::node_name(sustainml::NodeID::ID_HW_RESOURCES)).toString();
+                Utils::node_name(sustainml::NodeID::ID_HW_RESOURCES))
+                            .toString();
             emit update_hw_resources_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_ML_MODEL)))
         {
             QString status_value = nodes_json.value(
-                Utils::node_name(sustainml::NodeID::ID_ML_MODEL)).toString();
+                Utils::node_name(sustainml::NodeID::ID_ML_MODEL))
+                            .toString();
             emit update_ml_model_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA)))
         {
             QString status_value = nodes_json.value(
-                Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA)).toString();
+                Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA))
+                            .toString();
+            if (status_value.toStdString() == "IDLE" && ml_model_idle)
+            {
+                emit refreshing_on();
+                request_model();
+                ml_model_idle = false;
+            }
             emit update_ml_model_metadata_node_status(status_value);
         }
     }
@@ -492,7 +540,8 @@ void Engine::config_request(
         const QJsonObject& json_obj,
         std::function<void(const QJsonObject&)> callback)
 {
-    config_callback_ = callback;
+    int node_id = json_obj["node_id"].toInt();
+    config_callbacks_[node_id] = callback;
 
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::config_response, this, std::placeholders::_1, std::placeholders::_2),
@@ -511,12 +560,15 @@ void Engine::config_response(
 {
     if (!json_obj.empty())
     {
-        std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() << std::endl;
+        std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
+                std::endl;
+        QJsonObject response_obj = json_obj["response"].toObject();
+        int node_id = response_obj["node_id"].toInt();
 
-        if (config_callback_)
+        if (config_callbacks_[node_id])
         {
-            config_callback_(json_obj);
-            config_callback_ = nullptr; // Empty the callback
+            config_callbacks_[node_id](json_obj);
+            config_callbacks_[node_id] = nullptr; // Empty the callback
         }
     }
     // Remove REST requester from queue
