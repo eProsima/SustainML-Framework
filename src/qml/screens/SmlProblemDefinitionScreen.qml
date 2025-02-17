@@ -36,6 +36,7 @@ Item
     property int __minimum_samples: 1
     property int __maximum_samples: 1
     property bool __optimize_carbon_footprint_auto: false
+    property string __goal: ""
     property bool __optimize_carbon_footprint_manual: false
     property int __previous_iteration: 0
     property double __desired_carbon_footprint: 0.0
@@ -47,10 +48,14 @@ Item
 
     // Private properties
     property var __modality_list: []
+    property var __goal_list: []
     property var __metrics: []
+    property var __hardware_list: []
+    property bool __refreshing: false
 
     // External signals
     signal go_home();
+    signal go_results();
     signal send_task(
         string problem_short_description,
         string modality,
@@ -60,6 +65,7 @@ Item
         int minimum_samples,
         int maximum_samples,
         bool optimize_carbon_footprint_auto,
+        string goal,
         bool optimize_carbon_footprint_manual,
         int previous_iteration,
         double desired_carbon_footprint,
@@ -81,6 +87,7 @@ Item
     // Go home button
     SmlButton
     {
+        id: home_button
         icon_name: Settings.home_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Home"
@@ -97,6 +104,29 @@ Item
             leftMargin: Settings.spacing_normal
         }
         onClicked: root.go_home()
+    }
+
+    // Go results button
+    SmlButton
+    {
+        icon_name: Settings.start_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: "Results"
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        anchors
+        {
+            top: parent.top
+            topMargin: Settings.spacing_normal
+            left: home_button.right
+            leftMargin: Settings.spacing_normal
+        }
+        onClicked: root.go_results()
     }
 
     SmlScrollView
@@ -216,11 +246,11 @@ Item
 
 
                 // TODO: Get metrics with request of metrics given the modality
-                if (text === "TextData")
+                if (text === "audio")
                 {
-                    root.__metrics = ["Longiness", "Emptyness", "Something", "Metricable"]
+                    root.__metrics = ["Longiness", "Emptiness", "Something", "Metricable"]
                 }
-                if (text === "ImageData")
+                if (text === "cv")
                 {
                     root.__metrics = ["PSNR", "SSIM", "MSE"]
                 }                                                    // Testing
@@ -571,7 +601,7 @@ Item
             width: 360
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: previous_iteration_input
+            KeyNavigation.tab: goal_input
             anchors
             {
                 top: optimize_carbon_header.bottom
@@ -603,16 +633,16 @@ Item
                 }
             }
             onTab_pressed: {
-                previous_iteration_input.focus = true
+                goal_input.focus = true
             }
         }
 
-        // Previous iteration
+        // Goal selection
         SmlText
         {
-            id: previous_iteration_header
+            id: goal_header
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Previous iteration"
+            text_value: "Model Goal"
             anchors
             {
                 top: minimum_samples_input.bottom
@@ -620,10 +650,13 @@ Item
                 left: parent.left
             }
         }
-        SmlInput
+        SmlCombobox
         {
-            id: previous_iteration_input
-            placeholder_text: "Set previous iteration from which to perform the optimization (-1 takes last one)"
+            activeFocusOnTab: true
+            focus: true
+            id: goal_input
+            placeholder_text: "Select your model goal"
+            model: root.__goal_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
             border_nightmode_color: Settings.app_color_green_1
@@ -632,23 +665,30 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: root.__input_width_split
             height: root.__input_height
+            rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: desired_carbon_footprint_input
             anchors
             {
-                top: previous_iteration_header.bottom
+                top: goal_header.bottom
                 topMargin: Settings.spacing_small
-                left: previous_iteration_header.left
+                left: goal_header.left
             }
-            onTextChanged:
+            onModelChanged:
             {
-                root.__previous_iteration = parseInt(text);
+                goal_input.currentIndex = -1
             }
-            onFocusChanged:
+            onText_changed:
             {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(previous_iteration_input.y - Settings.spacing_big)
+                root.__goal = text;
+            }
+            onFocusChanged: {
+                if(focus === true){
+                    goal_input.open()
+                    goal_input.focus = true
                 }
+            }
+            onTab_pressed: {
+                desired_carbon_footprint_input.focus = true
             }
         }
 
@@ -660,8 +700,8 @@ Item
             text_value: "Desired carbon footprint"
             anchors
             {
-                top: previous_iteration_header.top
-                left: previous_iteration_input.right
+                top: goal_header.top
+                left: goal_input.right
                 leftMargin: Settings.spacing_big
             }
         }
@@ -705,7 +745,7 @@ Item
             text_value: "Max memory footprint"
             anchors
             {
-                top: previous_iteration_input.bottom
+                top: goal_input.bottom
                 topMargin: Settings.spacing_normal
                 left: parent.left
             }
@@ -761,7 +801,7 @@ Item
             focus: true
             id: required_hardware_input
             placeholder_text: "Select hardware"
-            model: ["DGX100", "H100_x5", "H100_x8", "H100_x3", "H100_x2", "A800", "H20", "H200", "H100", "A6000", "PIM_AI_1dimm", "PIM_AI_4dimm", "PIM_AI_16dimm", "PIM_AI_8dimm", "PIM_AI_10dimm", "PIM_AI_6dimm", "CXL_PIM_BC", "CXL_PIM_nBC", "PIM_AI_12dimm", "PIM_AI_24dimm"]
+            model: root.__hardware_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
             border_nightmode_color: Settings.app_color_green_1
@@ -781,6 +821,10 @@ Item
             onText_changed:
             {
                 root.__hardware_required = text;
+            }
+            onModelChanged:
+            {
+                required_hardware_input.currentIndex = -1
             }
             onFocusChanged: {
                 if(focus === true){
@@ -904,7 +948,10 @@ Item
         onClicked:
         {
             focus = true
-            root.prepare_task()
+            if (!root.__refreshing)
+            {
+                root.prepare_task()
+            }
         }
     }
 
@@ -919,6 +966,7 @@ Item
                 root.__minimum_samples,
                 root.__maximum_samples,
                 root.__optimize_carbon_footprint_auto,
+                root.__goal,
                 root.__optimize_carbon_footprint_manual,
                 root.__previous_iteration,
                 root.__desired_carbon_footprint,
@@ -956,6 +1004,34 @@ Item
             {
                 root.refresh()
             }
+        }
+    }
+
+    SequentialAnimation {
+        id: tasking_animation
+        running: root.__refreshing
+        loops: Animation.Infinite
+        NumberAnimation {
+            target: refresh_button
+            property: "rotation"
+            to: 360
+            duration: 4000
+            easing.type: Easing.InOutQuad
+        }
+    }
+
+    SmlText
+    {
+        id: loading_animation
+        visible: root.__refreshing
+        font.pixelSize: 14
+        color: Settings.app_color_green_2
+        text_value: "Refreshing..."
+        anchors
+        {
+            right: refresh_button.left
+            rightMargin: Settings.spacing_small
+            verticalCenter: refresh_button.verticalCenter
         }
     }
 }
