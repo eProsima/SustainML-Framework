@@ -2,6 +2,7 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls 1.4
+import QtQuick.Layouts 1.15
 
 // Project imports
 import eProsima.SustainML.Settings 1.0
@@ -294,6 +295,127 @@ Window {
             }
         }
 
+        ListModel {
+            id: reiterateModel
+            ListElement { label: "Previous Iteration nº"; value: "X" }
+            ListElement { label: "Problem Kind"; value: "X" }
+            ListElement { label: "Suggested model"; value: "X" }
+            ListElement { label: "Power consumption [W]"; value: "X" }
+            ListElement { label: "Memory footprint"; value: "X" }
+            ListElement { label: "Carbon footprint [kgCO2e]"; value: "X" }
+            ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
+        }
+
+        // PROBLEM REITERATION SCREEN
+        Component {
+            id: reiterate_screen
+
+            Rectangle {
+                width: parent.width
+                height: parent.height
+                color: "transparent"
+
+                SplitView {
+                    anchors.fill: parent
+                    orientation: Qt.Horizontal
+
+                    SmlProblemDefinitionScreen {
+                        id: definition_screen_component
+                        Layout.minimumWidth: parent.width * 0.66
+                        Layout.maximumWidth: parent.width * 0.75
+                        Layout.preferredWidth: 2 * parent.width / 3
+                        Layout.fillHeight: true
+
+                        __modality_list: main_window.modality_list
+                        __goal_list: main_window.goal_list
+                        __hardware_list: main_window.hardware_list
+                        __refreshing: main_window.refreshing
+
+                        onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
+                        onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
+                        onSend_task:
+                        {
+                            engine.launch_task(
+                                problem_short_description,
+                                modality,
+                                problem_definition,
+                                inputs,
+                                outputs,
+                                minimum_samples,
+                                maximum_samples,
+                                optimize_carbon_footprint_auto,
+                                goal,
+                                optimize_carbon_footprint_manual,
+                                previous_iteration,
+                                desired_carbon_footprint,
+                                max_memory_footprint,
+                                hardware_required,
+                                geo_location_continent,
+                                geo_location_region,
+                                extra_data)
+                        }
+                        onRefresh: {
+                            main_window.refreshing = true
+                            engine.request_model()
+                            engine.request_hardwares()
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.minimumWidth: parent.width * 0.25
+                        Layout.maximumWidth: parent.width * 0.33
+                        Layout.preferredWidth: parent.width / 3
+                        Layout.fillHeight: true
+                        color: "transparent"
+
+                        Column {
+                            anchors.fill: parent
+                            spacing: 10
+                            padding: 20
+
+                            SmlText {
+                                text_kind: SmlText.TextKind.Header_3
+                                text_value: "Previous Results"
+                                horizontalAlignment: Text.AlignHCenter
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+
+                            Rectangle {
+                                anchors.topMargin: Settings.spacing_normal
+                                width: parent.width * 0.9
+                                height: 1
+                                color: "black"
+                            }
+
+                            // Item list for the results
+                            Repeater {
+                                model: reiterateModel
+                                delegate: Row {
+                                    width: parent.width * 0.9
+                                    spacing: 10
+
+                                    Text {
+                                        text: label + ":"
+                                        font.pixelSize: 16
+                                        width: parent.width * 0.6
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        text: value
+                                        font.pixelSize: 16
+                                        color: "green"
+                                        width: parent.width * 0.35
+                                        horizontalAlignment: Text.AlignRight
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // RESULTS SCREEN
         Component
         {
@@ -506,8 +628,8 @@ Window {
                     screen_to_be_loaded = log_screen
                     break
                 // Add new screens here
-                case ScreenManager.Screens.NewScreen1TODOrename:
-                    screen_to_be_loaded = new_screen_1_todo_rename
+                case ScreenManager.Screens.Reiterate:
+                    screen_to_be_loaded = reiterate_screen
                     break
                 case ScreenManager.Screens.NewScreen2TODOrename:
                     screen_to_be_loaded = new_screen_2_todo_rename
@@ -570,7 +692,7 @@ Window {
                 movement[3] = Settings.app_height * 5
                 break
             // Add new screens here
-            case ScreenManager.Screens.NewScreen1TODOrename:
+            case ScreenManager.Screens.Reiterate:
                 movement[0] = Settings.app_width * 5
                 movement[1] = Settings.app_height * 5
                 movement[2] = Settings.background_2_x_initial
@@ -603,5 +725,19 @@ Window {
                 break
         }
         return movement
+    }
+
+    // Initiate reiteration of a problem
+    function reiterate_problem(problem_id, results)
+    {
+        reiterateModel.set(0, { label: "Previous Iteration nº", value: String(results["Iteration"]) })
+        reiterateModel.set(1, { label: "Problem Kind", value: results["Problem kind"] })
+        reiterateModel.set(2, { label: "Suggested model", value: results["Suggested model"] })
+        reiterateModel.set(3, { label: "Power consumption [W]", value: results["Power consumption"] })
+        reiterateModel.set(4, { label: "Memory footprint", value: results["Memory footprint"] })
+        reiterateModel.set(5, { label: "Carbon footprint [kgCO2e]", value: results["Carbon footprint"] })
+        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]))
+        load_screen(ScreenManager.Screens.Reiterate)
     }
 }

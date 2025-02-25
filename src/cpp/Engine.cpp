@@ -504,6 +504,68 @@ void Engine::print_results(
             Utils::node_name(id) + QString(":\n") + Utils::raw_output(json_obj));
 }
 
+void Engine::request_orchestrator(
+    int problem_id,
+    int iteration_id)
+{
+    QJsonObject task_json;
+    task_json["problem_id"] = problem_id;
+    task_json["iteration_id"] = iteration_id;
+
+    QJsonObject node_json_data;
+    node_json_data["node_id"] = static_cast<int>(sustainml::NodeID::ID_ORCHESTRATOR);
+    node_json_data["task_id"] = task_json;
+    orchestrator_request(node_json_data);
+}
+
+void Engine::send_reiteration_inputs(
+    const QJsonObject& json_obj)
+{
+    QJsonObject node_json = json_obj[Utils::node_name(sustainml::NodeID::ID_ORCHESTRATOR)].toObject();
+    types::TaskId task_id = Utils::task_id(node_json);
+
+    QJsonArray inputs_array = node_json["inputs"].toArray();
+    QStringList inputs_list;
+    for (const QJsonValue& value : inputs_array)
+    {
+        inputs_list << value.toString();
+    }
+    QString inputs_str = inputs_list.join(" ");
+
+    QJsonArray outputs_array = node_json["outputs"].toArray();
+    QStringList outputs_list;
+    for (const QJsonValue& value : outputs_array)
+    {
+        outputs_list << value.toString();
+    }
+    QString outputs_str = outputs_list.join(" ");
+
+    QJsonObject extraData = node_json["extra_data"].toObject();
+    QString goal = extraData["goal"].toString();
+    QString hardware_required = extraData["hardware_required"].toString();
+    int max_memory_footprint = extraData["max_memory_footprint"].toInt();
+
+    emit reiterate_user_inputs(
+        task_id.problem_id(),
+        task_id.iteration_id(),
+        node_json["modality"].toString(),
+        node_json["problem_short_description"].toString(),
+        node_json["problem_definition"].toString(),
+        inputs_str,
+        outputs_str,
+        node_json["minimum_samples"].toInt(),
+        node_json["maximum_samples"].toInt(),
+        node_json["optimize_carbon_footprint_manual"].toBool(),
+        node_json["previous_iteration"].toInt(),
+        node_json["optimize_carbon_footprint_auto"].toBool(),
+        node_json["desired_carbon_footprint"].toDouble(),
+        node_json["geo_location_continent"].toString(),
+        node_json["geo_location_region"].toString(),
+        goal,
+        hardware_required,
+        max_memory_footprint);
+}
+
 void Engine::user_input_request(
         const QJsonObject& json_obj)
 {
@@ -575,6 +637,46 @@ void Engine::node_results_response(
     {
         // specialized method to print results
         print_results(Utils::node_id(json_obj), json_obj);
+    }
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            (ptr)->disconnect();
+            (ptr)->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::orchestrator_request(
+    const QJsonObject& json_obj)
+{
+    std::cout << "Data send" << std::endl;     // debug
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::orchestrator_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::REQUEST_RESULTS,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::orchestrator_response(
+    const REST_requester* requester,
+    const QJsonObject& json_obj)
+{
+    if (!json_obj.empty())
+    {
+        // specialized method to emit user inputs to reiteration
+        std::cout << "Data received: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() << std::endl;     // debug
+        send_reiteration_inputs(json_obj);
     }
     // Remove REST requester from queue
     std::lock_guard<std::mutex> lock(requesters_mutex_);
