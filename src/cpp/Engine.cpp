@@ -205,7 +205,7 @@ void Engine::request_hardwares()
 {
     QJsonObject json_config;
     json_config["node_id"] = 3;
-    json_config["transaction_id"] = 0;
+    json_config["transaction_id"] = 1;
     json_config["configuration"] = "hardwares";
 
     config_request(json_config, [this](const QJsonObject& json_obj)
@@ -222,6 +222,35 @@ void Engine::request_hardwares()
                         {
                             QStringList hardwares = config_obj["hardwares"].toString().split(", ");
                             emit hardwares_available(hardwares);
+                        }
+                    }
+                }
+            });
+}
+
+void Engine::request_metrics(
+    QString metric_req_type,
+    QString req_type_values)
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 4;
+    json_config["transaction_id"] = 2;
+    json_config["configuration"] = "metrics, " + metric_req_type + ": " + req_type_values;
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("metrics") && config_obj["metrics"].isString())
+                        {
+                            QStringList metrics = config_obj["metrics"].toString().split(", ");
+                            emit metrics_available(metrics);
                         }
                     }
                 }
@@ -485,12 +514,6 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_HW_CONSTRAINTS))
                             .toString();
-            if (status_value.toStdString() == "IDLE" && hw_idle)
-            {
-                emit refreshing_on();
-                request_hardwares();
-                hw_idle = false;
-            }
             emit update_hw_constraints_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_HW_RESOURCES)))
@@ -498,6 +521,12 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_HW_RESOURCES))
                             .toString();
+            if (status_value.toStdString() == "IDLE" && hw_idle)
+            {
+                emit refreshing_on();
+                request_hardwares();
+                hw_idle = false;
+            }
             emit update_hw_resources_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_ML_MODEL)))
@@ -558,13 +587,14 @@ void Engine::config_response(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
+    std::cout << "INICIA OBTENER RESPUESTA" << std::endl;   //DEBUG
     if (!json_obj.empty())
     {
         std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
                 std::endl;
         QJsonObject response_obj = json_obj["response"].toObject();
         int node_id = response_obj["node_id"].toInt();
-
+        std::cout << "Node ID Response: " << node_id << std::endl; //DEBUG
         if (config_callbacks_[node_id])
         {
             config_callbacks_[node_id](json_obj);

@@ -30,6 +30,7 @@ Window {
     property var modality_list: []
     property var goal_list: []
     property var hardware_list: []
+    property var metrics_list: []
     property bool refreshing: false
     property bool tasking: false
 
@@ -92,14 +93,20 @@ Window {
 
         function onModalities_available(list_modalities, list_goals)
         {
-            main_window.modality_list = list_modalities
-            main_window.goal_list = list_goals
+            main_window.modality_list = ["other (describe)"].concat(list_modalities)
+            main_window.goal_list = ["other (describe)"].concat(list_goals)
             main_window.refreshing = false
         }
 
         function onHardwares_available(list_hardwares)
         {
-            main_window.hardware_list = list_hardwares
+            main_window.hardware_list = ["other (describe)"].concat(list_hardwares)
+            main_window.refreshing = false
+        }
+
+        function onMetrics_available(list_metrics)
+        {
+            main_window.metrics_list = list_metrics
             main_window.refreshing = false
         }
 
@@ -238,6 +245,7 @@ Window {
                 __modality_list: main_window.modality_list
                 __goal_list: main_window.goal_list
                 __hardware_list: main_window.hardware_list
+                __metrics: main_window.metrics_list
                 __refreshing: main_window.refreshing
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
@@ -268,6 +276,13 @@ Window {
                     main_window.refreshing = true
                     engine.request_model()
                     engine.request_hardwares()
+                }
+                onAsk_metrics:
+                {
+                    main_window.refreshing = true
+                    engine.request_metrics(
+                        metric_req_type,
+                        req_type_values)
                 }
             }
         }
