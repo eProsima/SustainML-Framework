@@ -76,6 +76,10 @@ Item
         string extra_data
     );
     signal refresh();
+    signal ask_metrics(
+        string metric_req_type,
+        string req_type_values
+    );
 
     // Background mouse area
     MouseArea
@@ -242,18 +246,26 @@ Item
             onText_changed:
             {
                 root.__modality = text;
-                root.__metrics = []
+                // root.__metrics = []
 
 
                 // TODO: Get metrics with request of metrics given the modality
                 if (text === "audio")
                 {
-                    root.__metrics = ["Longiness", "Emptiness", "Something", "Metricable"]
+                    // root.__metrics = ["Longiness", "Emptiness", "Something", "Metricable"]
                 }
                 if (text === "cv")
                 {
-                    root.__metrics = ["PSNR", "SSIM", "MSE"]
-                }                                                    // Testing
+                    root.ask_metrics(     // First word indicate type of metric reception (modality or problem)
+                        "modality",       //  and second values for the search (in modalities ins & out modalities, and problem type in other case)
+                        "Image, Label");
+                }
+                if (text === "nlp")
+                {
+                    root.ask_metrics(           // First word indicate type of metric reception (modality or problem)
+                        "problem",              //  and second values for the search (in modalities ins & out modalities, and problem type in other case)
+                        "audio-text-to-text");
+                }
 
                 root.__metrics_values = {}  // clear old data
                 for (var i = 0; i < root.__metrics.length; i++) {

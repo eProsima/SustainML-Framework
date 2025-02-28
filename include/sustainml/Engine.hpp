@@ -119,7 +119,17 @@ public slots:
     /**
      * @brief public method to request hardwares
      */
-    void request_hardwares ();
+    void request_hardwares();
+
+    /**
+     * @brief public method to request metrics from modalities or problem
+     *
+     * @param metric_req_type indicate if metrics are retrieved from modalities or problem. Also provide ins, out modalities or problem type
+     * @param req_type_values provide ins, out modalities or problem type. Each separated by comma
+     */
+    void request_metrics(
+        QString metric_req_type,
+        QString req_type_values);
 
 signals:
 
@@ -314,6 +324,14 @@ signals:
      */
     void hardwares_available(
             const QStringList& hardwares);
+
+    /**
+     * @brief Metrics received signal to display in the GUI
+     *
+     * @param metrics list of possible metrics
+     */
+    void metrics_available(
+        const QStringList& metrics);
 
 protected:
 
