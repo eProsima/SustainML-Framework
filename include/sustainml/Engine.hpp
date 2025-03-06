@@ -80,23 +80,23 @@ public slots:
      * @param extra_data extra data
      */
     void launch_task(
-            QString problem_short_description,
-            QString modality,
-            QString problem_definition,
-            QString inputs,
-            QString outputs,
-            int minimum_samples,
-            int maximum_samples,
-            bool optimize_carbon_footprint_auto,
-            QString goal,
-            bool optimize_carbon_footprint_manual,
-            int previous_iteration,
-            double desired_carbon_footprint,
-            int max_memory_footprint,
-            QString hardware_required,
-            QString geo_location_continent,
-            QString geo_location_region,
-            QString extra_data);
+        QString problem_short_description,
+        QString modality,
+        QString problem_definition,
+        QString inputs,
+        QString outputs,
+        int minimum_samples,
+        int maximum_samples,
+        bool optimize_carbon_footprint_auto,
+        QString goal,
+        bool optimize_carbon_footprint_manual,
+        int previous_iteration,
+        double desired_carbon_footprint,
+        int max_memory_footprint,
+        QString hardware_required,
+        QString geo_location_continent,
+        QString geo_location_region,
+        QString /*extra_data_*/);
 
     /**
      * @brief public method to request all nodes data
@@ -114,7 +114,12 @@ public slots:
     /**
      * @brief public method to request modalities of ML
      */
-    void request_model();
+    void request_modalities();
+
+    /**
+     * @brief public method to request goals of ML
+     */
+    void request_goals();
 
     /**
      * @brief public method to request hardwares
@@ -318,6 +323,14 @@ signals:
             const QStringList& goals);
 
     /**
+     * @brief Goals received signal to display in the GUI
+     *
+     * @param goals list of possible goals
+     */
+    void goals_available(
+        const QStringList& goals);
+
+    /**
      * @brief Hardwares received signal to display in the GUI
      *
      * @param hardwares list of possible hardwares
@@ -407,6 +420,7 @@ private:
     std::map<int, std::function<void(const QJsonObject&)>> config_callbacks_;
 
     bool ml_model_idle = true;
+    bool ml_model_meta_idle = true;
     bool hw_idle = true;
 };
 

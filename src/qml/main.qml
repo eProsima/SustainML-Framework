@@ -98,6 +98,12 @@ Window {
             main_window.refreshing = false
         }
 
+        function onGoals_available(list_goals)
+        {
+            main_window.goal_list = ["other (describe)"].concat(list_goals)
+            main_window.refreshing = false
+        }
+
         function onHardwares_available(list_hardwares)
         {
             main_window.hardware_list = ["other (describe)"].concat(list_hardwares)
@@ -274,7 +280,8 @@ Window {
                 onRefresh:
                 {
                     main_window.refreshing = true
-                    engine.request_model()
+                    engine.request_modalities()
+                    // engine.request_goals()
                     engine.request_hardwares()
                 }
                 onAsk_metrics:

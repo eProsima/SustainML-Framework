@@ -130,6 +130,7 @@ void Engine::launch_task(
     QJsonObject extra_data;
     extra_data["hardware_required"] = hardware_required;
     extra_data["max_memory_footprint"] = max_memory_footprint;
+    extra_data["goal"] = goal;
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
     json_data["modality"] = modality;
@@ -139,7 +140,6 @@ void Engine::launch_task(
     json_data["minimum_samples"] = int(min);
     json_data["maximum_samples"] = int(max);
     json_data["optimize_carbon_footprint_auto"] = optimize_carbon_footprint_auto;
-    json_data["goal"] = goal;
     json_data["optimize_carbon_footprint_manual"] = optimize_carbon_footprint_manual;
     json_data["previous_iteration"] = previous_iteration;
     json_data["desired_carbon_footprint"] = desired_carbon_footprint;
@@ -173,7 +173,7 @@ void Engine::request_status()
     node_status_request(QJsonObject());
 }
 
-void Engine::request_model()
+void Engine::request_modalities()
 {
     QJsonObject json_config;
     json_config["node_id"] = 4;
@@ -195,6 +195,33 @@ void Engine::request_model()
                             QStringList modalities = config_obj["modalities"].toString().split(", ");
                             QStringList goals = config_obj["goals"].toString().split(", ");
                             emit modalities_available(modalities, goals);
+                        }
+                    }
+                }
+            });
+}
+
+void Engine::request_goals()
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 5;
+    json_config["transaction_id"] = 0;
+    json_config["configuration"] = "goal";
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("goals") && config_obj["goals"].isString())
+                        {
+                            QStringList goals = config_obj["goals"].toString().split(", ");
+                            emit goals_available(goals);
                         }
                     }
                 }
@@ -534,6 +561,12 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_ML_MODEL))
                             .toString();
+            // if (status_value.toStdString() == "IDLE" && ml_model_idle)
+            // {
+            //     emit refreshing_on();
+            //     request_goals();
+            //     ml_model_idle = false;
+            // }
             emit update_ml_model_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA)))
@@ -541,11 +574,11 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA))
                             .toString();
-            if (status_value.toStdString() == "IDLE" && ml_model_idle)
+            if (status_value.toStdString() == "IDLE" && ml_model_meta_idle)
             {
                 emit refreshing_on();
-                request_model();
-                ml_model_idle = false;
+                request_modalities();
+                ml_model_meta_idle = false;
             }
             emit update_ml_model_metadata_node_status(status_value);
         }
