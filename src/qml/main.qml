@@ -277,7 +277,8 @@ Window {
                             geo_location_continent,
                             geo_location_region,
                             extra_data,
-                            previous_problem_id)
+                            previous_problem_id,
+                            num_outputs)
                 }
                 onRefresh:
                 {
@@ -354,7 +355,8 @@ Window {
                                 geo_location_continent,
                                 geo_location_region,
                                 extra_data,
-                                previous_problem_id)
+                                previous_problem_id,
+                                num_outputs)
                         }
                         onRefresh: {
                             main_window.refreshing = true

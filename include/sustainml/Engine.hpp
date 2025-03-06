@@ -79,6 +79,7 @@ public slots:
      * @param geo_location_region region of the location
      * @param extra_data extra data
      * @param previous_problem_id id of the previous problem in case of reiteration
+     * @param num_outputs number of outputs requested by the user
      */
     void launch_task(
         QString problem_short_description,
@@ -98,7 +99,8 @@ public slots:
         QString geo_location_continent,
         QString geo_location_region,
         QString /*extra_data_*/,
-        int previous_problem_id);
+        int previous_problem_id,
+        int num_outputs);
 
     /**
      * @brief public method to request all nodes data
@@ -373,7 +375,8 @@ signals:
         const QString& geo_location_region,
         const QString& goal,
         const QString& hardware_required,
-        const int& max_memory_footprint);
+        const int& max_memory_footprint,
+        const int& num_outputs);
 
     /**
      * @brief Update qml tasking bool signal as task end

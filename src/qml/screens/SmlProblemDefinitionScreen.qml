@@ -46,6 +46,7 @@ Item
     property string __geo_location_region: ""
     property string __extra_data: ""
     property int __previous_problem_id: 0
+    property int __num_outputs: 0
 
     // Private properties
     property var __modality_list: []
@@ -75,7 +76,8 @@ Item
         string geo_location_continent,
         string geo_location_region,
         string extra_data,
-        int previous_problem_id
+        int previous_problem_id,
+        int num_outputs
     );
     signal refresh();
     signal ask_metrics(
@@ -91,7 +93,7 @@ Item
                           maximum_samples, optimize_carbon_footprint_manual,
                           previous_iteration, optimize_carbon_footprint_auto,
                           desired_carbon_footprint, geo_location_continent,
-                          geo_location_region, goal, hardware_required, max_memory_footprint)
+                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs)
         {
             root.__problem_short_description = problem_short_description
             root.__modality = modality
@@ -111,6 +113,7 @@ Item
             root.__max_memory_footprint = max_memory_footprint
             root.__previous_iteration = iteration_id
             root.__previous_problem_id = problem_id
+            root.__num_outputs = num_outputs
         }
     }
 
@@ -719,10 +722,10 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width_split
+            width: root.__input_width_small
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: desired_carbon_footprint_input
+            KeyNavigation.tab: num_outputs_input
             anchors
             {
                 top: goal_header.bottom
@@ -744,7 +747,51 @@ Item
                 }
             }
             onTab_pressed: {
-                desired_carbon_footprint_input.focus = true
+                num_outputs_input.focus = true
+            }
+        }
+
+        // Number of outputs
+        SmlText
+        {
+            id: num_outputs_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Nº outputs models"
+            anchors
+            {
+                top: goal_header.top
+                left: goal_input.right
+                leftMargin: Settings.spacing_normal
+            }
+        }
+        SmlInput
+        {
+            id: num_outputs_input
+            text: root.__num_outputs === 0 ? "" : root.__num_outputs
+            placeholder_text: displayText !== "" ? "" : "Select the quantity of output models"
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width_small
+            height: root.__input_height
+            KeyNavigation.tab: desired_carbon_footprint_input
+            anchors
+            {
+                top: num_outputs_header.bottom
+                topMargin: Settings.spacing_small
+                left: num_outputs_header.left
+            }
+            onTextChanged:
+            {
+                root.__num_outputs = parseInt(text);
+            }
+            onFocusChanged: {
+                if(focus === true){
+                    scroll_view.scroll_to(num_outputs_input.y - Settings.spacing_big)
+                }
             }
         }
 
@@ -756,9 +803,9 @@ Item
             text_value: "Desired carbon footprint"
             anchors
             {
-                top: goal_header.top
-                left: goal_input.right
-                leftMargin: Settings.spacing_big
+                top: num_outputs_header.top
+                left: num_outputs_input.right
+                leftMargin: Settings.spacing_normal
             }
         }
         SmlInput
@@ -772,7 +819,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width_split
+            width: 360
             height: root.__input_height
             KeyNavigation.tab: max_mem_footprint_input
             anchors
@@ -1036,7 +1083,8 @@ Item
                 root.__geo_location_continent,
                 root.__geo_location_region,
                 root.__extra_data,
-                root.__previous_problem_id);
+                root.__previous_problem_id,
+                root.__num_outputs);
     }
 
     // Refresh button
