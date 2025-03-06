@@ -78,6 +78,7 @@ public slots:
      * @param geo_location_continent continent of the location
      * @param geo_location_region region of the location
      * @param extra_data extra data
+     * @param previous_problem_id id of the previous problem in case of reiteration
      */
     void launch_task(
         QString problem_short_description,
@@ -96,7 +97,8 @@ public slots:
         QString hardware_required,
         QString geo_location_continent,
         QString geo_location_region,
-        QString /*extra_data_*/);
+        QString /*extra_data_*/,
+        int previous_problem_id);
 
     /**
      * @brief public method to request all nodes data

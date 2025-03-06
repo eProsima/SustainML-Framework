@@ -45,6 +45,7 @@ Item
     property string __geo_location_continent: ""
     property string __geo_location_region: ""
     property string __extra_data: ""
+    property int __previous_problem_id: 0
 
     // Private properties
     property var __modality_list: []
@@ -73,7 +74,8 @@ Item
         string hardware_required,
         string geo_location_continent,
         string geo_location_region,
-        string extra_data
+        string extra_data,
+        int previous_problem_id
     );
     signal refresh();
     signal ask_metrics(
@@ -95,7 +97,6 @@ Item
             root.__modality = modality
             root.__metrics_values = {} // Reset metrics values as no nuevos datos de métricas recibidos
             root.__problem_definition = problem_definition
-            console.log("Problem definition:", problem_definition);
             root.__inputs = inputs
             root.__outputs = outputs
             root.__minimum_samples = minimum_samples
@@ -109,6 +110,7 @@ Item
             root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
             root.__previous_iteration = iteration_id
+            root.__previous_problem_id = problem_id
         }
     }
 
@@ -1033,7 +1035,8 @@ Item
                 root.__hardware_required,
                 root.__geo_location_continent,
                 root.__geo_location_region,
-                root.__extra_data);
+                root.__extra_data,
+                root.__previous_problem_id);
     }
 
     // Refresh button

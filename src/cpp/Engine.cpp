@@ -85,7 +85,8 @@ void Engine::launch_task(
         QString hardware_required,
         QString geo_location_continent,
         QString geo_location_region,
-        QString /*extra_data_*/)
+        QString /*extra_data_*/,
+        int previous_problem_id)
 {
     QJsonArray ins;
     QJsonArray outs;
@@ -131,6 +132,7 @@ void Engine::launch_task(
     extra_data["hardware_required"] = hardware_required;
     extra_data["max_memory_footprint"] = max_memory_footprint;
     extra_data["goal"] = goal;
+    extra_data["previous_problem_id"] = previous_problem_id;
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
     json_data["modality"] = modality;
@@ -524,21 +526,8 @@ void Engine::send_reiteration_inputs(
     QJsonObject node_json = json_obj[Utils::node_name(sustainml::NodeID::ID_ORCHESTRATOR)].toObject();
     types::TaskId task_id = Utils::task_id(node_json);
 
-    QJsonArray inputs_array = node_json["inputs"].toArray();
-    QStringList inputs_list;
-    for (const QJsonValue& value : inputs_array)
-    {
-        inputs_list << value.toString();
-    }
-    QString inputs_str = inputs_list.join(" ");
-
-    QJsonArray outputs_array = node_json["outputs"].toArray();
-    QStringList outputs_list;
-    for (const QJsonValue& value : outputs_array)
-    {
-        outputs_list << value.toString();
-    }
-    QString outputs_str = outputs_list.join(" ");
+    QString inputs_str = node_json["inputs"].toString();
+    QString outputs_str = node_json["outputs"].toString();
 
     QJsonObject extraData = node_json["extra_data"].toObject();
     QString goal = extraData["goal"].toString();

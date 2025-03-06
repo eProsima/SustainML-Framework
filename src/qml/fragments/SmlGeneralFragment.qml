@@ -112,6 +112,7 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
@@ -139,6 +140,7 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
@@ -167,6 +169,7 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
                     table_model.setData(table_model.index(row, __memory_footprint_column), "display", memory_footprint_of_ml_model)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
@@ -195,6 +198,7 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
                     table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {

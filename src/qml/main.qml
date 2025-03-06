@@ -276,7 +276,8 @@ Window {
                             hardware_required,
                             geo_location_continent,
                             geo_location_region,
-                            extra_data)
+                            extra_data,
+                            previous_problem_id)
                 }
                 onRefresh:
                 {
@@ -352,12 +353,21 @@ Window {
                                 hardware_required,
                                 geo_location_continent,
                                 geo_location_region,
-                                extra_data)
+                                extra_data,
+                                previous_problem_id)
                         }
                         onRefresh: {
                             main_window.refreshing = true
-                            engine.request_model()
+                            engine.request_modalities()
+                            // engine.request_goals()
                             engine.request_hardwares()
+                        }
+                        onAsk_metrics:
+                        {
+                            main_window.refreshing = true
+                            engine.request_metrics(
+                                metric_req_type,
+                                req_type_values)
                         }
                     }
 
