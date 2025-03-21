@@ -249,21 +249,23 @@ Item
                 // root.__metrics = []
 
 
-                // TODO: Get metrics with request of metrics given the modality
+                // TODO: Not mock the inputs for requesting metrics
                 if (text === "audio")
                 {
-                    // root.__metrics = ["Longiness", "Emptiness", "Something", "Metricable"]
+                    root.ask_metrics(     // First word indicate type of metric reception (modality, problem or all)
+                        "all",       //  and second values for the search (in modalities ins & out modalities, and problem type in other case // all does not need second value)
+                        "");
                 }
                 if (text === "cv")
                 {
-                    root.ask_metrics(     // First word indicate type of metric reception (modality or problem)
-                        "modality",       //  and second values for the search (in modalities ins & out modalities, and problem type in other case)
+                    root.ask_metrics(     // First word indicate type of metric reception (modality, problem or all)
+                        "modality",       //  and second values for the search (in modalities ins & out modalities, and problem type in other case // all does not need second value)
                         "Image, Label");
                 }
                 if (text === "nlp")
                 {
-                    root.ask_metrics(           // First word indicate type of metric reception (modality or problem)
-                        "problem",              //  and second values for the search (in modalities ins & out modalities, and problem type in other case)
+                    root.ask_metrics(           // First word indicate type of metric reception (modality, problem or all)
+                        "problem",              //  and second values for the search (in modalities ins & out modalities, and problem type in other case // all does not need second value)
                         "audio-text-to-text");
                 }
 
