@@ -201,6 +201,34 @@ void Engine::request_modalities()
             });
 }
 
+void Engine::request_inout_modalities()
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 4;
+    json_config["transaction_id"] = 0;
+    json_config["configuration"] = "in_out_modalities";
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("inputs") && config_obj["inputs"].isString())
+                        {
+                            QStringList inputs = config_obj["inputs"].toString().split(", ");
+                            QStringList outputs = config_obj["outputs"].toString().split(", ");
+                            //emit modalities_available(inputs, outputs); //TODO: Implement this signal
+                        }
+                    }
+                }
+            });
+}
+
 void Engine::request_goals()
 {
     QJsonObject json_config;
@@ -278,6 +306,70 @@ void Engine::request_metrics(
                         {
                             QStringList metrics = config_obj["metrics"].toString().split(", ");
                             emit metrics_available(metrics);
+                        }
+                    }
+                }
+            });
+}
+
+void Engine::request_model_info(
+    QString mode_name)
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 4;
+    json_config["transaction_id"] = 1;
+    json_config["configuration"] = "model_info, " + mode_name;
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("metrics") && config_obj["metrics"].isString())
+                        {
+                            QStringList model_uri = config_obj["model_uri"].toString().split(", ");
+                            QStringList id = config_obj["id"].toString().split(", ");
+                            QStringList name = config_obj["name"].toString().split(", ");
+                            QStringList problem = config_obj["problem"].toString().split(", ");
+                            QStringList coverTag = config_obj["coverTag"].toString().split(", ");
+                            QStringList library = config_obj["library"].toString().split(", ");
+                            QStringList downloads = config_obj["downloads"].toString().split(", ");
+                            QStringList likes = config_obj["likes"].toString().split(", ");
+                            QStringList lastModified = config_obj["lastModified"].toString().split(", ");
+                            // emit mode_details(model_uri, id, name, problem, coverTag, library, downloads, likes, lastModified);  // TODO: Implement this signal
+                        }
+                    }
+                }
+            });
+}
+
+void Engine::request_problem_from_modality(
+    QString modality)
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 4;
+    json_config["transaction_id"] = 3;
+    json_config["configuration"] = "problem_from_modality, " + modality;
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("goals") && config_obj["goals"].isString())
+                        {
+                            QStringList goals = config_obj["goals"].toString().split(", ");
+                            // emit mode_details(goals);  // TODO: Implement this signal
                         }
                     }
                 }

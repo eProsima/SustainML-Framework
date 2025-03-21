@@ -117,6 +117,11 @@ public slots:
     void request_modalities();
 
     /**
+     * @brief public method to request inputs and outputs modalities of ML
+     */
+    void request_inout_modalities();
+
+    /**
      * @brief public method to request goals of ML
      */
     void request_goals();
@@ -135,6 +140,22 @@ public slots:
     void request_metrics(
         QString metric_req_type,
         QString req_type_values);
+
+    /**
+     * @brief public method to request model details
+     *
+     * @param mode_name indicate model name that details are requested
+     */
+    void request_model_info(
+        QString mode_name);
+
+    /**
+     * @brief public method to request problem types from modality
+     *
+     * @param modality indicate modality to request problem types
+     */
+    void request_problem_from_modality(
+            QString modality);
 
 signals:
 
