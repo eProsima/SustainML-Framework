@@ -45,6 +45,7 @@ Item
     property string __geo_location_continent: ""
     property string __geo_location_region: ""
     property string __extra_data: ""
+    property int __previous_problem_id: 0
 
     // Private properties
     property var __modality_list: []
@@ -73,13 +74,45 @@ Item
         string hardware_required,
         string geo_location_continent,
         string geo_location_region,
-        string extra_data
+        string extra_data,
+        int previous_problem_id
     );
     signal refresh();
     signal ask_metrics(
         string metric_req_type,
         string req_type_values
     );
+
+    Connections
+    {
+        target: engine
+        function onReiterate_user_inputs(problem_id, iteration_id, modality, problem_short_description,
+                          problem_definition, inputs, outputs, minimum_samples,
+                          maximum_samples, optimize_carbon_footprint_manual,
+                          previous_iteration, optimize_carbon_footprint_auto,
+                          desired_carbon_footprint, geo_location_continent,
+                          geo_location_region, goal, hardware_required, max_memory_footprint)
+        {
+            root.__problem_short_description = problem_short_description
+            root.__modality = modality
+            root.__metrics_values = {} // Reset metrics values as no nuevos datos de métricas recibidos
+            root.__problem_definition = problem_definition
+            root.__inputs = inputs
+            root.__outputs = outputs
+            root.__minimum_samples = minimum_samples
+            root.__maximum_samples = maximum_samples
+            root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
+            root.__optimize_carbon_footprint_auto = optimize_carbon_footprint_auto
+            root.__desired_carbon_footprint = desired_carbon_footprint
+            root.__geo_location_continent = geo_location_continent
+            root.__geo_location_region = geo_location_region
+            root.__goal = goal
+            root.__hardware_required = hardware_required
+            root.__max_memory_footprint = max_memory_footprint
+            root.__previous_iteration = iteration_id
+            root.__previous_problem_id = problem_id
+        }
+    }
 
     // Background mouse area
     MouseArea
@@ -174,6 +207,7 @@ Item
         SmlInput
         {
             id: problem_short_description_input
+            text: root.__problem_short_description
             placeholder_text: "Resume briefly the objetive of the problem"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -221,7 +255,8 @@ Item
             activeFocusOnTab: true
             focus: true
             id: modality_input
-            placeholder_text: "Select the modality of the input data"
+            displayText: root.__modality
+            placeholder_text: displayText !== "" ? "" : "Select the modality of the input data"
             model: root.__modality_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -377,6 +412,7 @@ Item
         SmlInput
         {
             id: problem_definition_input
+            text: root.__problem_definition
             placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -422,6 +458,7 @@ Item
         SmlInput
         {
             id: inputs_input
+            text: root.__inputs
             placeholder_text: "Describe a sequence of serialized batches of input data"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -467,6 +504,7 @@ Item
         SmlInput
         {
             id: outputs_input
+            text: root.__outputs
             placeholder_text: "Describe a sequence of serialized batches of output data"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -512,6 +550,7 @@ Item
         SmlInput
         {
             id: minimum_samples_input
+            text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
             placeholder_text: "Min samples required"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -557,6 +596,7 @@ Item
         SmlInput
         {
             id: maximum_samples_input
+            text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
             placeholder_text: "Max samples required"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -604,7 +644,8 @@ Item
             activeFocusOnTab: true
             focus: true
             id: optimize_carbon_input
-            placeholder_text: "Select optimization iteration method"
+            displayText: root.__optimize_carbon_footprint_manual ? "Manual" : (root.__optimize_carbon_footprint_auto ? "Auto" : "")
+            placeholder_text: displayText !== "" ? "" : "Select optimization iteration method"
             model: ["Manual", "Auto"]
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -669,7 +710,8 @@ Item
             activeFocusOnTab: true
             focus: true
             id: goal_input
-            placeholder_text: "Select your model goal"
+            displayText: root.__goal
+            placeholder_text: displayText !== "" ? "" : "Select your model goal"
             model: root.__goal_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -722,6 +764,7 @@ Item
         SmlInput
         {
             id: desired_carbon_footprint_input
+            text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
             placeholder_text: "Optimization aimed value for carbon footprint"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -767,6 +810,7 @@ Item
         SmlInput
         {
             id: max_mem_footprint_input
+            text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
             placeholder_text: "Set maximum memory footprint allowed"
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -814,7 +858,8 @@ Item
             activeFocusOnTab: true
             focus: true
             id: required_hardware_input
-            placeholder_text: "Select hardware"
+            displayText: root.__hardware_required
+            placeholder_text: displayText !== "" ? "" : "Select hardware"
             model: root.__hardware_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -867,6 +912,7 @@ Item
         SmlInput
         {
             id: geo_location_continent_input
+            text: root.__geo_location_continent
             placeholder_text: "Set continent for the geo location" // TODO combobox
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -912,6 +958,7 @@ Item
         SmlInput
         {
             id: geo_location_region_input
+            text: root.__geo_location_region
             placeholder_text: "Set region for the geo location" // TODO combobox
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -988,7 +1035,8 @@ Item
                 root.__hardware_required,
                 root.__geo_location_continent,
                 root.__geo_location_region,
-                root.__extra_data);
+                root.__extra_data,
+                root.__previous_problem_id);
     }
 
     // Refresh button
