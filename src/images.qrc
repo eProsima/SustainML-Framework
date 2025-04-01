@@ -68,5 +68,12 @@
         <file>images/icons/plus/plus_4.svg</file>
         <file>images/icons/plus/plus_w.svg</file>
 
+        <file>images/icons/refresh/refresh.svg</file>
+        <file>images/icons/refresh/refresh_1.svg</file>
+        <file>images/icons/refresh/refresh_2.svg</file>
+        <file>images/icons/refresh/refresh_3.svg</file>
+        <file>images/icons/refresh/refresh_4.svg</file>
+        <file>images/icons/refresh/refresh_w.svg</file>
+
     </qresource>
 </RCC>

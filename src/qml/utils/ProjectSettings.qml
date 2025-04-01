@@ -22,10 +22,10 @@ QtObject {
 
     // FONT SIZES
     readonly property int app_name_size:     90
-    readonly property int header1_font_size: 60
-    readonly property int header2_font_size: 40
-    readonly property int header3_font_size: 30
-    readonly property int body_font_size:    20
+    readonly property int header1_font_size: 45
+    readonly property int header2_font_size: 30
+    readonly property int header3_font_size: 23
+    readonly property int body_font_size:    15
 
     // IMAGES
     readonly property string app_logo:      "qrc:/images/logos/sustainml.svg"
@@ -61,6 +61,7 @@ QtObject {
     readonly property string arrow_down_icon_name:      "down"
     readonly property string add_tab_icon_name:         "plus"
     readonly property string close_tab_icon_name:       "cross"
+    readonly property string refresh_icon_name:         "refresh"
 
     // ICON SIZES
     readonly property int button_icon_size:         30

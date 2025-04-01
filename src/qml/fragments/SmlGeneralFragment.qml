@@ -219,11 +219,7 @@ Rectangle
     {
         id: scroll_view
 
-        anchors
-        {
-            top: parent.top
-            left: parent.left
-        }
+        anchors.fill: parent
         width: root.__scroll_view_width
         height: root.__scroll_view_height
         content_width: general_header_table.contentWidth < general_table.contentWidth

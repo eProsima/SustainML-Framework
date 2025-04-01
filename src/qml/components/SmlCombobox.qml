@@ -59,7 +59,7 @@ ComboBox {
     }
     onCurrentIndexChanged:
     {
-        sustainml_custom_combobox.text_changed(sustainml_custom_combobox.currentText)
+        sustainml_custom_combobox.text_changed(sustainml_custom_combobox.model[sustainml_custom_combobox.currentIndex])
         sustainml_custom_combobox.__edited = false
     }
 
