@@ -26,7 +26,13 @@ Window {
     property string ml_model_metadata_node_last_status: "INACTIVE"
     property int current_problem_id: -1
     property int current_iteration_id: -1
+
     property var modality_list: []
+    property var goal_list: []
+    property var hardware_list: []
+    property var metrics_list: []
+    property bool refreshing: false
+    property bool tasking: false
 
     // Main view properties
     width:  Settings.app_width
@@ -41,6 +47,7 @@ Window {
         {
             main_window.current_problem_id = problem_id
             main_window.current_iteration_id = iteration_id
+            main_window.tasking = true
             main_window.load_screen(ScreenManager.Screens.Results)
         }
 
@@ -79,9 +86,39 @@ Window {
             main_window.ml_model_metadata_node_last_status = new_status
         }
 
-        function onModalities_available(list_modalities)
+        function onRefreshing_on()
         {
-            main_window.modality_list = list_modalities
+            main_window.refreshing = true
+        }
+
+        function onModalities_available(list_modalities, list_goals)
+        {
+            main_window.modality_list = ["other (describe)"].concat(list_modalities)
+            main_window.goal_list = ["other (describe)"].concat(list_goals)
+            main_window.refreshing = false
+        }
+
+        function onGoals_available(list_goals)
+        {
+            main_window.goal_list = ["other (describe)"].concat(list_goals)
+            main_window.refreshing = false
+        }
+
+        function onHardwares_available(list_hardwares)
+        {
+            main_window.hardware_list = ["other (describe)"].concat(list_hardwares)
+            main_window.refreshing = false
+        }
+
+        function onMetrics_available(list_metrics)
+        {
+            main_window.metrics_list = list_metrics
+            main_window.refreshing = false
+        }
+
+        function onTask_end()
+        {
+            main_window.tasking = false
         }
     }
 
@@ -212,8 +249,13 @@ Window {
 
                 // Pass modalities
                 __modality_list: main_window.modality_list
+                __goal_list: main_window.goal_list
+                __hardware_list: main_window.hardware_list
+                __metrics: main_window.metrics_list
+                __refreshing: main_window.refreshing
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
+                onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onSend_task:
                 {
                     engine.launch_task(
@@ -225,6 +267,7 @@ Window {
                             minimum_samples,
                             maximum_samples,
                             optimize_carbon_footprint_auto,
+                            goal,
                             optimize_carbon_footprint_manual,
                             previous_iteration,
                             desired_carbon_footprint,
@@ -234,7 +277,20 @@ Window {
                             geo_location_region,
                             extra_data)
                 }
-                onRefresh: engine.request_modalities()
+                onRefresh:
+                {
+                    main_window.refreshing = true
+                    engine.request_modalities()
+                    // engine.request_goals()
+                    engine.request_hardwares()
+                }
+                onAsk_metrics:
+                {
+                    main_window.refreshing = true
+                    engine.request_metrics(
+                        metric_req_type,
+                        req_type_values)
+                }
             }
         }
 
@@ -247,6 +303,7 @@ Window {
             {
                 id: results_screen_component
                 current_problem_id: -1
+                tasking: main_window.tasking
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_back: main_window.load_screen(ScreenManager.Screens.Definition) // todo update this
                 onResults_screen_loaded:
@@ -488,7 +545,7 @@ Window {
         }
     }
 
-    // Detemine location of each screen
+    // Determine location of each screen
     function get_movement (screen)
     {
         var movement = [0,0,0,0]

@@ -29,6 +29,7 @@ Item
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __tab_view_width: 1000
     readonly property int __tab_view_height: 600
+    property bool tasking: false
 
     Connections
     {
@@ -134,6 +135,7 @@ Item
     // Go back button
     SmlButton
     {
+        id: go_back_button
         icon_name: Settings.back_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: ""
@@ -153,6 +155,52 @@ Item
         onClicked: root.go_back()
     }
 
+    // Tasking status text
+    SmlText
+    {
+        id: tasking_status_text
+        visible: root.tasking
+        text_kind: SmlText.TextKind.Header_3
+        font.pixelSize: 25
+        text_value: "Working on task, please wait"
+        anchors {
+            horizontalCenter: parent.horizontalCenter
+            top: parent.top
+            topMargin: Settings.spacing_big*1.5
+        }
+    }
+
+    // Tasking status icon
+    SmlIcon
+    {
+        id: tasking_status_icon
+        visible: root.tasking
+        name:   Settings.bullet_point_icon_name
+        color:  Settings.app_color_green_1
+        color_pressed:  Settings.app_color_green_2
+        nightmode_color:  Settings.app_color_green_4
+        nightmode_color_pressed:  Settings.app_color_green_3
+        size: Settings.button_icon_size
+
+        anchors{
+            verticalCenter: tasking_status_text.verticalCenter
+            left: tasking_status_text.right
+            leftMargin: Settings.spacing_normal
+        }
+    }
+
+    SequentialAnimation {
+        id: tasking_animation
+        running: root.tasking
+        loops: Animation.Infinite
+        NumberAnimation {
+            target: tasking_status_icon
+            property: "rotation"
+            to: 360
+            duration: 4000
+            easing.type: Easing.InOutQuad
+        }
+    }
 
     SmlTabView
     {
