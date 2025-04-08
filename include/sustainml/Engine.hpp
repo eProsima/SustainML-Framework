@@ -100,7 +100,8 @@ public slots:
         QString geo_location_region,
         QString /*extra_data_*/,
         int previous_problem_id,
-        int num_outputs);
+        int num_outputs,
+        QString model_selected);
 
     /**
      * @brief public method to request all nodes data
@@ -160,6 +161,14 @@ public slots:
      */
     void request_problem_from_modality(
             QString modality);
+
+    /**
+     * @brief public method to request models types from goal
+     *
+     * @param modality indicate goal to request models types
+     */
+    void request_model_from_goal(
+        QString modality);
 
     /**
      * @brief private method to request user_inputs from the given previous task.
@@ -389,6 +398,11 @@ signals:
     void refreshing_on();
 
     /**
+     * @brief Update qml initializing bool signal to display in the GUI
+     */
+    void initializing_off();
+
+    /**
      * @brief Modalities received signal to display in the GUI
      *
      * @param modalities list of possible modalities
@@ -420,6 +434,14 @@ signals:
      * @param metrics list of possible metrics
      */
     void metrics_available(
+        const QStringList& metrics);
+
+    /**
+     * @brief Models received signal to display in the GUI
+     *
+     * @param metrics list of possible models
+     */
+    void models_available(
         const QStringList& metrics);
 
 protected:

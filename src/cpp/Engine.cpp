@@ -87,7 +87,8 @@ void Engine::launch_task(
         QString geo_location_region,
         QString /*extra_data_*/,
         int previous_problem_id,
-        int num_outputs)
+        int num_outputs,
+        QString model_selected)
 {
     QJsonArray ins;
     QJsonArray outs;
@@ -140,6 +141,7 @@ void Engine::launch_task(
     extra_data["goal"] = goal;
     extra_data["previous_problem_id"] = previous_problem_id;
     extra_data["num_outputs"] = num_outputs;
+    extra_data["model_selected"] = model_selected;
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
     json_data["modality"] = modality;
@@ -385,6 +387,34 @@ void Engine::request_problem_from_modality(
             });
 }
 
+void Engine::request_model_from_goal(
+    QString goal)
+{
+    QJsonObject json_config;
+    json_config["node_id"] = 5;
+    json_config["transaction_id"] = 1;
+    json_config["configuration"] = "model_from_goal, " + goal;
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("models") && config_obj["models"].isString())
+                        {
+                            QStringList models = config_obj["models"].toString().split(", ");
+                            emit models_available(models);
+                        }
+                    }
+                }
+            });
+}
+
 void Engine::request_results(
         const types::TaskId& task_id,
         const sustainml::NodeID& node_id)
@@ -434,7 +464,10 @@ void Engine::print_results(
         }
         case sustainml::NodeID::ID_CARBON_FOOTPRINT:
         {
-            emit task_end();
+            if (!received_task_ids.empty() && (task_id == received_task_ids.back()))
+            {
+                emit task_end();
+            }
             emit new_carbon_footprint_node_output(
                 task_id.problem_id(),
                 task_id.iteration_id(),
@@ -731,6 +764,8 @@ void Engine::node_status_response(
 {
     if (!json_obj.empty())
     {
+        int check_initialization = 0;
+
         QJsonObject nodes_json = json_obj["status"].toObject();
 
         // Update status for each node
@@ -739,6 +774,10 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_APP_REQUIREMENTS))
                             .toString();
+            if (status_value.toStdString() == "IDLE")
+            {
+                check_initialization++;
+            }
             emit update_app_requirements_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_CARBON_FOOTPRINT)))
@@ -746,6 +785,10 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_CARBON_FOOTPRINT))
                             .toString();
+            if (status_value.toStdString() == "IDLE")
+            {
+                check_initialization++;
+            }
             emit update_carbon_footprint_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_HW_CONSTRAINTS)))
@@ -753,6 +796,10 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_HW_CONSTRAINTS))
                             .toString();
+            if (status_value.toStdString() == "IDLE")
+            {
+                check_initialization++;
+            }
             emit update_hw_constraints_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_HW_RESOURCES)))
@@ -760,11 +807,14 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_HW_RESOURCES))
                             .toString();
-            if (status_value.toStdString() == "IDLE" && hw_idle)
+            if (status_value.toStdString() == "IDLE")
             {
-                emit refreshing_on();
-                request_hardwares();
-                hw_idle = false;
+                check_initialization++;
+                if(hw_idle){
+                    emit refreshing_on();
+                    request_hardwares();
+                    hw_idle = false;
+                }
             }
             emit update_hw_resources_node_status(status_value);
         }
@@ -773,12 +823,10 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_ML_MODEL))
                             .toString();
-            // if (status_value.toStdString() == "IDLE" && ml_model_idle)
-            // {
-            //     emit refreshing_on();
-            //     request_goals();
-            //     ml_model_idle = false;
-            // }
+            if (status_value.toStdString() == "IDLE")
+            {
+                check_initialization++;
+            }
             emit update_ml_model_node_status(status_value);
         }
         if (nodes_json.contains(Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA)))
@@ -786,13 +834,21 @@ void Engine::node_status_response(
             QString status_value = nodes_json.value(
                 Utils::node_name(sustainml::NodeID::ID_ML_MODEL_METADATA))
                             .toString();
-            if (status_value.toStdString() == "IDLE" && ml_model_meta_idle)
+            if (status_value.toStdString() == "IDLE")
             {
-                emit refreshing_on();
-                request_modalities();
-                ml_model_meta_idle = false;
+                check_initialization++;
+                if(ml_model_meta_idle){
+                    emit refreshing_on();
+                    request_modalities();
+                    ml_model_meta_idle = false;
+                }
             }
             emit update_ml_model_metadata_node_status(status_value);
+        }
+
+        if (check_initialization == 6)
+        {
+            emit initializing_off();
         }
     }
     // Remove REST requester from queue

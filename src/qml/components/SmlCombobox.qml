@@ -145,10 +145,15 @@ ComboBox {
 
         contentItem: ListView {
             id:listView
+            interactive: true
+            clip: true
             implicitHeight: contentHeight
             model: sustainml_custom_combobox.popup.visible ? sustainml_custom_combobox.delegateModel : null
 
-        ScrollIndicator.vertical: ScrollIndicator { }
+            ScrollBar.vertical: ScrollBar {
+                interactive: true
+                width: 8
+            }
         }
 
         background: Rectangle {

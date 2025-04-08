@@ -32,8 +32,10 @@ Window {
     property var goal_list: []
     property var hardware_list: []
     property var metrics_list: []
+    property var model_list: []
     property bool refreshing: false
     property bool tasking: false
+    property bool initializing: true
 
     // Main view properties
     width:  Settings.app_width
@@ -92,6 +94,11 @@ Window {
             main_window.refreshing = true
         }
 
+        function onInitializing_off()
+        {
+            main_window.initializing = false
+        }
+
         function onModalities_available(list_modalities, list_goals)
         {
             main_window.modality_list = ["other (describe)"].concat(list_modalities)
@@ -115,6 +122,11 @@ Window {
         {
             main_window.metrics_list = list_metrics
             main_window.refreshing = false
+        }
+
+        function onModels_available(list_models)
+        {
+            main_window.model_list = list_models
         }
 
         function onTask_end()
@@ -254,6 +266,7 @@ Window {
                 __hardware_list: main_window.hardware_list
                 __metrics: main_window.metrics_list
                 __refreshing: main_window.refreshing
+                __initializing: main_window.initializing
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
@@ -278,7 +291,8 @@ Window {
                             geo_location_region,
                             extra_data,
                             previous_problem_id,
-                            num_outputs)
+                            num_outputs,
+                            model_selected)
                 }
                 onRefresh:
                 {
@@ -302,6 +316,7 @@ Window {
             ListElement { label: "Previous Iteration nº"; value: "X" }
             ListElement { label: "Problem Kind"; value: "X" }
             ListElement { label: "Suggested model"; value: "X" }
+            ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
             ListElement { label: "Memory footprint"; value: "X" }
             ListElement { label: "Carbon footprint [kgCO2e]"; value: "X" }
@@ -323,15 +338,20 @@ Window {
 
                     SmlProblemDefinitionScreen {
                         id: definition_screen_component
-                        Layout.minimumWidth: parent.width * 0.66
-                        Layout.maximumWidth: parent.width * 0.75
-                        Layout.preferredWidth: 2 * parent.width / 3
+                        Layout.minimumWidth: parent.width * 0.70
+                        Layout.maximumWidth: parent.width * 0.78
+                        Layout.preferredWidth: parent.width * 0.75
                         Layout.fillHeight: true
 
                         __modality_list: main_window.modality_list
                         __goal_list: main_window.goal_list
                         __hardware_list: main_window.hardware_list
+                        __model_list: main_window.model_list
                         __refreshing: main_window.refreshing
+                        __initializing: main_window.initializing
+                        __reiterate: true
+                        __model_selected: reiterateModel.get(2).value
+                        __hardware_required: reiterateModel.get(3).value
 
                         onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
@@ -356,7 +376,8 @@ Window {
                                 geo_location_region,
                                 extra_data,
                                 previous_problem_id,
-                                num_outputs)
+                                num_outputs,
+                                model_selected)
                         }
                         onRefresh: {
                             main_window.refreshing = true
@@ -374,9 +395,9 @@ Window {
                     }
 
                     Rectangle {
-                        Layout.minimumWidth: parent.width * 0.25
-                        Layout.maximumWidth: parent.width * 0.33
-                        Layout.preferredWidth: parent.width / 3
+                        Layout.minimumWidth: parent.width * 0.22
+                        Layout.maximumWidth: parent.width * 0.30
+                        Layout.preferredWidth: parent.width * 0.25
                         Layout.fillHeight: true
                         color: "transparent"
 
@@ -408,14 +429,14 @@ Window {
 
                                     Text {
                                         text: label + ":"
-                                        font.pixelSize: 16
+                                        font.pixelSize: 13
                                         width: parent.width * 0.6
                                         elide: Text.ElideRight
                                     }
 
                                     Text {
                                         text: value
-                                        font.pixelSize: 16
+                                        font.pixelSize: 13
                                         color: "green"
                                         width: parent.width * 0.35
                                         horizontalAlignment: Text.AlignRight
@@ -577,8 +598,10 @@ Window {
         nightmode_color_pressed:  Settings.app_color_green_3
         size: Settings.button_big_icon_size
 
-        x: parent.width -  (size * 2)
-        y: parent.height - (size * 2)
+        x: parent.width - (size * 2)
+        y: ScreenManager.current_screen === ScreenManager.Screens.Reiterate ?
+            main_window.height - 2 * Settings.spacing_big :
+            Settings.spacing_big
 
         SmlMouseArea
         {
@@ -589,7 +612,6 @@ Window {
             onEntered: settings_icon.start_animation();
             onPressed: settings_icon.pressed = true;
             onReleased: settings_icon.pressed = false;
-            //onClicked: main_window.load_screen(ScreenManager.Screens.Log);
             onClicked: ScreenManager.night_mode = !ScreenManager.night_mode
         }
     }
@@ -599,20 +621,20 @@ Window {
     {
         id: logs_button
         icon_name: ""
-        text_kind: SmlText.Header_3
+        text_kind: SmlText.Header_2
         text_value: "Logs"
         rounded: true
-        color: "transparent" //Settings.app_color_green_3
+        color: Settings.app_color_green_3
         color_pressed: Settings.app_color_green_1
-        nightmode_color: "transparent" //Settings.app_color_green_1
+        nightmode_color: Settings.app_color_green_1
         nightmode_color_pressed: Settings.app_color_green_3
 
         // Layout constraints
         anchors
         {
-            top: settings_icon.top
-            topMargin: Settings.spacing_normal
             verticalCenter: settings_icon.verticalCenter
+            right: settings_icon.left
+            rightMargin: Settings.spacing_normal
         }
 
         // Button actions
@@ -745,11 +767,13 @@ Window {
         reiterateModel.set(0, { label: "Previous Iteration nº", value: String(results["Iteration"]) })
         reiterateModel.set(1, { label: "Problem Kind", value: results["Problem kind"] })
         reiterateModel.set(2, { label: "Suggested model", value: results["Suggested model"] })
-        reiterateModel.set(3, { label: "Power consumption [W]", value: results["Power consumption"] })
-        reiterateModel.set(4, { label: "Memory footprint", value: results["Memory footprint"] })
-        reiterateModel.set(5, { label: "Carbon footprint [kgCO2e]", value: results["Carbon footprint"] })
-        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
+        reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
+        reiterateModel.set(5, { label: "Memory footprint", value: results["Memory footprint"] })
+        reiterateModel.set(6, { label: "Carbon footprint [kgCO2e]", value: results["Carbon footprint"] })
+        reiterateModel.set(7, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]))
+        engine.request_model_from_goal(String(results["Problem kind"]))
         load_screen(ScreenManager.Screens.Reiterate)
     }
 }

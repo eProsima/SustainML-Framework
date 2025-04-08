@@ -16,16 +16,16 @@ QtObject {
     readonly property color app_color_dark:    "#394039"
 
     // SPACING
-    readonly property int spacing_big:    50
-    readonly property int spacing_normal: 20
+    readonly property int spacing_big:    30
+    readonly property int spacing_normal: 15
     readonly property int spacing_small:  10
 
     // FONT SIZES
-    readonly property int app_name_size:     90
-    readonly property int header1_font_size: 45
-    readonly property int header2_font_size: 30
-    readonly property int header3_font_size: 23
-    readonly property int body_font_size:    15
+    readonly property int app_name_size:     60
+    readonly property int header1_font_size: 35
+    readonly property int header2_font_size: 25
+    readonly property int header3_font_size: 18
+    readonly property int body_font_size:    13
 
     // IMAGES
     readonly property string app_logo:      "qrc:/images/logos/sustainml.svg"
@@ -49,7 +49,7 @@ QtObject {
     readonly property string rptu_nightmode_logo:       "qrc:/images/logos/rptu_w.png"
     readonly property string upmem_logo:                "qrc:/images/logos/upmem.jpeg"
     readonly property string upmem_nightmode_logo:      "qrc:/images/logos/upmem.jpeg"
-    readonly property int logo_height:                  48
+    readonly property int logo_height:                  30
 
     // ICONS
     readonly property string back_icon_name:            "back"
@@ -64,14 +64,14 @@ QtObject {
     readonly property string refresh_icon_name:         "refresh"
 
     // ICON SIZES
-    readonly property int button_icon_size:         30
-    readonly property int button_big_icon_size:     50
-    readonly property int bullet_point_icon_size:   20
+    readonly property int button_icon_size:         20
+    readonly property int button_big_icon_size:     35
+    readonly property int bullet_point_icon_size:   15
 
     // ELEMENTS SPECIFICATIONS
-    readonly property int input_default_rounded_radius: 20
+    readonly property int input_default_rounded_radius: 10
     readonly property int input_default_border_width:    3
-    readonly property int scrollbar_default_size:       10
+    readonly property int scrollbar_default_size:       7
 
     // ANIMATIONS DURATION
     readonly property int background_movement_anim_duration:  400 //ms
