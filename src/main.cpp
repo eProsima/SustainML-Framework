@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with eProsima SustainML front-end. If not, see <https://www.gnu.org/licenses/>.
 
-#include <QGuiApplication>
+#include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QFontDatabase>
 #include <QtQml>
@@ -30,7 +30,7 @@ int main(
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif // if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
     // Register main project settings
     qmlRegisterSingletonType( QUrl("qrc:/Settings"), "eProsima.SustainML.Settings", 1, 0, "Settings" );

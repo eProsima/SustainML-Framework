@@ -208,10 +208,12 @@ Item
         anchors
         {
             horizontalCenter: parent.horizontalCenter
-            verticalCenter: parent.verticalCenter
+            top: go_home_button.bottom
+            topMargin: Settings.spacing_normal
+            bottom: parent.bottom
         }
 
-        width: parent.width * 0.75
+        width: parent.width
         height: parent.height * 0.75
         clip: true
 

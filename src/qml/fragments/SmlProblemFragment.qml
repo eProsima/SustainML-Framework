@@ -19,8 +19,12 @@ Item
     required property int problem_id
     required property int stack_id
 
+    // Public signals
+    signal update_iteration(var comparison_interation_ids_list)
+    signal update_comparison(var comparison_interation_ids_list)
+
     // Private properties
-    readonly property var __signal_kind: ["inspect", "add_to_compare", "compare"]
+    readonly property var __signal_kind: ["add_to_compare", "out_of_compare"]
     property var __comparison_interation_ids_list: []
 
     onProblem_idChanged:
@@ -29,14 +33,14 @@ Item
     }
 
 
-    Rectangle
-    {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        width: 50
-        height: 20
-        color: ScreenManager.night_mode ? "#303030" : "white" //"transparent"
-    }
+    // Rectangle
+    // {
+    //     anchors.top: parent.top
+    //     anchors.left: parent.left
+    //     width: 50
+    //     height: 20
+    //     color: ScreenManager.night_mode ? "#303030" : "white" //"transparent"
+    // }
 
     SmlTabView
     {
@@ -58,8 +62,8 @@ Item
 
         allowed_stack_components: problem_components
         default_stack_component: "general_view"
-        tab_background_color: "white"
-        tab_background_nightmode_color: "#303030"
+        tab_background_color: "transparent"
+        tab_background_nightmode_color: "transparent"
         selected_tab_color: "#e0e0e0"
         selected_tab_nightmode_color: "#505050"
         not_selected_tab_color: "#d0d0d0"
@@ -72,8 +76,8 @@ Item
             problem_fragment_view.update_stack_id(components_stack_id_map["general_view"], -1)
             problem_fragment_view.update_problem_id(problem_id, -1)
             problem_fragment_view.update_tab_name(components_title_map["general_view"], components_stack_id_map["general_view"])
-            problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
-            problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
+            // problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
+            // problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
             problem_fragment_view.focus(components_stack_id_map["general_view"], problem_id)
         }
         onRetrieve_default_data:
@@ -83,22 +87,40 @@ Item
         }
         onLoaded_item_signal:
         {
+            console.log("Signal received: " + component + " " + signal_kind + " " + iteration_id)
             if (component === "general_view")
             {
-                if (signal_kind === "inspect")
+                if (signal_kind === "add_to_compare")
                 {
+                    sustainml_fragment_problem.__comparison_interation_ids_list.push(iteration_id)
+                    console.log("Added iteration id " + iteration_id + " to comparison list: " + sustainml_fragment_problem.__comparison_interation_ids_list)
                     problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
-                    // set iteration view with given id
+                    if (sustainml_fragment_problem.__comparison_interation_ids_list.length >= 2)
+                    {
+                        problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
+                    }
+                    sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
+                    // problem_fragment_view.focus(components_stack_id_map["general_view"], problem_id)
                 }
-                else if (signal_kind === "add_to_compare")
+
+                //TODO: create signal for delation of iteration from __comparison_interation_ids_list abd update in SmlIteration and SmlComparison
+                else if (signal_kind === "out_of_compare")
                 {
-                    sustainml_fragment_problem.__comparison_interation_ids_list.push(id)
-                    console.log("Added iteration id " + id + " to comparison list: " + sustainml_fragment_problem.__comparison_interation_ids_list)
-                }
-                else if (signal_kind === "compare")
-                {
-                    problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
-                    // set comparison view with given ids (sustainml_fragment_problem.__comparison_interation_ids_list)
+                    var index = sustainml_fragment_problem.__comparison_interation_ids_list.indexOf(iteration_id);
+                    if (index !== -1) {
+                        sustainml_fragment_problem.__comparison_interation_ids_list.splice(index, 1);
+                    }
+                    console.log("Get rid of iteration id " + iteration_id + " from comparison list: " + sustainml_fragment_problem.__comparison_interation_ids_list)
+
+                    if (sustainml_fragment_problem.__comparison_interation_ids_list.length < 2)
+                    {
+                        problem_fragment_view.close_tab(components_stack_id_map["comparison_view"], problem_id)
+
+                        if (sustainml_fragment_problem.__comparison_interation_ids_list.length == 0)
+                            problem_fragment_view.close_tab(components_stack_id_map["iteration_view"], problem_id)
+                    }
+
+                    sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                 }
             }
             else if (component === "iteration_view")

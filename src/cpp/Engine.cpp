@@ -25,6 +25,7 @@
 #include <QNetworkReply>
 #include <QQmlApplicationEngine>
 #include <qqmlcontext.h>
+#include <QEventLoop>
 #include <QString>
 #include <QUrl>
 
@@ -177,6 +178,20 @@ void Engine::request_current_data(
         // Request results for all nodes, for the given task ids
         request_results(received_task_ids.at(i), sustainml::NodeID::MAX);
     }
+}
+
+QJsonObject Engine::request_specific_results(
+    const int problem_id, const int iteration_id)
+{
+    // Node results requests
+    QJsonObject task_json;
+    task_json["problem_id"] = static_cast<int>(problem_id);
+    task_json["iteration_id"] = static_cast<int>(iteration_id);
+
+    QJsonObject node_json_data;
+    node_json_data["node_id"] = 9;  // Request all information
+    node_json_data["task_id"] = task_json;
+    return specific_node_results_request(node_json_data);
 }
 
 void Engine::request_status()
@@ -702,6 +717,50 @@ void Engine::node_results_response(
             break;
         }
     }
+}
+
+QJsonObject Engine::specific_node_results_request(
+    const QJsonObject& json_obj)
+{
+    QEventLoop loop;
+    QJsonObject response_json;
+
+    REST_requester* requester = new REST_requester(
+        [this, &loop, &response_json](const REST_requester* requester, const QJsonObject& json_obj)
+        {
+            if (!json_obj.empty())
+            {
+                // Specialized method to print results
+                print_results(Utils::node_id(json_obj), json_obj);
+                response_json = json_obj;
+            }
+            // Remove REST requester from queue
+            std::lock_guard<std::mutex> lock(requesters_mutex_);
+            for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+            {
+                if (*it == requester)
+                {
+                    auto ptr = *it;
+                    requesters_.erase(it);
+                    ptr->disconnect();
+                    ptr->deleteLater();
+                    break;
+                }
+            }
+            loop.quit();
+        },
+        REST_requester::RequestType::REQUEST_RESULTS,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+
+    // Start loop: this will block until loop.quit() is called in the callback above
+    loop.exec();
+    // std::cout << "Response JSON: " << QJsonDocument(response_json).toJson(QJsonDocument::Indented).toStdString() << std::endl;  //debug
+    return response_json;
 }
 
 void Engine::orchestrator_request(
