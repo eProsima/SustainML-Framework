@@ -26,6 +26,7 @@ Item
     // Private properties
     readonly property var __signal_kind: ["add_to_compare", "out_of_compare"]
     property var __comparison_interation_ids_list: []
+    property var __comparison_values_list: []
 
     onProblem_idChanged:
     {
@@ -97,7 +98,7 @@ Item
                     problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
                     if (sustainml_fragment_problem.__comparison_interation_ids_list.length >= 2)
                     {
-                        problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
+                        // problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
                     }
                     sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                     // problem_fragment_view.focus(components_stack_id_map["general_view"], problem_id)
@@ -125,9 +126,19 @@ Item
             }
             else if (component === "iteration_view")
             {
-                if (signal_kind === "")
+                if (signal_kind === "add_to_compare")
                 {
-                    //id
+                    sustainml_fragment_problem.__comparison_values_list.push(iteration_id)  // Here iteration_id is the name of value to compare
+                    console.log("Added " + iteration_id + " to comparison list: " + sustainml_fragment_problem.__comparison_values_list)
+                    problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
+                    sustainml_fragment_problem.update_comparison(sustainml_fragment_problem.__comparison_values_list)
+                    sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
+                    problem_fragment_view.focus(components_stack_id_map["comparison_view"], problem_id)
+
+                }
+                else if (signal_kind === "out_of_compare")
+                {
+                    // TODO: signal to delate comparison value from __comparison_values_list
                 }
             }
             else if (component === "comparison_view")

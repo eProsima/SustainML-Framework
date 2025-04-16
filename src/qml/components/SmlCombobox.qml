@@ -194,8 +194,8 @@ ComboBox {
         if (event.key == Qt.Key_Tab) {
             sustainml_custom_combobox.close();
             event.accepted = true;
-        }
-        else if (event.key == Qt.Key_Up) {
+
+        } else if (event.key == Qt.Key_Up) {
             if (currentIndex > 0)
             {
                 currentIndex--;
@@ -205,7 +205,8 @@ ComboBox {
                 currentIndex = count - 1;
             }
             event.accepted = true;
-        }else if (event.key == Qt.Key_Down) {
+
+        } else if (event.key == Qt.Key_Down) {
             if (currentIndex < count - 1)
             {
                 currentIndex++;
@@ -213,6 +214,18 @@ ComboBox {
             else
             {
                 currentIndex = 0;
+            }
+            event.accepted = true;
+
+        } else if (popup.visible && event.text.length > 0) {
+            var letter = event.text;
+            for (var i = 0; i < count; i++) {
+                var itemText = model[i];
+                if (typeof(itemText) === "string" && itemText.indexOf(letter) === 0) {
+                    currentIndex = i;
+                    popup.contentItem.positionViewAtIndex(i, ListView.Beginning);
+                    break;
+                }
             }
             event.accepted = true;
         }
