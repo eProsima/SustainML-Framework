@@ -67,13 +67,14 @@ The following sections describe the steps to install the SustainML Framework in 
     On Ubuntu use the command:
 
     ```bash
-    apt install --yes --no-install-recommends \
-        wget git cmake g++ build-essential python3 python3-pip libpython3-dev swig \
+    sudo apt install --yes --no-install-recommends \
+        curl wget git cmake g++ build-essential python3 python3-pip python3-venv libpython3-dev swig \
         libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
-        qtdeclarative5-dev libqt5charts5-dev qtquickcontrols2-5-dev libqt5svg5 qml-module-qtquick-controls \
-        qml-module-qtquick-controls2 && \
+        qtdeclarative5-dev libqt5charts5-dev qml-module-qtcharts qtquickcontrols2-5-dev libqt5svg5 \
+        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
     pip3 install -U \
-        colcon-common-extensions vcstool
+        colcon-common-extensions vcstool && \
+    curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3
     ```
 
 2. **Downloading sources**
@@ -81,9 +82,12 @@ The following sections describe the steps to install the SustainML Framework in 
     Create a SustainML directory and download the repositories file that will be used to install SustainML Framework and its dependencies.
 
     ```bash
-    mkdir -p ~/SustainML/src && cd ~/SustainML && \
+    mkdir -p ~/SustainML/SustainML_ws/src && cd ~/SustainML/SustainML_ws && \
     wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sustainml.repos && \
-    vcs import src < sustainml.repos
+    vcs import src < sustainml.repos && \
+    cd ~/SustainML/SustainML_ws/src/sustainml_lib && \
+    git submodule update --init --recursive && \
+    pip3 install -r ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/requirements.txt
     ```
 
 3. **Building framework**
@@ -92,8 +96,9 @@ The following sections describe the steps to install the SustainML Framework in 
     With the following command, colcon builds and installs the SustainML framework, and sources the generated libraries and applications.
 
     ```bash
+    cd ~/SustainML/SustainML_ws && \
     colcon build && \
-    source ~/SustainML/install/setup.bash
+    source ~/SustainML/SustainML_ws/install/setup.bash
     ```
 
 4. **Deploy the framework**
@@ -105,16 +110,20 @@ The following sections describe the steps to install the SustainML Framework in 
     ```
 
     The SustainML Framework needs each of the modules that are part of it for its deployment.
-    The following list shows how do they should be run by using python.
+    The following bash run each module, the backend orchestrator and the frontend application.
 
 
     ```bash
-    python3 ~/SustainML/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/app_requirements_node.py
-    python3 ~/SustainML/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/ml_model_metadata_node.py
-    python3 ~/SustainML/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/ml_model_provider_node.py
-    python3 ~/SustainML/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp2/hw_resources_provider_node.py
-    python3 ~/SustainML/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp2/hw_constraints_node.py
-    python3 ~/SustainML/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp3/carbon_footprint_node.py
+    bash -c " \
+        cd ~/SustainML/SustainML_ws/build/sustainml_modules/lib/sustainml_modules; \
+        python3 sustainml-wp1/app_requirements_node.py & \
+        python3 sustainml-wp1/ml_model_metadata_node.py & \
+        python3 sustainml-wp1/ml_model_provider_node.py & \
+        python3 sustainml-wp2/hw_constraints_node.py & \
+        python3 sustainml-wp2/hw_resources_provider_node.py & \
+        python3 sustainml-wp3/carbon_footprint_node.py & \
+        python3 sustainml-wp5/backend_node.py & \
+        sustainml”
     ```
 
 ### Running SustainML Framework using Docker
