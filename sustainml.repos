@@ -18,8 +18,8 @@ repositories:
     sustainml_lib:
         type: git
         url: https://github.com/eProsima/SustainML-Library.git
-        version: main
+        version: feature/domain_env
     sustainml_framework:
         type: git
         url: https://github.com/eProsima/SustainML-Framework.git
-        version: main
+        version: feature/update_docker
