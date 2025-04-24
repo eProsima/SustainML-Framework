@@ -110,21 +110,18 @@ The following sections describe the steps to install the SustainML Framework in 
     ```
 
     The SustainML Framework needs each of the modules that are part of it for its deployment.
-    The following bash run each module, the backend orchestrator and the frontend application.
+    Set the ``HF_TOKEN`` environment variable on your host to your personal Hugging Face access token.
+
+    The following bash script run each module, the backend orchestrator and the frontend application.
 
 
     ```bash
-    bash -c " \
-        cd ~/SustainML/SustainML_ws/build/sustainml_modules/lib/sustainml_modules; \
-        python3 sustainml-wp1/app_requirements_node.py & \
-        python3 sustainml-wp1/ml_model_metadata_node.py & \
-        python3 sustainml-wp1/ml_model_provider_node.py & \
-        python3 sustainml-wp2/hw_constraints_node.py & \
-        python3 sustainml-wp2/hw_resources_provider_node.py & \
-        python3 sustainml-wp3/carbon_footprint_node.py & \
-        python3 sustainml-wp5/backend_node.py & \
-        sustainml”
+    cd ~/SustainML/SustainML_ws/src/sustainml_framework
+    chmod +x framework_run.sh && \
+    ./framework_run.sh
     ```
+
+    Additionally, by setting the environment variable ``SUSTAINML_DOMAIN_ID`` the domain for inter-node communication can be changed.
 
 ### Running SustainML Framework using Docker
 
