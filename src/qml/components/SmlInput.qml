@@ -18,6 +18,7 @@ TextInput {
     property string border_nightmode_color: ""
     property string border_nightmode_editting_color: ""
     property string placeholder_text: ""
+    property bool disabled: false
 
     // Internal properties
     property bool __edited: false
@@ -35,6 +36,7 @@ TextInput {
     //focus: sustainml_custom_input.focus
     selectByMouse: true
     selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
+    enabled: !disabled
 
     Rectangle
     {
@@ -46,6 +48,8 @@ TextInput {
         radius: rounded ? sustainml_custom_input.__radius : 0
         color: ScreenManager.night_mode
                 ? sustainml_custom_input.background_nightmode_color
+                : sustainml_custom_input.disabled
+                ? "#d3d3d3"
                 : sustainml_custom_input.background_color
         border.color: ScreenManager.night_mode ? sustainml_custom_input.__edited
                     ? sustainml_custom_input.border_nightmode_editting_color
