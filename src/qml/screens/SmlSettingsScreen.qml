@@ -104,7 +104,7 @@ Item
                 {
                     verticalCenter: parent.verticalCenter
                     left: parent.left
-                    leftMargin: root.__status_margin
+                    leftMargin: root.__status_margin*1.5
                 }
 
                 SmlText {
@@ -142,7 +142,7 @@ Item
                 {
                     verticalCenter: parent.verticalCenter
                     left: parent.left
-                    leftMargin: root.__status_margin
+                    leftMargin: root.__status_margin*1.5
                 }
 
                 SmlText {
@@ -180,7 +180,7 @@ Item
                 {
                     verticalCenter: parent.verticalCenter
                     left: parent.left
-                    leftMargin: root.__status_margin
+                    leftMargin: root.__status_margin*1.5
                 }
 
                 SmlText {
@@ -218,7 +218,7 @@ Item
                 {
                     verticalCenter: parent.verticalCenter
                     left: parent.left
-                    leftMargin: root.__status_margin
+                    leftMargin: root.__status_margin*1.5
                 }
 
                 SmlText {
@@ -256,7 +256,7 @@ Item
                 {
                     verticalCenter: parent.verticalCenter
                     left: parent.left
-                    leftMargin: root.__status_margin
+                    leftMargin: root.__status_margin*1.5
                 }
 
                 SmlText {
@@ -294,7 +294,7 @@ Item
                 {
                     verticalCenter: parent.verticalCenter
                     left: parent.left
-                    leftMargin: root.__status_margin
+                    leftMargin: root.__status_margin*1.5
                 }
 
                 SmlText {
@@ -306,33 +306,6 @@ Item
                     force_color: true
                     forced_color: Settings.app_color_light
                 }
-            }
-        }
-
-        // Complete log
-        SmlScrollView {
-
-            anchors
-            {
-                top: parent.top
-                topMargin: root.__margin * 1.5
-                left: app_item.right
-                leftMargin: root.__margin * 3
-                right: parent.right
-                rightMargin: root.__margin
-                bottom: parent.bottom
-                bottomMargin: root.__margin
-            }
-            height: 600
-            content_width: 800
-            content_height: log_item.height
-
-            SmlText {
-                id: log_item
-                text_value: root.log
-                text_kind: SmlText.TextKind.Body
-                force_elide: true
-                width: parent.width
             }
         }
     }

@@ -72,6 +72,7 @@ Engine::~Engine()
 void Engine::launch_task(
         QString problem_short_description,
         QString modality,
+        QString metric,
         QString problem_definition,
         QString inputs,
         QString outputs,
@@ -89,7 +90,8 @@ void Engine::launch_task(
         QString /*extra_data_*/,
         int previous_problem_id,
         int num_outputs,
-        QString model_selected)
+        QString model_selected,
+        QString type)
 {
     QJsonArray ins;
     QJsonArray outs;
@@ -140,9 +142,11 @@ void Engine::launch_task(
     extra_data["hardware_required"] = hardware_required;
     extra_data["max_memory_footprint"] = max_memory_footprint;
     extra_data["goal"] = goal;
+    extra_data["metric"] = metric;
     extra_data["previous_problem_id"] = previous_problem_id;
     extra_data["num_outputs"] = num_outputs;
     extra_data["model_selected"] = model_selected;
+    extra_data["type"] = type;
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
     json_data["modality"] = modality;
@@ -594,6 +598,7 @@ void Engine::send_reiteration_inputs(
         task_id.problem_id(),
         task_id.iteration_id(),
         node_json["modality"].toString(),
+        extraData["metric"].toString(),
         node_json["problem_short_description"].toString(),
         node_json["problem_definition"].toString(),
         inputs_str,
@@ -609,7 +614,8 @@ void Engine::send_reiteration_inputs(
         goal,
         hardware_required,
         max_memory_footprint,
-        num_outputs);
+        num_outputs,
+        extraData["type"].toString());
 }
 
 void Engine::user_input_request(

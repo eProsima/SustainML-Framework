@@ -62,7 +62,6 @@ Rectangle
         TableModelColumn {display: "Suggested model"}
         TableModelColumn {display: "Suggested hardware"}
         TableModelColumn {display: "Power consumption"}
-        TableModelColumn {display: "Memory footprint"}
         TableModelColumn {display: "Carbon footprint"}
         TableModelColumn {display: "Carbon intensity"}
 
@@ -107,7 +106,6 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : "",
                             "Power consumption" : "",
-                            "Memory footprint" : "",
                             "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
@@ -138,7 +136,6 @@ Rectangle
                             "Suggested model" : model,
                             "Suggested hardware" : "",
                             "Power consumption" : "",
-                            "Memory footprint" : "",
                             "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
@@ -171,7 +168,6 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : hw_description,
                             "Power consumption" : power_consumption,
-                            "Memory footprint" : memory_footprint_of_ml_model,
                             "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
@@ -204,7 +200,6 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : "",
                             "Power consumption" : "",
-                            "Memory footprint" : "",
                             "Carbon footprint" : carbon_footprint,
                             "Carbon intensity" : carbon_intensity
                         }
@@ -288,7 +283,6 @@ Rectangle
                         TableModelColumn {display: "Problem kind"}
                         TableModelColumn {display: "Suggested model"}
                         TableModelColumn {display: "Suggested hardware"}
-                        TableModelColumn {display: "Memory footprint"}
                         TableModelColumn {display: "Power consumption"}
                         TableModelColumn {display: "Carbon footprint"}
                         TableModelColumn {display: "Carbon intensity"}
@@ -299,7 +293,6 @@ Rectangle
                             "Problem kind" : "Problem",
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
-                            "Memory footprint" : "Memory Footprint [MB]",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [kgCO2e]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]"}

@@ -34,11 +34,12 @@ Item
     property int __maximum_samples: 1
     property bool __optimize_carbon_footprint_auto: false
     property string __goal: ""
+    property string __types: "transformers"
     property bool __optimize_carbon_footprint_manual: false
     property int __previous_iteration: 0
     property double __desired_carbon_footprint: 0.0
     property int __max_memory_footprint: 0
-    property string __hardware_required: ""
+    property string __hardware_required: "PIM-AI-1chip"
     property string __geo_location_continent: ""
     property string __geo_location_region: ""
     property string __extra_data: ""
@@ -63,6 +64,7 @@ Item
     signal send_task(
         string problem_short_description,
         string modality,
+        string metric,
         string problem_definition,
         string inputs,
         string outputs,
@@ -80,27 +82,32 @@ Item
         string extra_data,
         int previous_problem_id,
         int num_outputs,
-        string model_selected
+        string model_selected,
+        string type
     );
     signal refresh();
     signal ask_metrics(
         string metric_req_type,
         string req_type_values
     );
+    signal ask_models(
+        string goal_type
+    );
 
     Connections
     {
         target: engine
-        function onReiterate_user_inputs(problem_id, iteration_id, modality, problem_short_description,
+        function onReiterate_user_inputs(problem_id, iteration_id, modality, metric, problem_short_description,
                           problem_definition, inputs, outputs, minimum_samples,
                           maximum_samples, optimize_carbon_footprint_manual,
                           previous_iteration, optimize_carbon_footprint_auto,
                           desired_carbon_footprint, geo_location_continent,
-                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs)
+                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type)
         {
             root.__problem_short_description = problem_short_description
             root.__modality = modality
-            root.__metric = "" // Reset metrics values as new metrics received
+            root.__metric = metric
+            root.__types = type
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
@@ -201,7 +208,6 @@ Item
         SmlText
         {
             id: problem_short_description_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Problem short description"
             anchors
@@ -213,7 +219,7 @@ Item
         SmlInput
         {
             id: problem_short_description_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             text: root.__problem_short_description
             placeholder_text: "Resume briefly the objective of the problem"
             border_color: Settings.app_color_green_3
@@ -248,7 +254,6 @@ Item
         SmlText
         {
             id: problem_definition_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Problem definition"
             anchors
@@ -261,7 +266,7 @@ Item
         SmlInput
         {
             id: problem_definition_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             text: root.__problem_definition
             placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
             border_color: Settings.app_color_green_3
@@ -296,7 +301,6 @@ Item
         SmlText
         {
             id: modality_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Modality"
             anchors
@@ -311,7 +315,7 @@ Item
             activeFocusOnTab: true
             focus: true
             id: modality_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             displayText: root.__modality
             placeholder_text: displayText !== "" ? "" : "Select the modality of the input data"
             model: root.__modality_list
@@ -377,7 +381,7 @@ Item
         SmlText
         {
             id: metrics_header
-            visible: root.__metrics.length > 0 && !root.__reiterate
+            visible: root.__metrics.length > 0
             text_kind: SmlText.TextKind.Header_3
             text_value: "Metrics"
             anchors
@@ -393,7 +397,8 @@ Item
             activeFocusOnTab: true
             focus: true
             id: metrics_input
-            visible: root.__metrics.length > 0 && !root.__reiterate
+            visible: root.__metrics.length > 0
+            disabled: root.__reiterate
             displayText: root.__metric
             placeholder_text: displayText !== "" ? "" : "Select the metrics for the model"
             model: root.__metrics
@@ -434,16 +439,72 @@ Item
             }
         }
 
+         // Types
+        SmlText
+        {
+            id: types_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Type limiter"
+            anchors
+            {
+                top: modality_input.bottom
+                topMargin: Settings.spacing_small
+                left: parent.left
+            }
+        }
+        SmlCombobox
+        {
+            activeFocusOnTab: true
+            focus: true
+            disabled: root.__reiterate
+            id: types_input
+            displayText: root.__types
+            placeholder_text: displayText !== "" ? "" : "Select type limiter"
+            model: ["transformers", "..."]
+            border_color: Settings.app_color_green_3
+            border_editting_color: Settings.app_color_green_4
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            height: root.__input_height
+            rounded_radius: Settings.input_default_rounded_radius
+            KeyNavigation.tab: inputs_input
+            anchors
+            {
+                top: types_header.bottom
+                topMargin: -Settings.spacing_small * 0.25
+                left: types_header.left
+            }
+            onModelChanged:
+            {
+                types_input.currentIndex = -1
+            }
+            onText_changed:
+            {
+                root.__types = text;
+            }
+            onFocusChanged: {
+                if(focus === true){
+                    types_input.open()
+                    types_input.focus = true
+                }
+            }
+            onTab_pressed: {
+                inputs_input.focus = true
+            }
+        }
+
         // Inputs
         SmlText
         {
             id: inputs_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Inputs"
             anchors
             {
-                top: root.__metrics.length > 0 ? metrics_input.bottom : modality_input.bottom
+                top: types_input.bottom
                 topMargin: Settings.spacing_small
                 left: parent.left
             }
@@ -451,7 +512,7 @@ Item
         SmlInput
         {
             id: inputs_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             text: root.__inputs
             placeholder_text: "Describe a sequence of serialized batches of input data"
             border_color: Settings.app_color_green_3
@@ -486,7 +547,6 @@ Item
         SmlText
         {
             id: outputs_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Outputs"
             anchors
@@ -499,7 +559,7 @@ Item
         SmlInput
         {
             id: outputs_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             text: root.__outputs
             placeholder_text: "Describe a sequence of serialized batches of output data"
             border_color: Settings.app_color_green_3
@@ -534,7 +594,6 @@ Item
         SmlText
         {
             id: minimum_samples_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Minimum samples"
             anchors
@@ -547,7 +606,7 @@ Item
         SmlInput
         {
             id: minimum_samples_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
             placeholder_text: "Min samples required (only numbers)"
             border_color: Settings.app_color_green_3
@@ -587,7 +646,6 @@ Item
         SmlText
         {
             id: maximum_samples_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Maximum samples"
             anchors
@@ -600,7 +658,7 @@ Item
         SmlInput
         {
             id: maximum_samples_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
             placeholder_text: "Max samples required (only numbers)"
             border_color: Settings.app_color_green_3
@@ -640,7 +698,6 @@ Item
         SmlText
         {
             id: goal_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Model Goal"
             anchors
@@ -655,7 +712,7 @@ Item
             activeFocusOnTab: true
             focus: true
             id: goal_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             displayText: root.__goal
             placeholder_text: displayText !== "" ? "" : "Select your model goal"
             model: root.__goal_list
@@ -682,6 +739,11 @@ Item
             onText_changed:
             {
                 root.__goal = text;
+                if (text !== "" && text !== "other (describe)")
+                {
+                    console.log("Buscando modelo para goal:", text);    //debug
+                    root.ask_models(text);
+                }
             }
             onFocusChanged: {
                 if(focus === true){
@@ -702,8 +764,8 @@ Item
             text_value: "Required hardware"
             anchors
             {
-                top: root.__reiterate ? parent.verticalCenter : goal_input.bottom
-                topMargin: root.__reiterate ? -1.5*Settings.spacing_big : Settings.spacing_small
+                top: goal_input.bottom
+                topMargin: Settings.spacing_small
                 left: parent.left
             }
         }
@@ -713,7 +775,7 @@ Item
             focus: true
             id: required_hardware_input
             displayText: root.__hardware_required
-            placeholder_text: displayText !== "" ? "" : (root.__reiterate ? "Select hardware (if empty use same model)" : "Select hardware")
+            placeholder_text: displayText !== "" ? "" : "Select hardware"
             model: root.__hardware_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -724,7 +786,7 @@ Item
             width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: root.__reiterate ? model_select_input : num_outputs_input
+            KeyNavigation.tab: model_select_input
             anchors
             {
                 top: required_hardware_header.bottom
@@ -738,6 +800,7 @@ Item
             onModelChanged:
             {
                 required_hardware_input.currentIndex = -1
+                root.__hardware_required = "PIM-AI-1chip"
             }
             onFocusChanged: {
                 if(focus === true){
@@ -746,15 +809,14 @@ Item
                 }
             }
             onTab_pressed: {
-                (root.__reiterate ? model_select_input : num_outputs_input).focus = true
+                model_select_input.focus = true
             }
         }
 
-        // Model selector (only in reiteration)
+        // Model selector
         SmlText
         {
             id: model_select_header
-            visible: root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Model selection"
             anchors
@@ -769,9 +831,8 @@ Item
             activeFocusOnTab: true
             focus: true
             id: model_select_input
-            visible: root.__reiterate
             displayText: root.__model_selected
-            placeholder_text: displayText !== "" ? "" : "Select the model to reiterate (if empty use same model)"
+            placeholder_text: displayText !== "" ? "" : "Select the ml model"
             model: root.__model_list
             border_color: Settings.app_color_green_3
             border_editting_color: Settings.app_color_green_4
@@ -782,12 +843,12 @@ Item
             width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: optimize_carbon_input
+            KeyNavigation.tab: num_outputs_input
             anchors
             {
-                top: num_outputs_header.bottom
+                top: model_select_header.bottom
                 topMargin: -Settings.spacing_small * 0.25
-                left: num_outputs_header.left
+                left: model_select_header.left
             }
             onText_changed:
             {
@@ -811,7 +872,7 @@ Item
                 }
             }
             onTab_pressed: {
-                optimize_carbon_input.focus = true
+                num_outputs_input.focus = true
             }
         }
 
@@ -819,20 +880,19 @@ Item
         SmlText
         {
             id: num_outputs_header
-            visible: !root.__reiterate
             text_kind: SmlText.TextKind.Header_3
             text_value: "Nº outputs models"
             anchors
             {
                 top: required_hardware_header.top
-                left: required_hardware_input.right
+                left: model_select_input.right
                 leftMargin: Settings.spacing_small
             }
         }
         SmlInput
         {
             id: num_outputs_input
-            visible: !root.__reiterate
+            disabled: root.__reiterate
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
             border_color: Settings.app_color_green_3
@@ -874,13 +934,14 @@ Item
             text_value: "Carbon footprint optimization"
             anchors
             {
-                top: num_outputs_header.top
-                left: num_outputs_input.right
-                leftMargin: Settings.spacing_small
+                top: num_outputs_input.bottom
+                topMargin: Settings.spacing_small
+                left: parent.left
             }
         }
         SmlCombobox
         {
+            disabled: true
             activeFocusOnTab: true
             focus: true
             id: optimize_carbon_input
@@ -893,7 +954,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 + 1 : root.__input_width_small + 1
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: desired_carbon_footprint_input
@@ -948,6 +1009,7 @@ Item
         SmlInput
         {
             id: desired_carbon_footprint_input
+            disabled: true
             text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
             placeholder_text: "Optimization aimed value for carbon footprint"
             border_color: Settings.app_color_green_3
@@ -994,6 +1056,7 @@ Item
         SmlInput
         {
             id: max_mem_footprint_input
+            disabled: true
             text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
             placeholder_text: "Set maximum memory footprint allowed (only number)"
             border_color: Settings.app_color_green_3
@@ -1045,6 +1108,7 @@ Item
         SmlInput
         {
             id: geo_location_continent_input
+            disabled: true
             text: root.__geo_location_continent
             placeholder_text: "Set continent for the geo location" // TODO combobox
             border_color: Settings.app_color_green_3
@@ -1091,6 +1155,7 @@ Item
         SmlInput
         {
             id: geo_location_region_input
+            disabled: true
             text: root.__geo_location_region
             placeholder_text: "Set region for the geo location" // TODO combobox
             border_color: Settings.app_color_green_3
@@ -1156,6 +1221,7 @@ Item
         root.send_task(
                 root.__problem_short_description,
                 root.__modality,
+                root.__metric,
                 root.__problem_definition,
                 root.__inputs,
                 root.__outputs,
@@ -1173,7 +1239,8 @@ Item
                 root.__extra_data,
                 root.__previous_problem_id,
                 root.__num_outputs,
-                root.__model_selected);
+                root.__model_selected,
+                root.__types);
     }
 
     // Refresh button
