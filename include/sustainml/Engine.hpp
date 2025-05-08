@@ -80,22 +80,23 @@ public slots:
      * @param extra_data extra data
      */
     void launch_task(
-            QString problem_short_description,
-            QString modality,
-            QString problem_definition,
-            QString inputs,
-            QString outputs,
-            int minimum_samples,
-            int maximum_samples,
-            bool optimize_carbon_footprint_auto,
-            bool optimize_carbon_footprint_manual,
-            int previous_iteration,
-            double desired_carbon_footprint,
-            int max_memory_footprint,
-            QString hardware_required,
-            QString geo_location_continent,
-            QString geo_location_region,
-            QString extra_data);
+        QString problem_short_description,
+        QString modality,
+        QString problem_definition,
+        QString inputs,
+        QString outputs,
+        int minimum_samples,
+        int maximum_samples,
+        bool optimize_carbon_footprint_auto,
+        QString goal,
+        bool optimize_carbon_footprint_manual,
+        int previous_iteration,
+        double desired_carbon_footprint,
+        int max_memory_footprint,
+        QString hardware_required,
+        QString geo_location_continent,
+        QString geo_location_region,
+        QString /*extra_data_*/);
 
     /**
      * @brief public method to request all nodes data
@@ -113,7 +114,48 @@ public slots:
     /**
      * @brief public method to request modalities of ML
      */
-    void request_modalities ();
+    void request_modalities();
+
+    /**
+     * @brief public method to request inputs and outputs modalities of ML
+     */
+    void request_inout_modalities();
+
+    /**
+     * @brief public method to request goals of ML
+     */
+    void request_goals();
+
+    /**
+     * @brief public method to request hardwares
+     */
+    void request_hardwares();
+
+    /**
+     * @brief public method to request metrics from modalities or problem
+     *
+     * @param metric_req_type indicate if metrics are retrieved from modalities or problem. Also provide ins, out modalities or problem type
+     * @param req_type_values provide ins, out modalities or problem type. Each separated by comma
+     */
+    void request_metrics(
+        QString metric_req_type,
+        QString req_type_values);
+
+    /**
+     * @brief public method to request model details
+     *
+     * @param mode_name indicate model name that details are requested
+     */
+    void request_model_info(
+        QString mode_name);
+
+    /**
+     * @brief public method to request problem types from modality
+     *
+     * @param modality indicate modality to request problem types
+     */
+    void request_problem_from_modality(
+            QString modality);
 
 signals:
 
@@ -282,12 +324,48 @@ signals:
             const QString& carbon_intensity);
 
     /**
+     * @brief Update qml tasking bool signal as task end
+     */
+    void task_end();
+
+    /**
+     * @brief Update qml refreshing bool signal to display in the GUI
+     */
+    void refreshing_on();
+
+    /**
      * @brief Modalities received signal to display in the GUI
      *
      * @param modalities list of possible modalities
+     * @param goals list of possible goals
      */
     void modalities_available(
-            const QStringList& modalities);
+            const QStringList& modalities,
+            const QStringList& goals);
+
+    /**
+     * @brief Goals received signal to display in the GUI
+     *
+     * @param goals list of possible goals
+     */
+    void goals_available(
+        const QStringList& goals);
+
+    /**
+     * @brief Hardwares received signal to display in the GUI
+     *
+     * @param hardwares list of possible hardwares
+     */
+    void hardwares_available(
+            const QStringList& hardwares);
+
+    /**
+     * @brief Metrics received signal to display in the GUI
+     *
+     * @param metrics list of possible metrics
+     */
+    void metrics_available(
+        const QStringList& metrics);
 
 protected:
 
@@ -360,7 +438,11 @@ private:
 
     QTimer* node_status_timer_;
 
-    std::function<void(const QJsonObject&)> config_callback_;
+    std::map<int, std::function<void(const QJsonObject&)>> config_callbacks_;
+
+    bool ml_model_idle = true;
+    bool ml_model_meta_idle = true;
+    bool hw_idle = true;
 };
 
 #endif //EPROSIMA_SUSTAINML_ENGINE_HPP
