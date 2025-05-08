@@ -79,6 +79,7 @@ public slots:
      * @param geo_location_region region of the location
      * @param extra_data extra data
      * @param previous_problem_id id of the previous problem in case of reiteration
+     * @param num_outputs number of outputs requested by the user
      */
     void launch_task(
         QString problem_short_description,
@@ -98,7 +99,9 @@ public slots:
         QString geo_location_continent,
         QString geo_location_region,
         QString /*extra_data_*/,
-        int previous_problem_id);
+        int previous_problem_id,
+        int num_outputs,
+        QString model_selected);
 
     /**
      * @brief public method to request all nodes data
@@ -158,6 +161,14 @@ public slots:
      */
     void request_problem_from_modality(
             QString modality);
+
+    /**
+     * @brief public method to request models types from goal
+     *
+     * @param modality indicate goal to request models types
+     */
+    void request_model_from_goal(
+        QString modality);
 
     /**
      * @brief private method to request user_inputs from the given previous task.
@@ -373,7 +384,8 @@ signals:
         const QString& geo_location_region,
         const QString& goal,
         const QString& hardware_required,
-        const int& max_memory_footprint);
+        const int& max_memory_footprint,
+        const int& num_outputs);
 
     /**
      * @brief Update qml tasking bool signal as task end
@@ -384,6 +396,11 @@ signals:
      * @brief Update qml refreshing bool signal to display in the GUI
      */
     void refreshing_on();
+
+    /**
+     * @brief Update qml initializing bool signal to display in the GUI
+     */
+    void initializing_off();
 
     /**
      * @brief Modalities received signal to display in the GUI
@@ -417,6 +434,14 @@ signals:
      * @param metrics list of possible metrics
      */
     void metrics_available(
+        const QStringList& metrics);
+
+    /**
+     * @brief Models received signal to display in the GUI
+     *
+     * @param metrics list of possible models
+     */
+    void models_available(
         const QStringList& metrics);
 
 protected:

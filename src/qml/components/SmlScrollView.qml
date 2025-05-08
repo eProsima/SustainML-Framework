@@ -24,7 +24,7 @@ Flickable
     boundsBehavior: Flickable.StopAtBounds
 
     clip: true
-    interactive: false
+    interactive: true
 
     // Vertical ScrollBar
     ScrollBar.vertical: SmlScrollBar {
@@ -37,7 +37,7 @@ Flickable
         background_color: sustainml_custom_scrollview.scrollbar_backgound_color
         background_nightmode_color: sustainml_custom_scrollview.scrollbar_backgound_nightmodel_color
         layout: sustainml_custom_scrollview.layout
-        visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Horizontal
+        visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Horizontal && sustainml_custom_scrollview.contentHeight > sustainml_custom_scrollview.height
     }
 
     // Horizontal ScrollBar
@@ -51,7 +51,7 @@ Flickable
         background_color: sustainml_custom_scrollview.scrollbar_backgound_color
         background_nightmode_color: sustainml_custom_scrollview.scrollbar_backgound_nightmodel_color
         layout: sustainml_custom_scrollview.layout
-        visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Vertical
+        visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Vertical && sustainml_custom_scrollview.contentWidth > sustainml_custom_scrollview.width
     }
 
     MouseArea
