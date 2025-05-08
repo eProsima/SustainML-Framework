@@ -1,80 +1,116 @@
-version: '3'
-
 services:
   desktop:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: desktop
     privileged: true
     environment:
-      - node=desktop
+      - SUSTAINML_NODE=desktop
       - DISPLAY=${DISPLAY}
       - QT_QUICK_BACKEND=software
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
 
   front_end:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: front_end
     privileged: true
     environment:
-      - node=front-end
+      - SUSTAINML_NODE=front_end
+    volumes:
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
 
   back_end:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: back_end
     environment:
-      - node=back-end
+      - SUSTAINML_NODE=back_end
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - HF_TOKEN=${HF_TOKEN}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
 
   app_requirements:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: app_requirements
     environment:
-      - node=app_requirements
+      - SUSTAINML_NODE=app_requirements
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
 
   carbon_tracker:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: carbon_tracker
+    privileged: true
+    volumes:
+      - /sys:/sys:ro
+      - sustainml_share_data:/sustainml_share_data
     environment:
-      - node=carbon_tracker
+      - SUSTAINML_NODE=carbon_tracker
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - PYTHONUNBUFFERED=1
     network_mode: host
     ipc: host
 
   hw_constraints:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: hw_constraints
     environment:
-      - node=hw_constraints
+      - SUSTAINML_NODE=hw_constraints
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
 
   hw_resources:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: hw_resources
+    privileged: true
     environment:
-      - node=hw_resources
+      - SUSTAINML_NODE=hw_resources
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
 
   ml_model:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: ml_model
     environment:
-      - node=ml_model
+      - SUSTAINML_NODE=ml_model
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
 
   ml_model_metadata:
-    image: sustainml:v0.1.0
+    image: sustainml:v0.2.0
     container_name: ml_model_metadata
     environment:
-      - node=ml_model_metadata
+      - SUSTAINML_NODE=ml_model_metadata
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - sustainml_share_data:/sustainml_share_data
     network_mode: host
     ipc: host
+
+volumes:
+  sustainml_share_data:
