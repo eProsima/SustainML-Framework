@@ -64,6 +64,7 @@ public slots:
      *
      * @param problem_short_description short description of the problem
      * @param modality modality of the problem
+     * @param metric metric of the problem
      * @param problem_definition definition of the problem
      * @param inputs inputs of the problem
      * @param outputs outputs of the problem
@@ -80,10 +81,14 @@ public slots:
      * @param extra_data extra data
      * @param previous_problem_id id of the previous problem in case of reiteration
      * @param num_outputs number of outputs requested by the user
+     * @param model_selected model selected by the user
+     * @param type type of the problem
+     *
      */
     void launch_task(
         QString problem_short_description,
         QString modality,
+        QString metric,
         QString problem_definition,
         QString inputs,
         QString outputs,
@@ -101,7 +106,8 @@ public slots:
         QString /*extra_data_*/,
         int previous_problem_id,
         int num_outputs,
-        QString model_selected);
+        QString model_selected,
+        QString type);
 
     /**
      * @brief public method to request all nodes data
@@ -358,6 +364,7 @@ signals:
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
      * @param modality modality of the problem
+     * @param metric metric of the problem
      * @param problem_short_description short description of the problem
      * @param problem_definition definition of the problem
      * @param inputs_str inputs of the problem
@@ -376,6 +383,7 @@ signals:
         const int& problem_id,
         const int& iteration_id,
         const QString& modality,
+        const QString& metric,
         const QString& problem_short_description,
         const QString& problem_definition,
         const QString& inputs_str,
@@ -391,7 +399,8 @@ signals:
         const QString& goal,
         const QString& hardware_required,
         const int& max_memory_footprint,
-        const int& num_outputs);
+        const int& num_outputs,
+        const QString& type);
 
     /**
      * @brief Update qml tasking bool signal as task end

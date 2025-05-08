@@ -50,7 +50,6 @@ Rectangle {
         TableModelColumn { display: "Suggested model" }
         TableModelColumn { display: "Suggested hardware" }
         TableModelColumn { display: "Latency" }
-        TableModelColumn { display: "Memory footprint" }
         TableModelColumn { display: "Power consumption" }
         TableModelColumn { display: "Carbon footprint" }
         TableModelColumn { display: "Carbon intensity" }
@@ -86,7 +85,6 @@ Rectangle {
                     "Suggested model": json.ML_MODEL.model,
                     "Suggested hardware": json.HW_RESOURCES.hw_description,
                     "Latency": formatNumber(json.HW_RESOURCES.latency),
-                    "Memory footprint": formatNumber(json.HW_RESOURCES.memory_footprint_of_ml_model),
                     "Power consumption": formatNumber(json.HW_RESOURCES.power_consumption),
                     "Carbon footprint": formatNumber(json.CARBON_FOOTPRINT.carbon_footprint),
                     "Carbon intensity": formatNumber(json.CARBON_FOOTPRINT.carbon_intensity),
@@ -194,7 +192,6 @@ Rectangle {
                         TableModelColumn { display: "Suggested model" }
                         TableModelColumn { display: "Suggested hardware" }
                         TableModelColumn { display: "Latency" }
-                        TableModelColumn { display: "Memory footprint" }
                         TableModelColumn { display: "Power consumption" }
                         TableModelColumn { display: "Carbon footprint" }
                         TableModelColumn { display: "Carbon intensity" }
@@ -206,7 +203,6 @@ Rectangle {
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
                             "Latency" : "Latency [ms]",
-                            "Memory footprint" : "Memory Footprint [MB]",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [kgCO2e]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
@@ -261,6 +257,7 @@ Rectangle {
                         MouseArea {
                             id: contextMenuArea
                             enabled: model.display !== "Iteration" && model.display !== "Problem" && model.display !== "ML Model" && model.display !== "Hardware"
+                            hoverEnabled: true
                             anchors {
                                 top: parent.top
                                 bottom: parent.bottom
@@ -271,9 +268,16 @@ Rectangle {
                             }
                             acceptedButtons: Qt.RightButton
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onEntered: {
+                                if (enabled)
+                                    parent.color = "#f0f0f0" // slightly changed background color
+                            }
+                            onExited: {
+                                parent.color = "transparent"
+                            }
                             onClicked: {
                                 if (mouse.button === Qt.RightButton) {
-                                    contextMenu.popup(mouse.x, mouse.y);
+                                    contextMenu.popup(mouse.x, mouse.y)
                                 }
                             }
                         }
@@ -281,9 +285,9 @@ Rectangle {
                         Menu {
                             id: contextMenu
                             MenuItem {
-                                text: "Compere"
+                                text: "Compare"
                                 onTriggered: {
-                                    console.log("Comparar triggered");
+                                    console.log("Compare triggered");
                                     root.component_signal("iteration_view", "add_to_compare", model.display);
                                 }
                             }
@@ -400,6 +404,7 @@ Rectangle {
                             MouseArea {
                                 id: contextMenuMoreData
                                 enabled: column === 0
+                                hoverEnabled: true
                                 anchors {
                                     top: parent.top
                                     bottom: parent.bottom
@@ -410,6 +415,13 @@ Rectangle {
                                 }
                                 acceptedButtons: Qt.RightButton
                                 cursorShape: column === 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onEntered: {
+                                    if (enabled)
+                                        parent.color = "#f0f0f0" // slightly changed background color
+                                }
+                                onExited: {
+                                    parent.color = "transparent"
+                                }
                                 onClicked: {
                                     if (mouse.button === Qt.RightButton) {
                                         contextMenuData.popup(mouse.x, mouse.y);
@@ -519,7 +531,7 @@ Rectangle {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: {
-                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Memory Footprint", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption"];
+                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption"];
                                 return headers[modelData - 1];
                             }
                         }
