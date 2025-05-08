@@ -37,8 +37,8 @@ RUN chmod +x /run.bash
 ARG fastcdr_branch
 ARG fastdds_branch
 ARG devutils_branch
-ARG sustainml_lib_branch="feature/domain_env"
-ARG sustainml_framework_branch="feature/results_improvement"
+ARG sustainml_lib_branch
+ARG sustainml_framework_branch
 
 # Clone the repositories and checkout the branches if set
 RUN wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sustainml.repos && \
