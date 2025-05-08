@@ -78,6 +78,7 @@ public slots:
      * @param geo_location_continent continent of the location
      * @param geo_location_region region of the location
      * @param extra_data extra data
+     * @param previous_problem_id id of the previous problem in case of reiteration
      */
     void launch_task(
         QString problem_short_description,
@@ -96,7 +97,8 @@ public slots:
         QString hardware_required,
         QString geo_location_continent,
         QString geo_location_region,
-        QString /*extra_data_*/);
+        QString /*extra_data_*/,
+        int previous_problem_id);
 
     /**
      * @brief public method to request all nodes data
@@ -156,6 +158,16 @@ public slots:
      */
     void request_problem_from_modality(
             QString modality);
+
+    /**
+     * @brief private method to request user_inputs from the given previous task.
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     */
+    void request_orchestrator(
+        int problem_id,
+        int iteration_id);
 
 signals:
 
@@ -324,6 +336,46 @@ signals:
             const QString& carbon_intensity);
 
     /**
+     * @brief Signal to reiterate user inputs for task reiteration
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param modality modality of the problem
+     * @param problem_short_description short description of the problem
+     * @param problem_definition definition of the problem
+     * @param inputs_str inputs of the problem
+     * @param outputs_str outputs of the problem
+     * @param minimum_samples minimum number of samples
+     * @param maximum_samples maximum number of samples
+     * @param optimize_carbon_footprint_manual optimize carbon footprint manually
+     * @param previous_iteration previous iteration number
+     * @param optimize_carbon_footprint_auto optimize carbon footprint automatically
+     * @param desired_carbon_footprint desired carbon footprint value
+     * @param geo_location_continent continent of the location
+     * @param geo_location_region region of the location
+     * @param extra_data extra data as JSON object
+     */
+    void reiterate_user_inputs(
+        const int& problem_id,
+        const int& iteration_id,
+        const QString& modality,
+        const QString& problem_short_description,
+        const QString& problem_definition,
+        const QString& inputs_str,
+        const QString& outputs_str,
+        int minimum_samples,
+        int maximum_samples,
+        bool optimize_carbon_footprint_manual,
+        int previous_iteration,
+        bool optimize_carbon_footprint_auto,
+        double desired_carbon_footprint,
+        const QString& geo_location_continent,
+        const QString& geo_location_region,
+        const QString& goal,
+        const QString& hardware_required,
+        const int& max_memory_footprint);
+
+    /**
      * @brief Update qml tasking bool signal as task end
      */
     void task_end();
@@ -394,6 +446,14 @@ private:
             const sustainml::NodeID& id,
             const QJsonObject& json_obj);
 
+    /**
+     * @brief private method to send the user_inputs to the reiteration.
+     *
+     * @param json_obj JSON object with the node status
+     */
+    void send_reiteration_inputs(
+        const QJsonObject& json_obj);
+
     std::vector<types::TaskId> received_task_ids;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
@@ -416,6 +476,15 @@ private:
     void node_results_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
+
+    //! Previous user_inputs request to the Framework
+    void orchestrator_request(
+        const QJsonObject& json_obj);
+
+    //! Previous user_inputs results to the GUI
+    void orchestrator_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj);
 
     //! Request node status to the Framework
     void node_status_request(

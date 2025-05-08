@@ -22,6 +22,7 @@ Rectangle
 
     // Public signals
     signal component_signal(string signal_kind, string id)
+    // signal go_reiterate();
 
     // Private properties
     readonly property int __margin: Settings.spacing_big * 2
@@ -45,7 +46,7 @@ Rectangle
 
     TableModel {
         id: table_model
-        TableModelColumn {display: "Check"}
+        TableModelColumn {display: "Reiterate"}
         TableModelColumn {display: "Iteration"}
         TableModelColumn {display: "Problem kind"}
         TableModelColumn {display: "Suggested model"}
@@ -54,35 +55,35 @@ Rectangle
         TableModelColumn {display: "Carbon footprint"}
         TableModelColumn {display: "Carbon intensity"}
 
-        rows: []
-            /*{"Check" : "false",
-             "Iteration" : "1",
-             "Problem kind" : "ImageClassification",
-             "Suggested model" : "InceptionV4",
-             "Power consumption" : "60",
-             "Memory footprint" : "1240",
-             "Carbon footprint" : "68",
-             "Carbon intensity" : "12,15"
-             },
-             {"Check" : "true",
-             "Iteration" : "2",
-             "Problem kind" : "ImageClassification",
-             "Suggested model" : "VIT",
-             "Power consumption" : "65",
-             "Memory footprint" : "1520",
-             "Carbon footprint" : "82",
-             "Carbon intensity" : "19,20"
-             },
-             {"Check" : "false",
-             "Iteration" : "3",
-             "Problem kind" : "ImageClassification",
-             "Suggested model" : "InceptionV4",
-             "Power consumption" : "58",
-             "Memory footprint" : "1120",
-             "Carbon footprint" : "63",
-             "Carbon intensity" : "10,85"
-             }
-        ]*/
+        rows: [
+            // {"Reiterate" : "false",
+            //  "Iteration" : "1",
+            //  "Problem kind" : "ImageClassification",
+            //  "Suggested model" : "InceptionV4",
+            //  "Power consumption" : "60",
+            //  "Memory footprint" : "1240",
+            //  "Carbon footprint" : "68",
+            //  "Carbon intensity" : "12,15"
+            //  },
+            //  {"Reiterate" : "false",
+            //  "Iteration" : "2",
+            //  "Problem kind" : "ImageClassification",
+            //  "Suggested model" : "VIT",
+            //  "Power consumption" : "65",
+            //  "Memory footprint" : "1520",
+            //  "Carbon footprint" : "82",
+            //  "Carbon intensity" : "19,20"
+            //  },
+            //  {"Reiterate" : "false",
+            //  "Iteration" : "3",
+            //  "Problem kind" : "ImageClassification",
+            //  "Suggested model" : "InceptionV4",
+            //  "Power consumption" : "58",
+            //  "Memory footprint" : "1120",
+            //  "Carbon footprint" : "63",
+            //  "Carbon intensity" : "10,85"
+            //  }
+        ]
 
         function contains (iteration_id)
         {
@@ -103,7 +104,6 @@ Rectangle
     {
         target: engine
 
-
         function onNew_ml_model_metadata_node_output(problem_id, iteration_id, metadata, keywords)
         {
             if (problem_id === root.problem_id)
@@ -112,12 +112,13 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
                     table_model.appendRow(
                         {
-                            "Check" : "false",
+                            "Reiterate" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : keywords,
                             "Suggested model" : "",
@@ -139,12 +140,13 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
                     table_model.appendRow(
                         {
-                            "Check" : "false",
+                            "Reiterate" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : model,
@@ -167,12 +169,13 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
                     table_model.setData(table_model.index(row, __memory_footprint_column), "display", memory_footprint_of_ml_model)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
                     table_model.appendRow(
                         {
-                            "Check" : "false",
+                            "Reiterate" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -195,12 +198,13 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
                     table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
+                    general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
                     table_model.appendRow(
                         {
-                            "Check" : "false",
+                            "Reiterate" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -234,7 +238,7 @@ Rectangle
         {
             id: general_header_table
             model: TableModel {
-                TableModelColumn {display: "Check"}
+                TableModelColumn {display: "Reiterate"}
                 TableModelColumn {display: "Iteration"}
                 TableModelColumn {display: "Problem kind"}
                 TableModelColumn {display: "Suggested model"}
@@ -244,7 +248,7 @@ Rectangle
                 TableModelColumn {display: "Carbon intensity"}
 
                 rows: [
-                    {"Check" : "Check",
+                    {"Reiterate" : "Reiterate",
                      "Iteration" : "Iteration",
                      "Problem kind" : "Problem kind              ",
                      "Suggested model" : "Suggested model",
@@ -284,6 +288,7 @@ Rectangle
             anchors.top: general_header_table.bottom
             anchors.topMargin: __header_height + __cell_padding
             anchors.left: parent.left
+            height: __header_height * table_model.rows.length
             width: root.__scroll_view_width * 2
             syncView: general_header_table
 
@@ -291,6 +296,7 @@ Rectangle
             {
                 height: implicitHeight
                 implicitHeight: __header_height < value.implicitHeight ? value.implicitHeight : __header_height
+                implicitWidth: 40
 
                 SmlText
                 {
@@ -304,14 +310,29 @@ Rectangle
                     forced_size: 14
                     wrapMode: TextEdit.Wrap
                 }
-                CheckBox
+
+                // Go reiterate button
+                SmlButton
                 {
+                    id: reiterate_button
+                    icon_name: ""
                     visible: model.display === "true" || model.display === "false"
-                    checked: model.display === "true"
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: value.verticalCenter
-                    indicator.height: __header_height /2
-                    indicator.width: indicator.height
+                    text_value: ""
+                    rounded: false
+                    size: 10
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    anchors
+                    {
+                        top: parent.top
+                        topMargin: Settings.spacing_small
+                        horizontalCenter: parent.horizontalCenter
+                    }
+                    onClicked: {
+                        main_window.reiterate_problem(root.problem_id, table_model.rows[index])
+                    }
                 }
             }
         }
