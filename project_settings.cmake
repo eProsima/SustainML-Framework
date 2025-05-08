@@ -38,7 +38,8 @@ set(MODULE_DEPENDENCIES
         Qt5::Gui
         Qt5::Qml
         Qt5::Quick
-        Qt5::QuickControls2)
+        Qt5::QuickControls2
+        Qt5::Charts)
 
 set(MODULE_LICENSE_FILE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 

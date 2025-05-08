@@ -39,7 +39,7 @@ Item {
     // Public signals
     signal tab_view_loaded()
     signal retrieve_default_data()
-    signal loaded_item_signal(string component, string signal_kind, string id)  // abstract signal from loaded components
+    signal loaded_item_signal(string component, string signal_kind, string iteration_id)  // abstract signal from loaded components
 
     // Private signals
     signal change_stack_view_(int stack_id, var stack_component_name)
@@ -83,9 +83,10 @@ Item {
                 Connections {
                     target: stack.item
                     ignoreUnknownSignals: true
-                    function onComponent_signal(signal_kind, id)
+                    function onComponent_signal(component, signal_kind, iteration_id)
                     {
-                        sustainml_custom_tabview.loaded_item_signal(stack.customInitialItem, signal_kind, id)
+                        console.log("Signal: " + signal_kind + " with id " + iteration_id + ", from item: " + component)    // debug
+                        sustainml_custom_tabview.loaded_item_signal(component, signal_kind, iteration_id)
                     }
                 }
             }
@@ -301,12 +302,50 @@ Item {
     {
         if (allowed_stack_components[stack_component_name] !== undefined)
         {
-            __create_new_custom_tab(tab_title, stack_id, problem_id, stack_component_name)
+            var tabExists = false;
+            for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
+                console.log(" Valor de stack_id: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
+                if (sustainml_custom_tabview.__tab_model.get(i).stack_id === stack_id) {
+                    tabExists = true;
+                    break;
+                }
+            }
+            if (!tabExists) {
+                __create_new_custom_tab(tab_title, stack_id, problem_id, stack_component_name);
+                console.log("Creating tab with stack id '" + stack_id + "'");    // debug
+            } else {
+                console.log("The given stack id '" + stack_id + "' already exists");    // debug
+            }
         }
         else
         {
             console.log("Error: The given stack component '" + stack_component_name + "' is not allowed")
         }
+
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++)
+                console.log(" Valor de stack_id despues creacion: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
+    }
+
+    function close_tab(stack_id, problem_id)
+    {
+        var tabExists = false;
+            for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
+                console.log(" Valor de stack_id: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
+                if (sustainml_custom_tabview.__tab_model.get(i).stack_id === stack_id) {
+                    tabExists = true;
+                    break;
+                }
+            }
+         if (tabExists) {
+                __remove_idx(i);
+                console.log("The given stack id '" + stack_id + "' is closed");
+            } else {
+                console.log("The given stack id '" + stack_id + "' doesn't exists");    // debug
+            }
+
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++)
+                console.log(" Valor de stack_id despues destruccion: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
+
     }
 
     function focus(stack_id, problem_id)
@@ -407,22 +446,23 @@ Item {
         {
             initial_component = default_stack_component;
         }
-        var last_stack_id = __last_stack
-        if (last_stack_id < stack_id)
-        {
-            last_stack_id = stack_id
-        }
-        __last_stack = last_stack_id + 1
+        // var last_stack_id = __last_stack
+        // if (last_stack_id < stack_id)
+        // {
+        //     last_stack_id = stack_id
+        // }
+        // __last_stack = last_stack_id + 1
         var idx = sustainml_custom_tabview.__tab_model.count
-        sustainml_custom_tabview.__tab_model.set(idx, {"idx" : idx, "title": tab_title, "stack_id": last_stack_id})
+        sustainml_custom_tabview.__tab_model.set(idx, {"idx" : idx, "title": tab_title, "stack_id": stack_id})
+        console.log("Creando un nuevo tab con stack_id: " + stack_id)
         var new_stack = stack_component.createObject(null)
         new_stack.setSource(sustainml_custom_tabview.__get_load_component(initial_component),
-                {"stack_id": last_stack_id, "problem_id": problem_id})
+                {"stack_id": stack_id, "problem_id": problem_id})
         stack_layout.children.push(new_stack)
-        stack_layout.currentIndex = last_stack_id
-        __refresh_layout(idx)
+        // stack_layout.currentIndex = last_stack_id
+        // __refresh_layout(idx)
         __order_tabs()
-        focus(undefined, problem_id)
+        // focus(undefined, problem_id)
     }
 
     // the given idx update current tab displayed (if != current)

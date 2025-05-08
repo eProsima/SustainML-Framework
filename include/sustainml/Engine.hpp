@@ -109,6 +109,12 @@ public slots:
      */
     void request_current_data (
             const bool& retrieve_all);
+    /**
+     * @brief public method to request specific task results from all  nodes.
+     * @param task_id task identifier pointer
+     */
+    QJsonObject request_specific_results(
+        const int problem_id, const int iteration_id);
 
     /**
      * @brief public method to request status periodically
@@ -501,6 +507,10 @@ private:
     void node_results_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
+
+    //! Request all results to the Framework from specific task
+    QJsonObject specific_node_results_request(
+        const QJsonObject& json_obj);
 
     //! Previous user_inputs request to the Framework
     void orchestrator_request(
