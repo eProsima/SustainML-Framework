@@ -741,7 +741,6 @@ Item
                 root.__goal = text;
                 if (text !== "" && text !== "other (describe)")
                 {
-                    console.log("Buscando modelo para goal:", text);    //debug
                     root.ask_models(text);
                 }
             }

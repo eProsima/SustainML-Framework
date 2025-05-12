@@ -765,7 +765,6 @@ QJsonObject Engine::specific_node_results_request(
 
     // Start loop: this will block until loop.quit() is called in the callback above
     loop.exec();
-    // std::cout << "Response JSON: " << QJsonDocument(response_json).toJson(QJsonDocument::Indented).toStdString() << std::endl;  //debug
     return response_json;
 }
 
@@ -953,14 +952,12 @@ void Engine::config_response(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
-    std::cout << "INICIA OBTENER RESPUESTA" << std::endl;   //DEBUG
     if (!json_obj.empty())
     {
         std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
                 std::endl;
         QJsonObject response_obj = json_obj["response"].toObject();
         int node_id = response_obj["node_id"].toInt();
-        std::cout << "Node ID Response: " << node_id << std::endl; //DEBUG
         if (config_callbacks_[node_id])
         {
             config_callbacks_[node_id](json_obj);

@@ -26,7 +26,7 @@ Rectangle
     // signal go_reiterate();
 
     // Private properties
-    property var minColumnWidths: [90, 80, 110, 160, 150, 160, 170, 180, 185]
+    property var minColumnWidths: [45, 45, 110, 160, 150, 160, 170, 180, 185]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -34,7 +34,7 @@ Rectangle
         }
         return total;
     }
-    property var columnWidths: [90, 80, 110, 160, 150, 160, 170, 180, 185]
+    property var columnWidths: [45, 45, 110, 160, 150, 160, 170, 180, 185]
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height
     readonly property int __scroll_view_content_height: 700
@@ -42,13 +42,13 @@ Rectangle
     readonly property int __cell_padding: 10
     readonly property string __cell_background_color: "#e0e0e0"
     readonly property string __cell_background_nightmode_color: "#505050"
-    readonly property int __check_column: 0
-    readonly property int __iteration_column: 1
-    readonly property int __problem_kind_column: 2
-    readonly property int __suggested_model_column: 3
-    readonly property int __hw_description_column: 4
-    readonly property int __power_consumption_column: 5
-    readonly property int __memory_footprint_column: 6
+    readonly property int __reiterate_column: 0
+    readonly property int __check_column: 1
+    readonly property int __iteration_column: 2
+    readonly property int __problem_kind_column: 3
+    readonly property int __suggested_model_column: 4
+    readonly property int __hw_description_column: 5
+    readonly property int __power_consumption_column: 6
     readonly property int __carbon_footprint_column: 7
     readonly property int __carbon_intensity_column: 8
 
@@ -57,6 +57,7 @@ Rectangle
     TableModel {
         id: table_model
         TableModelColumn {display: "Reiterate"}
+        TableModelColumn {display: "Checkbox"}
         TableModelColumn {display: "Iteration"}
         TableModelColumn {display: "Problem kind"}
         TableModelColumn {display: "Suggested model"}
@@ -100,7 +101,8 @@ Rectangle
                 {
                     var newRows = table_model.rows
                     newRows.push({
-                            "Reiterate" : "false",
+                            "Reiterate" : "",
+                            "Checkbox" : "",
                             "Iteration" : iteration_id,
                             "Problem kind" : keywords,
                             "Suggested model" : "",
@@ -130,7 +132,8 @@ Rectangle
                 {
                     var newRows = table_model.rows
                     newRows.push({
-                            "Reiterate" : "false",
+                            "Reiterate" : "",
+                            "Checkbox" : "",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : model,
@@ -155,14 +158,14 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __hw_description_column), "display", hw_description)
                     table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
-                    table_model.setData(table_model.index(row, __memory_footprint_column), "display", memory_footprint_of_ml_model)
                     general_table.height = __header_height * table_model.rows.length;
                 }
                 else
                 {
                     var newRows = table_model.rows
                     newRows.push({
-                            "Reiterate" : "false",
+                            "Reiterate" : "",
+                            "Checkbox" : "",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -194,7 +197,8 @@ Rectangle
                     console.log("Creando una nueva fila para iteration_id:", iteration_id)
                     var newRows = table_model.rows
                     newRows.push({
-                            "Reiterate" : "false",
+                            "Reiterate" : "",
+                            "Checkbox" : "",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -279,6 +283,7 @@ Rectangle
 
                     model: TableModel {
                         TableModelColumn {display: "Reiterate"}
+                        TableModelColumn {display: "Checkbox"}
                         TableModelColumn {display: "Iteration"}
                         TableModelColumn {display: "Problem kind"}
                         TableModelColumn {display: "Suggested model"}
@@ -288,13 +293,14 @@ Rectangle
                         TableModelColumn {display: "Carbon intensity"}
 
                         rows: [
-                            {"Reiterate" : "        ",
+                            {"Reiterate" : "  ",
+                            "Checkbox" : "  ",
                             "Iteration" : "Iteration",
                             "Problem kind" : "Problem",
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
                             "Power consumption" : "Power Consumption [W]",
-                            "Carbon footprint" : "Carbon Footprint [kgCO2e]",
+                            "Carbon footprint" : "Carbon Footprint [gCO2eq]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]"}
                         ]
                     }
@@ -334,6 +340,7 @@ Rectangle
 
                         // Right vertical border (lighter tone)
                         Rectangle {
+                            visible: index !== 0
                             anchors.top: parent.top
                             anchors.topMargin: parent.height * 0.125
                             anchors.bottom: parent.bottom
@@ -419,7 +426,7 @@ Rectangle
 
                             SmlText {
                                 id: value
-                                visible: column !== 0
+                                visible: column !== 0 && column !== 1
                                 width: parent.width
                                 anchors.centerIn: parent
                                 text_kind: SmlText.TextKind.Body
@@ -445,8 +452,7 @@ Rectangle
                                 anchors
                                 {
                                     verticalCenter: value.verticalCenter
-                                    left: parent.left
-                                    leftMargin: Settings.spacing_small
+                                    horizontalCenter: parent.horizontalCenter
                                 }
 
                                 SmlMouseArea
@@ -459,7 +465,7 @@ Rectangle
                                     onReleased: reiterate_button.pressed = false;
                                     onClicked:
                                     {
-                                        main_window.reiterate_problem(root.problem_id, table_model.rows[index])
+                                        main_window.reiterate_problem(root.problem_id, table_model.rows[row])
                                     }
                                 }
                             }
@@ -467,12 +473,11 @@ Rectangle
                             // Checkbox to select iterations
                             CheckBox
                             {
-                                visible: column === 0
+                                visible: column === 1
                                 // checked: model.display === "true"
                                 anchors{
                                     verticalCenter: value.verticalCenter
-                                    right: parent.right
-                                    rightMargin: Settings.spacing_small
+                                    horizontalCenter: parent.horizontalCenter
                                 }
                                 indicator.height: __header_height /2
                                 indicator.width: indicator.height
@@ -480,10 +485,10 @@ Rectangle
                                 onCheckedChanged: {
                                     console.log("Checked changed to: " + checked)
                                     if (checked) {
-                                        root.component_signal("general_view", "add_to_compare", table_model.rows[index]["Iteration"])
+                                        root.component_signal("general_view", "add_to_compare", table_model.rows[row]["Iteration"])
                                     }
                                     else{
-                                        root.component_signal("general_view", "out_of_compare", table_model.rows[index]["Iteration"])
+                                        root.component_signal("general_view", "out_of_compare", table_model.rows[row]["Iteration"])
                                     }
                                 }
                             }

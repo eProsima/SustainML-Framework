@@ -315,7 +315,6 @@ Window {
                 onAsk_models:
                 {
                     main_window.refreshing = true
-                    console.log("Goal type used: " + goal_type) //debug
                     engine.request_model_from_goal(goal_type)
                 }
             }
@@ -758,7 +757,6 @@ Window {
         reiterateModel.set(6, { label: "Carbon footprint [kgCO2e]", value: results["Carbon footprint"] })
         reiterateModel.set(7, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]))
-        console.log("Goal type used on reiterate: " + results["Problem kind"])  //debug
         engine.request_model_from_goal(String(results["Problem kind"]))
         load_screen(ScreenManager.Screens.Reiterate)
     }

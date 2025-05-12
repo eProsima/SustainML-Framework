@@ -90,7 +90,6 @@ Rectangle {
                     "Carbon intensity": formatNumber(json.CARBON_FOOTPRINT.carbon_intensity),
                     "Energy Consumption": formatNumber(json.CARBON_FOOTPRINT.energy_consumption)
                 });
-                console.log("Se ha añadido la iteración:", json.task_id.iteration_id, "y el modelo:", json.ML_MODEL.model);   // debug
             }
 
             jsonList = newList;
@@ -204,7 +203,7 @@ Rectangle {
                             "Suggested hardware" : "Hardware",
                             "Latency" : "Latency [ms]",
                             "Power consumption" : "Power Consumption [W]",
-                            "Carbon footprint" : "Carbon Footprint [kgCO2e]",
+                            "Carbon footprint" : "Carbon Footprint [gCO2eq]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
                             "Energy Consumption" : "Energy Consumption [kWh]"}
                         ]
@@ -510,7 +509,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: [1,2,3,4,5,6,7,8,9]
+                    model: [1,2,3,4,5,6,7,8]
                     delegate: Row {
                         spacing: 5
                         CheckBox {

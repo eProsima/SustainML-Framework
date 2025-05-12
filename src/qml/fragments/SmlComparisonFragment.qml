@@ -49,7 +49,6 @@ Rectangle
             } else {
                 values_list = [];
             }
-            console.log("Comparison values list: " + values_list);    //debug
         }
     }
 
@@ -117,7 +116,6 @@ Rectangle
                         "label": "Iteration " + data.task_id.iteration_id,
                         "values": valuesArray
                     });
-                    console.log("Plotea: Label = " + barSet.label + ", Value = " + barSet.values);   //debug
                 if (barSet !== null) {
                     mySeries.append(barSet.label, barSet.values);
                     _barSets.push(barSet);
