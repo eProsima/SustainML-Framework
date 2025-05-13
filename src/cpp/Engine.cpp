@@ -72,6 +72,7 @@ Engine::~Engine()
 void Engine::launch_task(
         QString problem_short_description,
         QString modality,
+        QString metric,
         QString problem_definition,
         QString inputs,
         QString outputs,
@@ -89,7 +90,8 @@ void Engine::launch_task(
         QString /*extra_data_*/,
         int previous_problem_id,
         int num_outputs,
-        QString model_selected)
+        QString model_selected,
+        QString type)
 {
     QJsonArray ins;
     QJsonArray outs;
@@ -140,9 +142,11 @@ void Engine::launch_task(
     extra_data["hardware_required"] = hardware_required;
     extra_data["max_memory_footprint"] = max_memory_footprint;
     extra_data["goal"] = goal;
+    extra_data["metric"] = metric;
     extra_data["previous_problem_id"] = previous_problem_id;
     extra_data["num_outputs"] = num_outputs;
     extra_data["model_selected"] = model_selected;
+    extra_data["type"] = type;
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
     json_data["modality"] = modality;
@@ -594,6 +598,7 @@ void Engine::send_reiteration_inputs(
         task_id.problem_id(),
         task_id.iteration_id(),
         node_json["modality"].toString(),
+        extraData["metric"].toString(),
         node_json["problem_short_description"].toString(),
         node_json["problem_definition"].toString(),
         inputs_str,
@@ -609,7 +614,8 @@ void Engine::send_reiteration_inputs(
         goal,
         hardware_required,
         max_memory_footprint,
-        num_outputs);
+        num_outputs,
+        extraData["type"].toString());
 }
 
 void Engine::user_input_request(
@@ -759,14 +765,12 @@ QJsonObject Engine::specific_node_results_request(
 
     // Start loop: this will block until loop.quit() is called in the callback above
     loop.exec();
-    // std::cout << "Response JSON: " << QJsonDocument(response_json).toJson(QJsonDocument::Indented).toStdString() << std::endl;  //debug
     return response_json;
 }
 
 void Engine::orchestrator_request(
     const QJsonObject& json_obj)
 {
-    std::cout << "Data send" << std::endl;     // debug
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::orchestrator_response, this, std::placeholders::_1, std::placeholders::_2),
         REST_requester::RequestType::REQUEST_RESULTS,
@@ -785,7 +789,6 @@ void Engine::orchestrator_response(
     if (!json_obj.empty())
     {
         // specialized method to emit user inputs to reiteration
-        std::cout << "Data received: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() << std::endl;     // debug
         send_reiteration_inputs(json_obj);
     }
     // Remove REST requester from queue
@@ -947,14 +950,12 @@ void Engine::config_response(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
-    std::cout << "INICIA OBTENER RESPUESTA" << std::endl;   //DEBUG
     if (!json_obj.empty())
     {
         std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
                 std::endl;
         QJsonObject response_obj = json_obj["response"].toObject();
         int node_id = response_obj["node_id"].toInt();
-        std::cout << "Node ID Response: " << node_id << std::endl; //DEBUG
         if (config_callbacks_[node_id])
         {
             config_callbacks_[node_id](json_obj);

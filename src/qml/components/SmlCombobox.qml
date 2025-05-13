@@ -21,6 +21,9 @@ ComboBox {
     property string border_nightmode_color: ""
     property string border_nightmode_editting_color: ""
     property string placeholder_text: ""
+    property bool disabled: false
+
+    enabled: !disabled
 
     // Internal properties
     property bool __edited: false
@@ -33,9 +36,24 @@ ComboBox {
     SmlMouseArea
     {
         anchors.fill: parent
+        enabled: !sustainml_custom_combobox.disabled  // Disable interaction when disabled is true
         onWheel: { } // do nothing to avoid changing values while scrolling with the mouse wheel
-        onPressed: { mouse.accepted = false; sustainml_custom_combobox.__edited = true; }
-        onReleased: { mouse.accepted = false; sustainml_custom_combobox.__edited = true; }
+        onPressed:
+        {
+            if (!sustainml_custom_combobox.disabled)
+            {
+                mouse.accepted = false;
+                sustainml_custom_combobox.__edited = true;
+            }
+        }
+        onReleased:
+        {
+            if (!sustainml_custom_combobox.disabled)
+            {
+                mouse.accepted = false;
+                sustainml_custom_combobox.__edited = true;
+            }
+        }
     }
 
     // Custom placeholder field
@@ -71,7 +89,8 @@ ComboBox {
         radius: sustainml_custom_combobox.rounded_radius
         color: ScreenManager.night_mode
                 ? sustainml_custom_combobox.background_nightmode_color
-                : sustainml_custom_combobox.background_color
+                : sustainml_custom_combobox.disabled
+                ? "#d3d3d3" : sustainml_custom_combobox.background_color
         border.color: ScreenManager.night_mode ? sustainml_custom_combobox.__edited
                     ? sustainml_custom_combobox.border_nightmode_editting_color
                     : sustainml_custom_combobox.border_nightmode_color
@@ -222,7 +241,7 @@ ComboBox {
             for (var i = 0; i < count; i++) {
                 var itemText = model[i];
                 if (typeof(itemText) === "string" && itemText.indexOf(letter) === 0) {
-                    currentIndex = i;
+                    // currentIndex = i;
                     popup.contentItem.positionViewAtIndex(i, ListView.Beginning);
                     break;
                 }

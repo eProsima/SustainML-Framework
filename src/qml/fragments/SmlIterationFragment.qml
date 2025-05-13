@@ -50,7 +50,6 @@ Rectangle {
         TableModelColumn { display: "Suggested model" }
         TableModelColumn { display: "Suggested hardware" }
         TableModelColumn { display: "Latency" }
-        TableModelColumn { display: "Memory footprint" }
         TableModelColumn { display: "Power consumption" }
         TableModelColumn { display: "Carbon footprint" }
         TableModelColumn { display: "Carbon intensity" }
@@ -86,13 +85,11 @@ Rectangle {
                     "Suggested model": json.ML_MODEL.model,
                     "Suggested hardware": json.HW_RESOURCES.hw_description,
                     "Latency": formatNumber(json.HW_RESOURCES.latency),
-                    "Memory footprint": formatNumber(json.HW_RESOURCES.memory_footprint_of_ml_model),
                     "Power consumption": formatNumber(json.HW_RESOURCES.power_consumption),
                     "Carbon footprint": formatNumber(json.CARBON_FOOTPRINT.carbon_footprint),
                     "Carbon intensity": formatNumber(json.CARBON_FOOTPRINT.carbon_intensity),
                     "Energy Consumption": formatNumber(json.CARBON_FOOTPRINT.energy_consumption)
                 });
-                console.log("Se ha añadido la iteración:", json.task_id.iteration_id, "y el modelo:", json.ML_MODEL.model);   // debug
             }
 
             jsonList = newList;
@@ -194,7 +191,6 @@ Rectangle {
                         TableModelColumn { display: "Suggested model" }
                         TableModelColumn { display: "Suggested hardware" }
                         TableModelColumn { display: "Latency" }
-                        TableModelColumn { display: "Memory footprint" }
                         TableModelColumn { display: "Power consumption" }
                         TableModelColumn { display: "Carbon footprint" }
                         TableModelColumn { display: "Carbon intensity" }
@@ -206,9 +202,8 @@ Rectangle {
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
                             "Latency" : "Latency [ms]",
-                            "Memory footprint" : "Memory Footprint [MB]",
                             "Power consumption" : "Power Consumption [W]",
-                            "Carbon footprint" : "Carbon Footprint [kgCO2e]",
+                            "Carbon footprint" : "Carbon Footprint [gCO2eq]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
                             "Energy Consumption" : "Energy Consumption [kWh]"}
                         ]
@@ -261,6 +256,7 @@ Rectangle {
                         MouseArea {
                             id: contextMenuArea
                             enabled: model.display !== "Iteration" && model.display !== "Problem" && model.display !== "ML Model" && model.display !== "Hardware"
+                            hoverEnabled: true
                             anchors {
                                 top: parent.top
                                 bottom: parent.bottom
@@ -271,9 +267,16 @@ Rectangle {
                             }
                             acceptedButtons: Qt.RightButton
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onEntered: {
+                                if (enabled)
+                                    parent.color = "#f0f0f0" // slightly changed background color
+                            }
+                            onExited: {
+                                parent.color = "transparent"
+                            }
                             onClicked: {
                                 if (mouse.button === Qt.RightButton) {
-                                    contextMenu.popup(mouse.x, mouse.y);
+                                    contextMenu.popup(mouse.x, mouse.y)
                                 }
                             }
                         }
@@ -281,9 +284,9 @@ Rectangle {
                         Menu {
                             id: contextMenu
                             MenuItem {
-                                text: "Compere"
+                                text: "Compare"
                                 onTriggered: {
-                                    console.log("Comparar triggered");
+                                    console.log("Compare triggered");
                                     root.component_signal("iteration_view", "add_to_compare", model.display);
                                 }
                             }
@@ -400,6 +403,7 @@ Rectangle {
                             MouseArea {
                                 id: contextMenuMoreData
                                 enabled: column === 0
+                                hoverEnabled: true
                                 anchors {
                                     top: parent.top
                                     bottom: parent.bottom
@@ -410,6 +414,13 @@ Rectangle {
                                 }
                                 acceptedButtons: Qt.RightButton
                                 cursorShape: column === 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onEntered: {
+                                    if (enabled)
+                                        parent.color = "#f0f0f0" // slightly changed background color
+                                }
+                                onExited: {
+                                    parent.color = "transparent"
+                                }
                                 onClicked: {
                                     if (mouse.button === Qt.RightButton) {
                                         contextMenuData.popup(mouse.x, mouse.y);
@@ -498,7 +509,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: [1,2,3,4,5,6,7,8,9]
+                    model: [1,2,3,4,5,6,7,8]
                     delegate: Row {
                         spacing: 5
                         CheckBox {
@@ -519,7 +530,7 @@ Rectangle {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: {
-                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Memory Footprint", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption"];
+                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption"];
                                 return headers[modelData - 1];
                             }
                         }

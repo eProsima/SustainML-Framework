@@ -85,7 +85,6 @@ Item {
                     ignoreUnknownSignals: true
                     function onComponent_signal(component, signal_kind, iteration_id)
                     {
-                        console.log("Signal: " + signal_kind + " with id " + iteration_id + ", from item: " + component)    // debug
                         sustainml_custom_tabview.loaded_item_signal(component, signal_kind, iteration_id)
                     }
                 }
