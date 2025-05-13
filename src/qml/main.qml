@@ -327,7 +327,7 @@ Window {
             ListElement { label: "Suggested model"; value: "X" }
             ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
-            ListElement { label: "Carbon footprint [kgCO2e]"; value: "X" }
+            ListElement { label: "Carbon footprint [gCO2eq]"; value: "X" }
             ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
         }
 
@@ -754,10 +754,11 @@ Window {
         reiterateModel.set(2, { label: "Suggested model", value: results["Suggested model"] })
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
-        reiterateModel.set(6, { label: "Carbon footprint [kgCO2e]", value: results["Carbon footprint"] })
-        reiterateModel.set(7, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(5, { label: "Carbon footprint [gCO2eq]", value: results["Carbon footprint"] })
+        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]))
-        engine.request_model_from_goal(String(results["Problem kind"]))
+        var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
+        engine.request_model_from_goal(goal_and_tag)
         load_screen(ScreenManager.Screens.Reiterate)
     }
 }

@@ -343,26 +343,11 @@ Item
             onText_changed:
             {
                 root.__modality = text;
+                if (text !== "" && text !== "other (describe)")
+                {
+                    root.ask_metrics("cover_tag", text);
+                }
 
-                // TODO: Not mock the inputs for requesting metrics
-                if (text === "audio")
-                {
-                    root.ask_metrics(     // First word indicate type of metric reception (modality, problem or all)
-                        "all",       //  and second values for the search (in modalities ins & out modalities, and problem type in other case // all does not need second value)
-                        "");
-                }
-                if (text === "cv")
-                {
-                    root.ask_metrics(     // First word indicate type of metric reception (modality, problem or all)
-                        "modality",       //  and second values for the search (in modalities ins & out modalities, and problem type in other case // all does not need second value)
-                        "Image, Label");
-                }
-                if (text === "nlp")
-                {
-                    root.ask_metrics(           // First word indicate type of metric reception (modality, problem or all)
-                        "problem",              //  and second values for the search (in modalities ins & out modalities, and problem type in other case // all does not need second value)
-                        "audio-text-to-text");
-                }
             }
             onFocusChanged:
             {
@@ -741,7 +726,11 @@ Item
                 root.__goal = text;
                 if (text !== "" && text !== "other (describe)")
                 {
-                    root.ask_models(text);
+                    if(root.__types !== "")
+
+                        root.ask_models(text + ", " + root.__types);
+                    else
+                        root.ask_models(text);
                 }
             }
             onFocusChanged: {
@@ -798,8 +787,11 @@ Item
             }
             onModelChanged:
             {
-                required_hardware_input.currentIndex = -1
-                root.__hardware_required = "PIM-AI-1chip"
+                if(!root.__reiterate)
+                {
+                    required_hardware_input.currentIndex = -1
+                    root.__hardware_required = "PIM-AI-1chip"
+                }
             }
             onFocusChanged: {
                 if(focus === true){

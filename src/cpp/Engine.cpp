@@ -771,7 +771,6 @@ QJsonObject Engine::specific_node_results_request(
 void Engine::orchestrator_request(
     const QJsonObject& json_obj)
 {
-    std::cout << "Data send" << std::endl;     // debug
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::orchestrator_response, this, std::placeholders::_1, std::placeholders::_2),
         REST_requester::RequestType::REQUEST_RESULTS,
@@ -790,7 +789,6 @@ void Engine::orchestrator_response(
     if (!json_obj.empty())
     {
         // specialized method to emit user inputs to reiteration
-        std::cout << "Data received: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() << std::endl;     // debug
         send_reiteration_inputs(json_obj);
     }
     // Remove REST requester from queue
