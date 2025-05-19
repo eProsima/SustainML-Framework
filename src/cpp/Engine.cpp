@@ -206,9 +206,8 @@ void Engine::request_status()
 void Engine::request_modalities()
 {
     QJsonObject json_config;
-    json_config["node_id"] = 4;
-    json_config["transaction_id"] = 0;
     json_config["configuration"] = "modality";
+    json_config["node_id"] = 4;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -234,9 +233,8 @@ void Engine::request_modalities()
 void Engine::request_inout_modalities()
 {
     QJsonObject json_config;
-    json_config["node_id"] = 4;
-    json_config["transaction_id"] = 0;
     json_config["configuration"] = "in_out_modalities";
+    json_config["node_id"] = 4;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -262,9 +260,8 @@ void Engine::request_inout_modalities()
 void Engine::request_goals()
 {
     QJsonObject json_config;
-    json_config["node_id"] = 5;
-    json_config["transaction_id"] = 0;
     json_config["configuration"] = "goal";
+    json_config["node_id"] = 5;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -289,9 +286,8 @@ void Engine::request_goals()
 void Engine::request_hardwares()
 {
     QJsonObject json_config;
-    json_config["node_id"] = 3;
-    json_config["transaction_id"] = 1;
     json_config["configuration"] = "hardwares";
+    json_config["node_id"] = 3;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -318,9 +314,8 @@ void Engine::request_metrics(
     QString req_type_values)
 {
     QJsonObject json_config;
-    json_config["node_id"] = 4;
-    json_config["transaction_id"] = 2;
     json_config["configuration"] = "metrics, " + metric_req_type + ": " + req_type_values;
+    json_config["node_id"] = 4;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -346,9 +341,8 @@ void Engine::request_model_info(
     QString mode_name)
 {
     QJsonObject json_config;
-    json_config["node_id"] = 4;
-    json_config["transaction_id"] = 1;
     json_config["configuration"] = "model_info, " + mode_name;
+    json_config["node_id"] = 4;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -382,9 +376,8 @@ void Engine::request_problem_from_modality(
     QString modality)
 {
     QJsonObject json_config;
-    json_config["node_id"] = 4;
-    json_config["transaction_id"] = 3;
     json_config["configuration"] = "problem_from_modality, " + modality;
+    json_config["node_id"] = 4;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -410,9 +403,8 @@ void Engine::request_model_from_goal(
     QString goal)
 {
     QJsonObject json_config;
-    json_config["node_id"] = 5;
-    json_config["transaction_id"] = 1;
     json_config["configuration"] = "model_from_goal, " + goal;
+    json_config["node_id"] = 5;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
