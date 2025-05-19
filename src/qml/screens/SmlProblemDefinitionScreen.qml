@@ -123,7 +123,7 @@ Item
             root.__max_memory_footprint = max_memory_footprint
             root.__previous_iteration = iteration_id
             root.__previous_problem_id = problem_id
-            root.__num_outputs = num_outputs
+            root.__num_outputs = 1
         }
     }
 
@@ -883,7 +883,6 @@ Item
         SmlInput
         {
             id: num_outputs_input
-            disabled: root.__reiterate
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
             border_color: Settings.app_color_green_3
