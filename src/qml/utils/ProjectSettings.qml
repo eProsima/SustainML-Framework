@@ -14,7 +14,8 @@ QtObject {
     readonly property color app_color_green_4: "#64c537"
     readonly property color app_color_light:   "#eaeeea"
     readonly property color app_color_dark:    "#394039"
-
+    readonly property color app_color_blue:    "#09487e"
+    readonly property color app_color_disable: "#c3e4b4"
     // SPACING
     readonly property int spacing_big:    30
     readonly property int spacing_normal: 15
@@ -70,7 +71,7 @@ QtObject {
 
     // ELEMENTS SPECIFICATIONS
     readonly property int input_default_rounded_radius: 10
-    readonly property int input_default_border_width:    3
+    readonly property int input_default_border_width:    2
     readonly property int scrollbar_default_size:       7
 
     // ANIMATIONS DURATION

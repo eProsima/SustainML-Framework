@@ -16,6 +16,7 @@ ComboBox {
     property int border_width: Settings.input_default_border_width
     property string background_color: ""
     property string background_nightmode_color: ""
+    property string background_disable_color: Settings.app_color_disable
     property string border_color: ""
     property string border_editting_color: ""
     property string border_nightmode_color: ""
@@ -72,7 +73,7 @@ ComboBox {
 
         width: sustainml_custom_combobox.width - 2 * Settings.spacing_normal
         force_color: true
-        forced_color: "#aaa"
+        forced_color: sustainml_custom_combobox.disabled ? "#888" : "#aaa"
         visible: sustainml_custom_combobox.currentIndex === -1
     }
     onCurrentIndexChanged:
@@ -90,7 +91,7 @@ ComboBox {
         color: ScreenManager.night_mode
                 ? sustainml_custom_combobox.background_nightmode_color
                 : sustainml_custom_combobox.disabled
-                ? "#d3d3d3" : sustainml_custom_combobox.background_color
+                ? sustainml_custom_combobox.background_disable_color : sustainml_custom_combobox.background_color
         border.color: ScreenManager.night_mode ? sustainml_custom_combobox.__edited
                     ? sustainml_custom_combobox.border_nightmode_editting_color
                     : sustainml_custom_combobox.border_nightmode_color

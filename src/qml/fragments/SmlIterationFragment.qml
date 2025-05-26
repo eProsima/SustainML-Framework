@@ -23,8 +23,8 @@ Rectangle {
     signal component_signal(string viewType, string signal_kind, string id)
 
     // Property to decide the visibles columns
-    property var visibleColumns: [0,1,2,3,4,5,6,7,8,9]
-    property var minColumnWidths: [80, 110, 160, 150, 140, 160, 170, 185, 190, 190]
+    property var visibleColumns: [0,1,2,3,4,5,6,7]
+    property var minColumnWidths: [80, 160, 180, 150, 140, 160, 170, 185]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -32,13 +32,14 @@ Rectangle {
         }
         return total;
     }
-    property var columnWidths: [80, 110, 160, 150, 140, 160, 170, 185, 190, 190]
+    property var columnWidths: [80, 160, 180, 150, 140, 160, 170, 185]
     property var jsonList : []
     readonly property int fixedColumnWidth: 150
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height
     readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 40
+    readonly property int __data_height: __header_height * 1.25
     readonly property int __cell_padding: 10
     readonly property string __cell_background_color: "#e0e0e0"
     readonly property string __cell_background_nightmode_color: "#505050"
@@ -51,7 +52,6 @@ Rectangle {
         TableModelColumn { display: "Suggested hardware" }
         TableModelColumn { display: "Latency" }
         TableModelColumn { display: "Power consumption" }
-        TableModelColumn { display: "Carbon footprint" }
         TableModelColumn { display: "Carbon intensity" }
         TableModelColumn { display: "Energy Consumption" }
 
@@ -86,7 +86,6 @@ Rectangle {
                     "Suggested hardware": json.HW_RESOURCES.hw_description,
                     "Latency": formatNumber(json.HW_RESOURCES.latency),
                     "Power consumption": formatNumber(json.HW_RESOURCES.power_consumption),
-                    "Carbon footprint": formatNumber(json.CARBON_FOOTPRINT.carbon_footprint),
                     "Carbon intensity": formatNumber(json.CARBON_FOOTPRINT.carbon_intensity),
                     "Energy Consumption": formatNumber(json.CARBON_FOOTPRINT.energy_consumption)
                 });
@@ -95,7 +94,6 @@ Rectangle {
             jsonList = newList;
             table_model.rows = newRows;
             general_table.forceLayout();
-            console.log("El layout se ha actualizado con el nuevo contenido de table_model");
         }
     }
 
@@ -192,7 +190,6 @@ Rectangle {
                         TableModelColumn { display: "Suggested hardware" }
                         TableModelColumn { display: "Latency" }
                         TableModelColumn { display: "Power consumption" }
-                        TableModelColumn { display: "Carbon footprint" }
                         TableModelColumn { display: "Carbon intensity" }
                         TableModelColumn { display: "Energy Consumption" }
 
@@ -203,7 +200,6 @@ Rectangle {
                             "Suggested hardware" : "Hardware",
                             "Latency" : "Latency [ms]",
                             "Power consumption" : "Power Consumption [W]",
-                            "Carbon footprint" : "Carbon Footprint [gCO2eq]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
                             "Energy Consumption" : "Energy Consumption [kWh]"}
                         ]
@@ -319,10 +315,8 @@ Rectangle {
                                 if (Math.abs(newWidth - columnWidths[index]) > 1) {
                                     columnWidths[index] = newWidth;
                                     general_header_table.forceLayout();
+                                    general_table.forceLayout();
                                 }
-                            }
-                            onReleased: {
-                                console.log("Nuevo ancho para la columna", index, ":", columnWidths[index]);
                             }
                         }
                     }
@@ -340,31 +334,71 @@ Rectangle {
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
                 scrollbar_backgound_color: Settings.app_color_light
                 scrollbar_backgound_nightmodel_color: Settings.app_color_dark
-                // interactive: false
-
-                // Background mouse area
-                MouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: focus = true
-                }
+                flickableDirection: Flickable.VerticalFlick
 
                 Rectangle {
                     id: tableRect
                     width: headerRect.width
-                    height: __header_height * table_model.rows.length
+                    height: __data_height * table_model.rows.length
                     color: "transparent"
+                    onWidthChanged: {
+                        general_header_table.forceLayout(),
+                        general_table.forceLayout();
+                    }
 
                     TableView {
                         id: general_table
                         model: table_model
-                        anchors.fill: parent
-                        syncView: general_header_table
+                        anchors{
+                            top: parent.top
+                            left: parent.left
+                            bottom: parent.bottom
+                        }
+                        rowHeightProvider: function(row) { return root.__data_height }
+                        columnWidthProvider: function (column) {
+                            {
+                                if (visibleColumns.indexOf(column) === -1)
+                                    return 0;
+                                var idx = visibleColumns.indexOf(column);
+                                var currentWidth = columnWidths[column];
+                                if (idx === visibleColumns.length - 1 && scroll_view.width > sumMinColumnWidths) {
+                                    var sum = 0;
+                                    for (var i = 0; i < visibleColumns.length - 1; i++) {
+                                        sum += columnWidths[visibleColumns[i]];
+                                    }
+                                    var total = scroll_view.width - sum;
+                                    if (total <= minColumnWidths[visibleColumns[visibleColumns.length - 1]]) {
+                                        columnWidths[column] = minColumnWidths[column];
+                                        var reduction = columnWidths[column];
+                                        var idx = visibleColumns.length - 2;
+                                        while (reduction > 0 && idx >= 0) {
+                                            var colIndex = visibleColumns[idx];
+                                            var available = columnWidths[colIndex] - minColumnWidths[colIndex];
+                                            if (available >= reduction) {
+                                                columnWidths[colIndex] -= reduction;
+                                                reduction = 0;
+                                            } else {
+                                                columnWidths[colIndex] = minColumnWidths[colIndex];
+                                                reduction -= available;
+                                            }
+                                            idx--;
+                                        }
+                                        return minColumnWidths[column];
+                                    }
+                                    columnWidths[visibleColumns[visibleColumns.length - 1]] = total;
+                                    return total;
+                                }
+                                return currentWidth;
+                            }
+                        }
+                        width: contentItem.childrenRect.width + 1
+                        contentWidth: contentItem.childrenRect.width + 1
 
                         delegate: Rectangle {
                             color: "transparent"
-                            height: implicitHeight
-                            implicitHeight: __header_height < value.implicitHeight ? value.implicitHeight : __header_height
+                            height: root.__data_height
+                            implicitHeight: root.__data_height
+                            implicitWidth: width
                             property string iterationValue: model.display
 
                             SmlText {
@@ -402,7 +436,7 @@ Rectangle {
                             // MouseArea to capture right-click and show a context menu
                             MouseArea {
                                 id: contextMenuMoreData
-                                enabled: column === 0
+                                enabled: column === 0 || column === 2
                                 hoverEnabled: true
                                 anchors {
                                     top: parent.top
@@ -413,7 +447,7 @@ Rectangle {
                                     rightMargin: 5
                                 }
                                 acceptedButtons: Qt.RightButton
-                                cursorShape: column === 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                cursorShape: (column === 0 || column === 2) ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onEntered: {
                                     if (enabled)
                                         parent.color = "#f0f0f0" // slightly changed background color
@@ -423,7 +457,16 @@ Rectangle {
                                 }
                                 onClicked: {
                                     if (mouse.button === Qt.RightButton) {
-                                        contextMenuData.popup(mouse.x, mouse.y);
+                                        switch (column) {
+                                            case 0:
+                                                contextMenuData.popup(mouse.x, mouse.y);
+                                                break;
+                                            case 2:
+                                                hfMenu.popup(mouse.x, mouse.y);
+                                                break;
+                                            default:
+                                                break;
+                                        }
                                     }
                                 }
                             }
@@ -436,6 +479,24 @@ Rectangle {
                                         console.log("More info triggered, iterationValue = " + iterationValue);
                                         infoPopup.iteration = iterationValue;
                                         infoPopup.open();
+                                    }
+                                }
+                            }
+
+                            Menu {
+                                id: hfMenu
+                                MenuItem {
+                                    text: "More on HF"
+                                    onTriggered: {
+                                        console.log("Search model " + model.display + " on HF triggered");
+
+                                        var modelName = model.display;
+                                        if (modelName) {
+                                            var searchUrl = "https://huggingface.co/" + modelName;
+                                            Qt.openUrlExternally(searchUrl);
+                                        } else {
+                                            console.log("The name of the model is not available.");
+                                        }
                                     }
                                 }
                             }
@@ -467,10 +528,8 @@ Rectangle {
                                     if (Math.abs(newWidth - columnWidths[column]) > 1) {
                                         columnWidths[column] = newWidth;
                                         general_header_table.forceLayout();
+                                        general_table.forceLayout();
                                     }
-                                }
-                                onReleased: {
-                                    console.log("Nuevo ancho para la columna", column, ":", columnWidths[column]);
                                 }
                             }
                         }
@@ -509,7 +568,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: [1,2,3,4,5,6,7,8]
+                    model: [1,2,3,4,5,6,7]
                     delegate: Row {
                         spacing: 5
                         CheckBox {
@@ -525,12 +584,13 @@ Rectangle {
                                     visibleColumns = visibleColumns.filter(function(item) { return item !== modelData; });
                                 }
                                 general_header_table.forceLayout();
+                                general_table.forceLayout();
                             }
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: {
-                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption"];
+                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Intensity", "Energy Consumption"];
                                 return headers[modelData - 1];
                             }
                         }

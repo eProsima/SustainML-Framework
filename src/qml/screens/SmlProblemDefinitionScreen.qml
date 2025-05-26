@@ -48,6 +48,8 @@ Item
     property string __model_selected: ""
     property string __model_selected_copy: __model_selected
 
+    property string notSupportProblemMessage: ""
+
     // Private properties
     property var __modality_list: []
     property var __goal_list: []
@@ -124,6 +126,12 @@ Item
             root.__previous_iteration = iteration_id
             root.__previous_problem_id = problem_id
             root.__num_outputs = 1
+        }
+
+        function onNotSupportProblem(error_msg)
+        {
+            root.notSupportProblemMessage = error_msg
+            notSupportDialog.open()
         }
     }
 
@@ -210,20 +218,21 @@ Item
             id: problem_short_description_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Problem short description"
+            color: problem_short_description_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
-                top: parent.top
-                left: parent.left
+            top: parent.top
+            left: parent.left
             }
         }
         SmlInput
         {
             id: problem_short_description_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__problem_short_description
             placeholder_text: "Resume briefly the objective of the problem"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -256,6 +265,7 @@ Item
             id: problem_definition_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Problem definition"
+            color: problem_definition_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: problem_short_description_input.bottom
@@ -266,11 +276,11 @@ Item
         SmlInput
         {
             id: problem_definition_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__problem_definition
             placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -303,6 +313,7 @@ Item
             id: modality_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Modality"
+            color: modality_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: problem_definition_input.bottom
@@ -315,12 +326,12 @@ Item
             activeFocusOnTab: true
             focus: true
             id: modality_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             displayText: root.__modality
             placeholder_text: displayText !== "" ? "" : "Select the modality of the input data"
             model: root.__modality_list
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -342,8 +353,9 @@ Item
             }
             onText_changed:
             {
+                if (text === "(empty)") text = "";
                 root.__modality = text;
-                if (text !== "" && text !== "other (describe)")
+                if (text !== "" && text !== "(empty)")
                 {
                     root.ask_metrics("cover_tag", text);
                 }
@@ -369,6 +381,7 @@ Item
             visible: root.__metrics.length > 0
             text_kind: SmlText.TextKind.Header_3
             text_value: "Metrics"
+            color: metrics_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: modality_header.top
@@ -383,12 +396,12 @@ Item
             focus: true
             id: metrics_input
             visible: root.__metrics.length > 0
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             displayText: root.__metric
             placeholder_text: displayText !== "" ? "" : "Select the metrics for the model"
             model: root.__metrics
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -430,6 +443,7 @@ Item
             id: types_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Type limiter"
+            color: types_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: modality_input.bottom
@@ -441,13 +455,13 @@ Item
         {
             activeFocusOnTab: true
             focus: true
-            disabled: root.__reiterate
+            disabled: true  // Right now, this is not editable
             id: types_input
             displayText: root.__types
             placeholder_text: displayText !== "" ? "" : "Select type limiter"
             model: ["transformers", "..."]
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -487,6 +501,7 @@ Item
             id: inputs_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Inputs"
+            color: inputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: types_input.bottom
@@ -497,11 +512,11 @@ Item
         SmlInput
         {
             id: inputs_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__inputs
             placeholder_text: "Describe a sequence of serialized batches of input data"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -534,6 +549,7 @@ Item
             id: outputs_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Outputs"
+            color: outputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: inputs_header.top
@@ -544,11 +560,11 @@ Item
         SmlInput
         {
             id: outputs_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__outputs
             placeholder_text: "Describe a sequence of serialized batches of output data"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -581,6 +597,7 @@ Item
             id: minimum_samples_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Minimum samples"
+            color: minimum_samples_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: outputs_input.bottom
@@ -591,11 +608,11 @@ Item
         SmlInput
         {
             id: minimum_samples_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
             placeholder_text: "Min samples required (only numbers)"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -633,6 +650,7 @@ Item
             id: maximum_samples_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Maximum samples"
+            color: maximum_samples_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: minimum_samples_header.top
@@ -643,11 +661,11 @@ Item
         SmlInput
         {
             id: maximum_samples_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
             placeholder_text: "Max samples required (only numbers)"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -685,6 +703,7 @@ Item
             id: goal_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Model Goal"
+            color: goal_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: maximum_samples_header.top
@@ -697,12 +716,12 @@ Item
             activeFocusOnTab: true
             focus: true
             id: goal_input
-            disabled: root.__reiterate
+            disabled: root.__reiterate || root.__model_selected !== ""
             displayText: root.__goal
             placeholder_text: displayText !== "" ? "" : "Select your model goal"
             model: root.__goal_list
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -723,8 +742,9 @@ Item
             }
             onText_changed:
             {
+                if (text === "(empty)") text = "";
                 root.__goal = text;
-                if (text !== "" && text !== "other (describe)")
+                if (text !== "")
                 {
                     if(root.__types !== "")
 
@@ -750,6 +770,7 @@ Item
             id: required_hardware_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Required hardware"
+            color: required_hardware_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: goal_input.bottom
@@ -765,8 +786,8 @@ Item
             displayText: root.__hardware_required
             placeholder_text: displayText !== "" ? "" : "Select hardware"
             model: root.__hardware_list
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -810,6 +831,7 @@ Item
             id: model_select_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Model selection"
+            color: model_select_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: required_hardware_header.top
@@ -825,8 +847,8 @@ Item
             displayText: root.__model_selected
             placeholder_text: displayText !== "" ? "" : "Select the ml model"
             model: root.__model_list
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -843,6 +865,7 @@ Item
             }
             onText_changed:
             {
+                if (text === "(empty)") text = "";
                 if (model_select_input.currentIndex == -1)
                 {
                     root.__model_selected = root.__model_selected_copy
@@ -873,6 +896,7 @@ Item
             id: num_outputs_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Nº outputs models"
+            color: num_outputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: required_hardware_header.top
@@ -885,8 +909,8 @@ Item
             id: num_outputs_input
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -922,6 +946,7 @@ Item
             id: optimize_carbon_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Carbon footprint optimization"
+            color: optimize_carbon_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: num_outputs_input.bottom
@@ -938,8 +963,8 @@ Item
             displayText: root.__optimize_carbon_footprint_manual ? "Manual" : (root.__optimize_carbon_footprint_auto ? "Auto" : "")
             placeholder_text: displayText !== "" ? "" : "Select optimization iteration method"
             model: ["Manual", "Auto"]
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -989,6 +1014,7 @@ Item
             id: desired_carbon_footprint_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Desired carbon footprint"
+            color: desired_carbon_footprint_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: optimize_carbon_input.bottom
@@ -1002,8 +1028,8 @@ Item
             disabled: true
             text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
             placeholder_text: "Optimization aimed value for carbon footprint"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -1036,6 +1062,7 @@ Item
             id: max_mem_footprint_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Max memory footprint"
+            color: max_mem_footprint_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: desired_carbon_footprint_header.top
@@ -1049,8 +1076,8 @@ Item
             disabled: true
             text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
             placeholder_text: "Set maximum memory footprint allowed (only number)"
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -1088,6 +1115,7 @@ Item
             id: geo_location_continent_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Geo location: continent"
+            color: geo_location_continent_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: max_mem_footprint_input.bottom
@@ -1101,8 +1129,8 @@ Item
             disabled: true
             text: root.__geo_location_continent
             placeholder_text: "Set continent for the geo location" // TODO combobox
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -1135,6 +1163,7 @@ Item
             id: geo_location_region_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Geo location: region"
+            color: geo_location_region_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: geo_location_continent_header.top
@@ -1148,8 +1177,8 @@ Item
             disabled: true
             text: root.__geo_location_region
             placeholder_text: "Set region for the geo location" // TODO combobox
-            border_color: Settings.app_color_green_3
-            border_editting_color: Settings.app_color_green_4
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
@@ -1184,6 +1213,7 @@ Item
         icon_name: Settings.submit_icon_name
         text_kind: SmlText.TextKind.Header_3
         text_value: "Submit"
+        disabled: root.__refreshing || root.__initializing
         rounded: true
         color: Settings.app_color_light
         color_pressed: Settings.app_color_green_1
@@ -1199,10 +1229,7 @@ Item
         onClicked:
         {
             focus = true
-            if (!root.__refreshing && !root.__initializing)
-            {
-                root.prepare_task()
-            }
+            root.prepare_task()
         }
     }
 
@@ -1244,7 +1271,7 @@ Item
         nightmode_color_pressed:  Settings.app_color_green_3
         size: Settings.button_icon_size
 
-        x: scroll_view.width - size/2 - Settings.spacing_big * 4
+        x: scroll_view.width - size/2 - Settings.spacing_big * 2
         y: Settings.spacing_big + size/2
 
         SmlMouseArea
@@ -1305,4 +1332,82 @@ Item
             verticalCenter: refresh_button.verticalCenter
         }
     }
+
+    // Error message dialog
+    SmlDialog
+    {
+        id: notSupportDialog
+        placeholder_text: "WARNING!!"
+        text_value: notSupportProblemMessage
+        background_color: Settings.app_color_light
+        border_color: Settings.app_color_green_4
+        border_width: 1
+        rounded: true
+        placeholder_text_color: Settings.app_color_blue
+        text_color: Settings.app_color_blue
+    }
+
+    // Dialog {
+    //     id: notSupportDialog
+    //     anchors.centerIn: parent
+    //     modal: true
+
+    //     width: contentColumn.implicitWidth
+    //     height: contentColumn.implicitHeight
+
+    //     background: Rectangle {
+    //         anchors.fill: parent
+    //         radius: 10
+    //         color: Settings.app_color_light
+    //         border.color: Settings.app_color_green_4
+    //         border.width: 1
+    //     }
+
+    //     header: Item { }
+
+    //     Column {
+    //         id: contentColumn
+    //         spacing: 16
+    //         padding: 16
+    //         anchors.centerIn: parent
+
+    //         Text {
+    //             text: "WARNING!!"
+    //             font.pixelSize: 20
+    //             font.bold: true
+    //             color: Settings.app_color_blue
+    //             horizontalAlignment: Text.AlignHCenter
+    //         }
+
+    //         Text {
+    //             text: notSupportProblemMessage
+    //             wrapMode: Text.WordWrap
+    //             font.pixelSize: 16
+    //             color: Settings.app_color_blue
+    //             horizontalAlignment: Text.AlignHCenter
+    //         }
+
+    //         Button {
+    //             anchors.right: parent.right
+    //             anchors.rightMargin: Settings.spacing_small
+    //             font.pixelSize: 14
+    //             height: 32
+    //             width: 80
+    //             onClicked: notSupportDialog.close()
+
+    //             background: Rectangle {
+    //                 anchors.fill: parent
+    //                 radius: 5
+    //                 color: Settings.app_color_green_1
+    //             }
+    //             contentItem: Text {
+    //                 text: "Ok"
+    //                 font.pixelSize: parent.font.pixelSize
+    //                 color: Settings.app_color_light
+    //                 horizontalAlignment: Text.AlignHCenter
+    //                 verticalAlignment: Text.AlignVCenter
+    //             }
+    //         }
+    //     }
+    // }
 }

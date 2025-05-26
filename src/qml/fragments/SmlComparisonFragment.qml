@@ -137,7 +137,6 @@ Rectangle
                 }
             }
             mySeries.axisY.max = highest * 1.1;
-            console.log("Highest value: " + highest);
         }
     }
 

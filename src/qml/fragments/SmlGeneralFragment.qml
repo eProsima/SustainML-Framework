@@ -26,7 +26,7 @@ Rectangle
     // signal go_reiterate();
 
     // Private properties
-    property var minColumnWidths: [45, 45, 110, 160, 150, 160, 170, 180, 185]
+    property var minColumnWidths: [45, 45, 100, 160, 180, 160, 170, 185]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -34,11 +34,12 @@ Rectangle
         }
         return total;
     }
-    property var columnWidths: [45, 45, 110, 160, 150, 160, 170, 180, 185]
+    property var columnWidths: [45, 45, 100, 160, 180, 160, 170, 185]
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height
     readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 40
+    readonly property int __data_height: __header_height * 1.25
     readonly property int __cell_padding: 10
     readonly property string __cell_background_color: "#e0e0e0"
     readonly property string __cell_background_nightmode_color: "#505050"
@@ -49,8 +50,9 @@ Rectangle
     readonly property int __suggested_model_column: 4
     readonly property int __hw_description_column: 5
     readonly property int __power_consumption_column: 6
-    readonly property int __carbon_footprint_column: 7
-    readonly property int __carbon_intensity_column: 8
+    readonly property int __carbon_intensity_column: 7
+
+    property string errorMessage: ""
 
     color: ScreenManager.night_mode ?  Settings.app_color_dark : Settings.app_color_light
 
@@ -63,7 +65,6 @@ Rectangle
         TableModelColumn {display: "Suggested model"}
         TableModelColumn {display: "Suggested hardware"}
         TableModelColumn {display: "Power consumption"}
-        TableModelColumn {display: "Carbon footprint"}
         TableModelColumn {display: "Carbon intensity"}
 
         rows: []
@@ -95,7 +96,7 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
-                    general_table.height = __header_height * table_model.rows.length;
+                    general_table.height = __data_height * table_model.rows.length;
                 }
                 else
                 {
@@ -108,7 +109,6 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : "",
                             "Power consumption" : "",
-                            "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
                     )
@@ -116,6 +116,10 @@ Rectangle
                 }
             }
             general_table.forceLayout();
+            if (keywords === "Error" !errorDialog.visible) {
+                errorMessage = "Error in node ML Model Metadata. Please check the logs for more details.";
+                errorDialog.open();
+            }
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
@@ -126,7 +130,7 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
-                    general_table.height = __header_height * table_model.rows.length;
+                    general_table.height = __data_height * table_model.rows.length;
                 }
                 else
                 {
@@ -139,7 +143,6 @@ Rectangle
                             "Suggested model" : model,
                             "Suggested hardware" : "",
                             "Power consumption" : "",
-                            "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
                     )
@@ -147,6 +150,10 @@ Rectangle
                 }
             }
             general_table.forceLayout();
+            if (model === "Error" !errorDialog.visible) {
+                errorMessage = "Error in node ML Model Provider. Please check the logs for more details.";
+                errorDialog.open();
+            }
         }
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
@@ -158,7 +165,7 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __hw_description_column), "display", hw_description)
                     table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
-                    general_table.height = __header_height * table_model.rows.length;
+                    general_table.height = __data_height * table_model.rows.length;
                 }
                 else
                 {
@@ -171,7 +178,6 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : hw_description,
                             "Power consumption" : power_consumption,
-                            "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
                     )
@@ -179,6 +185,10 @@ Rectangle
                 }
             }
             general_table.forceLayout();
+            if (hw_description === "Error" !errorDialog.visible) {
+                errorMessage = "Error in node HW Resource. Please check the logs for more details.";
+                errorDialog.open();
+            }
         }
 
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
@@ -188,13 +198,12 @@ Rectangle
                 var row = table_model.contains(iteration_id)
                 if(row >= 0)
                 {
-                    table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
+                    // table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
                     table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
-                    general_table.height = __header_height * table_model.rows.length;
+                    general_table.height = __data_height * table_model.rows.length;
                 }
                 else
                 {
-                    console.log("Creando una nueva fila para iteration_id:", iteration_id)
                     var newRows = table_model.rows
                     newRows.push({
                             "Reiterate" : "",
@@ -204,7 +213,6 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : "",
                             "Power consumption" : "",
-                            "Carbon footprint" : carbon_footprint,
                             "Carbon intensity" : carbon_intensity
                         }
                     )
@@ -212,6 +220,10 @@ Rectangle
                 }
             }
             general_table.forceLayout();
+            if (carbon_intensity === 0 && !errorDialog.visible) {
+                errorMessage = "Error in node Carbon Footprint. Please check the logs for more details.";
+                errorDialog.open();
+            }
         }
     }
 
@@ -233,6 +245,10 @@ Rectangle
             scrollbar_backgound_color: Settings.app_color_light
             scrollbar_backgound_nightmodel_color: Settings.app_color_dark
             interactive: false
+            onWidthChanged: {
+                general_header_table.forceLayout(),
+                general_table.forceLayout();
+            }
 
             // Header
             Rectangle {
@@ -261,13 +277,27 @@ Rectangle
                     columnWidthProvider: function (column) {
                         {
                             var currentWidth = columnWidths[column];
-                            if (column === 8 && scroll_view.width > sumMinColumnWidths) {
+                            if (column === columnWidths.length - 1 && scroll_view.width > sumMinColumnWidths) {
                                 var sum = 0;
                                 for (var i = 0; i < columnWidths.length - 1; i++) {
                                     sum += columnWidths[i];
                                 }
                                 var total = scroll_view.width - sum;
                                 if (total <= minColumnWidths[column]) {
+                                    columnWidths[column] = minColumnWidths[column];
+                                    var reduction = columnWidths[column];
+                                    var idx = columnWidths.length - 2;
+                                    while (reduction > 0 && idx >= 0) {
+                                        var available = columnWidths[idx] - minColumnWidths[idx];
+                                        if (available >= reduction) {
+                                            columnWidths[idx] -= reduction;
+                                            reduction = 0;
+                                        } else {
+                                            columnWidths[idx] = minColumnWidths[idx];
+                                            reduction -= available;
+                                        }
+                                        idx--;
+                                    }
                                     return minColumnWidths[column];
                                 }
                                 columnWidths[column] = total;
@@ -289,7 +319,6 @@ Rectangle
                         TableModelColumn {display: "Suggested model"}
                         TableModelColumn {display: "Suggested hardware"}
                         TableModelColumn {display: "Power consumption"}
-                        TableModelColumn {display: "Carbon footprint"}
                         TableModelColumn {display: "Carbon intensity"}
 
                         rows: [
@@ -300,7 +329,6 @@ Rectangle
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
                             "Power consumption" : "Power Consumption [W]",
-                            "Carbon footprint" : "Carbon Footprint [gCO2eq]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]"}
                         ]
                     }
@@ -377,10 +405,8 @@ Rectangle
                                 if (Math.abs(newWidth - columnWidths[index]) > 1) {
                                     columnWidths[index] = newWidth;
                                     general_header_table.forceLayout();
+                                    general_table.forceLayout();
                                 }
-                            }
-                            onReleased: {
-                                console.log("Nuevo ancho para la columna", index, ":", columnWidths[index]);
                             }
                         }
                     }
@@ -398,31 +424,68 @@ Rectangle
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
                 scrollbar_backgound_color: Settings.app_color_light
                 scrollbar_backgound_nightmodel_color: Settings.app_color_dark
-                // interactive: false
-
-                // Background mouse area
-                MouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: focus = true
-                }
+                flickableDirection: Flickable.VerticalFlick
 
                 Rectangle {
                     id: tableRect
                     width: headerRect.width
-                    height: __header_height * table_model.rows.length
+                    height: __data_height * table_model.rows.length
                     color: "transparent"
+                    onWidthChanged: {
+                        general_header_table.forceLayout(),
+                        general_table.forceLayout();
+                    }
 
                     TableView {
                         id: general_table
                         model: table_model
-                        anchors.fill: parent
-                        syncView: general_header_table
+                        anchors{
+                            top: parent.top
+                            left: parent.left
+                            bottom: parent.bottom
+                        }
+                        boundsBehavior: Flickable.StopAtBounds
+                        rowHeightProvider: function(row) { return root.__data_height }
+                        columnWidthProvider: function (column) {
+                            {
+                                var currentWidth = columnWidths[column];
+                                if (column === columnWidths.length - 1 && scroll_view.width > sumMinColumnWidths) {
+                                    var sum = 0;
+                                    for (var i = 0; i < columnWidths.length - 1; i++) {
+                                        sum += columnWidths[i];
+                                    }
+                                    var total = scroll_view.width - sum;
+                                    if (total <= minColumnWidths[column]) {
+                                        columnWidths[column] = minColumnWidths[column];
+                                        var reduction = columnWidths[column];
+                                        var idx = columnWidths.length - 2;
+                                        while (reduction > 0 && idx >= 0) {
+                                            var available = columnWidths[idx] - minColumnWidths[idx];
+                                            if (available >= reduction) {
+                                                columnWidths[idx] -= reduction;
+                                                reduction = 0;
+                                            } else {
+                                                columnWidths[idx] = minColumnWidths[idx];
+                                                reduction -= available;
+                                            }
+                                            idx--;
+                                        }
+                                        return minColumnWidths[column];
+                                    }
+                                    columnWidths[column] = total;
+                                    return total;
+                                }
+                                return currentWidth;
+                            }
+                        }
+                        width: contentItem.childrenRect.width + 1
+                        contentWidth: contentItem.childrenRect.width + 1
 
                         delegate: Rectangle {
                             color: "transparent"
-                            height: implicitHeight
-                            implicitHeight: __header_height < value.implicitHeight ? value.implicitHeight : __header_height
+                            height: root.__data_height
+                            implicitHeight: root.__data_height
+                            implicitWidth: width
 
                             SmlText {
                                 id: value
@@ -479,11 +542,10 @@ Rectangle
                                     verticalCenter: value.verticalCenter
                                     horizontalCenter: parent.horizontalCenter
                                 }
-                                indicator.height: __header_height /2
+                                indicator.height: __data_height /2
                                 indicator.width: indicator.height
 
                                 onCheckedChanged: {
-                                    console.log("Checked changed to: " + checked)
                                     if (checked) {
                                         root.component_signal("general_view", "add_to_compare", table_model.rows[row]["Iteration"])
                                     }
@@ -540,10 +602,8 @@ Rectangle
                                     if (Math.abs(newWidth - columnWidths[column]) > 1) {
                                         columnWidths[column] = newWidth;
                                         general_header_table.forceLayout();
+                                        general_table.forceLayout();
                                     }
-                                }
-                                onReleased: {
-                                    console.log("Nuevo ancho para la columna", column, ":", columnWidths[column]);
                                 }
                             }
                         }
@@ -551,5 +611,18 @@ Rectangle
                 }
             }
         }
+    }
+
+    SmlDialog
+    {
+        id: errorDialog
+        placeholder_text: "ERROR!!"
+        text_value: errorMessage
+        background_color: Settings.app_color_light
+        border_color: Settings.app_color_green_4
+        border_width: 1
+        rounded: true
+        placeholder_text_color: Settings.app_color_blue
+        text_color: Settings.app_color_blue
     }
 }
