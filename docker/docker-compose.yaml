@@ -1,6 +1,6 @@
 services:
   desktop:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: desktop
     privileged: true
     environment:
@@ -14,7 +14,7 @@ services:
     ipc: host
 
   front_end:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: front_end
     privileged: true
     environment:
@@ -25,7 +25,7 @@ services:
     ipc: host
 
   back_end:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: back_end
     environment:
       - SUSTAINML_NODE=back_end
@@ -38,7 +38,7 @@ services:
     ipc: host
 
   app_requirements:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: app_requirements
     environment:
       - SUSTAINML_NODE=app_requirements
@@ -50,7 +50,7 @@ services:
     ipc: host
 
   carbon_tracker:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: carbon_tracker
     privileged: true
     volumes:
@@ -64,7 +64,7 @@ services:
     ipc: host
 
   hw_constraints:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: hw_constraints
     environment:
       - SUSTAINML_NODE=hw_constraints
@@ -76,7 +76,7 @@ services:
     ipc: host
 
   hw_resources:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: hw_resources
     privileged: true
     environment:
@@ -89,7 +89,7 @@ services:
     ipc: host
 
   ml_model:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: ml_model
     environment:
       - SUSTAINML_NODE=ml_model
@@ -101,7 +101,7 @@ services:
     ipc: host
 
   ml_model_metadata:
-    image: sustainml:v0.2.0
+    image: sustainml:v0.1.0
     container_name: ml_model_metadata
     environment:
       - SUSTAINML_NODE=ml_model_metadata

@@ -116,7 +116,7 @@ Rectangle
                 }
             }
             general_table.forceLayout();
-            if (keywords === "Error" !errorDialog.visible) {
+            if (keywords === "Error" && !errorDialog.visible) {
                 errorMessage = "Error in node ML Model Metadata. Please check the logs for more details.";
                 errorDialog.open();
             }
@@ -150,7 +150,7 @@ Rectangle
                 }
             }
             general_table.forceLayout();
-            if (model === "Error" !errorDialog.visible) {
+            if (model === "Error" && !errorDialog.visible) {
                 errorMessage = "Error in node ML Model Provider. Please check the logs for more details.";
                 errorDialog.open();
             }
@@ -185,7 +185,7 @@ Rectangle
                 }
             }
             general_table.forceLayout();
-            if (hw_description === "Error" !errorDialog.visible) {
+            if (hw_description === "Error" && !errorDialog.visible) {
                 errorMessage = "Error in node HW Resource. Please check the logs for more details.";
                 errorDialog.open();
             }

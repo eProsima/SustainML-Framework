@@ -14,7 +14,7 @@ To run the SustainML Framework using Docker, please follow these steps:
 1. Build the Docker image by running the following command:
 
    ```bash
-   docker build -f Dockerfile -t sustainml:v0.2.0 .
+   docker build -f Dockerfile -t sustainml:v0.1.0 .
    ```
 
 1. Before running the backend, make sure you’ve set the ``HF_TOKEN`` environment variable on your host to your personal Hugging Face access token.
