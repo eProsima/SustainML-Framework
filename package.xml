@@ -10,7 +10,6 @@
   <!-->Update maintainer information<-->
   <maintainer email="RaulSanchezMateos@eprosima.com">Raul Sánchez-Mateos</maintainer>
   <maintainer email="mariodominguez@eprosima.com">Mario Domínguez</maintainer>
-  <maintainer email="jesuspoderoso@eprosima.com">Jesús Poderoso</maintainer>
   <maintainer email="javiergil@eprosima.com">Javier Gil</maintainer>
   <license file="LICENSE">GNU general public license</license>
 
