@@ -83,7 +83,7 @@ The following sections describe the steps to install the SustainML Framework in 
 
     ```bash
     mkdir -p ~/SustainML/SustainML_ws/src && cd ~/SustainML/SustainML_ws && \
-    wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sustainml.repos && \
+    wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/v0.1.0/sustainml.repos && \
     vcs import src < sustainml.repos && \
     cd ~/SustainML/SustainML_ws/src/sustainml_lib && \
     git submodule update --init --recursive && \
