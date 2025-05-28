@@ -459,6 +459,14 @@ signals:
     void models_available(
         const QStringList& metrics);
 
+    /**
+     * @brief Signal to display the error message
+     *
+     * @param message error message to display
+     */
+    void notSupportProblem(
+        const QString& message);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -497,6 +505,7 @@ private:
     std::vector<types::TaskId> received_task_ids;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
+    bool has_active_problem_ = false;
 
     // --------------- REST requester --------------- //
     //! Send user input to the Framework pipeline

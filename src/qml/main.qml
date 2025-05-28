@@ -101,20 +101,20 @@ Window {
 
         function onModalities_available(list_modalities, list_goals)
         {
-            main_window.modality_list = ["other (describe)"].concat(list_modalities)
-            main_window.goal_list = ["other (describe)"].concat(list_goals)
+            main_window.modality_list = ["(empty)"].concat(list_modalities)
+            main_window.goal_list = ["(empty)"].concat(list_goals)
             main_window.refreshing = false
         }
 
         function onGoals_available(list_goals)
         {
-            main_window.goal_list = ["other (describe)"].concat(list_goals)
+            main_window.goal_list = ["(empty)"].concat(list_goals)
             main_window.refreshing = false
         }
 
         function onHardwares_available(list_hardwares)
         {
-            main_window.hardware_list = ["other (describe)"].concat(list_hardwares)
+            main_window.hardware_list = ["(empty)"].concat(list_hardwares)
             main_window.refreshing = false
         }
 
@@ -126,7 +126,7 @@ Window {
 
         function onModels_available(list_models)
         {
-            main_window.model_list = list_models
+            main_window.model_list = ["(empty)"].concat(list_models)
             main_window.refreshing = false
         }
 
@@ -327,7 +327,6 @@ Window {
             ListElement { label: "Suggested model"; value: "X" }
             ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
-            ListElement { label: "Carbon footprint [gCO2eq]"; value: "X" }
             ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
         }
 
@@ -754,11 +753,11 @@ Window {
         reiterateModel.set(2, { label: "Suggested model", value: results["Suggested model"] })
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
-        reiterateModel.set(5, { label: "Carbon footprint [gCO2eq]", value: results["Carbon footprint"] })
-        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(5, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]))
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         engine.request_model_from_goal(goal_and_tag)
+        main_window.refreshing = true
         load_screen(ScreenManager.Screens.Reiterate)
     }
 }

@@ -13,6 +13,7 @@ TextInput {
     property int border_width: Settings.input_default_border_width
     property string background_color: ""
     property string background_nightmode_color: ""
+    property string background_disable_color: Settings.app_color_disable
     property string border_color: ""
     property string border_editting_color: ""
     property string border_nightmode_color: ""
@@ -49,7 +50,7 @@ TextInput {
         color: ScreenManager.night_mode
                 ? sustainml_custom_input.background_nightmode_color
                 : sustainml_custom_input.disabled
-                ? "#d3d3d3"
+                ? sustainml_custom_input.background_disable_color
                 : sustainml_custom_input.background_color
         border.color: ScreenManager.night_mode ? sustainml_custom_input.__edited
                     ? sustainml_custom_input.border_nightmode_editting_color
@@ -71,7 +72,7 @@ TextInput {
             topPadding: sustainml_custom_input.padding
 
             force_color: true
-            forced_color: "#aaa"
+            forced_color: sustainml_custom_input.disabled ? "#888" : "#aaa"
             visible: sustainml_custom_input.text === ""
 
             SmlMouseArea

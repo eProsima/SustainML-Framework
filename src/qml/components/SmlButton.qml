@@ -16,6 +16,7 @@ Item {
     property string color: Settings.app_color_dark
     property string color_pressed: color
     property string color_text: ""
+    property string color_disable: Settings.app_color_disable
     property string nightmode_color: Settings.app_color_light
     property string nightmode_color_pressed: nightmode_color
     property string nightmode_color_text: ""
@@ -23,6 +24,8 @@ Item {
     property real scalingFactor: 1
     property int anim_angle: Settings.button_movement_anim_angle
     property int anim_duration: Settings.button_movement_anim_duration
+    property bool disabled: false
+
 
     property string __font_color:  sustainml_custom_button.text_kind === SmlText.TextKind.App_name ? ScreenManager.app_name_color  :
                                    sustainml_custom_button.text_kind === SmlText.TextKind.Body     ? ScreenManager.body_font_color :
@@ -42,6 +45,8 @@ Item {
         id: background
         color: ScreenManager.night_mode
                 ? sustainml_custom_button.nightmode_color
+                : sustainml_custom_button.disabled
+                ? sustainml_custom_button.color_disable
                 : sustainml_custom_button.color
         height: sustainml_custom_button.size * 2
         border.color: text.force_color ? text.forced_color : __font_color
@@ -122,10 +127,10 @@ Item {
         hoverEnabled: true
         width: background.width
         height: background.height
-        onPressed: { sustainml_custom_button.__pressed = true; }
-        onReleased: { sustainml_custom_button.__pressed = false; }
-        onClicked: sustainml_custom_button.clicked();
-        onEntered: { mouse_area.cursorShape = Qt.PointingHandCursor; icon.start_animation();}
-        onExited:  { mouse_area.cursorShape = Qt.ArrowCursor; }
+        onPressed: { if (!sustainml_custom_button.disabled) sustainml_custom_button.__pressed = true; }
+        onReleased: { if (!sustainml_custom_button.disabled) sustainml_custom_button.__pressed = false; }
+        onClicked: { if (!sustainml_custom_button.disabled) sustainml_custom_button.clicked(); }
+        onEntered: { if (!sustainml_custom_button.disabled) { mouse_area.cursorShape = Qt.PointingHandCursor; icon.start_animation(); } }
+        onExited:  { if (!sustainml_custom_button.disabled) mouse_area.cursorShape = Qt.ArrowCursor; }
     }
 }

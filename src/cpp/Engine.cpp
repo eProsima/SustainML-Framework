@@ -163,8 +163,16 @@ void Engine::launch_task(
     json_data["geo_location_region"] = geo_location_region;
     json_data["extra_data"] = extra_data;
 
-    // Launch user input request
-    user_input_request(json_data);
+    if(previous_problem_id == 0 && has_active_problem_)
+    {
+        emit notSupportProblem("Second problem not supported yet");
+    }
+    else
+    {
+        has_active_problem_ = true;
+        // Launch user input request
+        user_input_request(json_data);
+    }
 }
 
 void Engine::request_current_data(

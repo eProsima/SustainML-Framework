@@ -320,9 +320,6 @@ Item {
         {
             console.log("Error: The given stack component '" + stack_component_name + "' is not allowed")
         }
-
-        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++)
-                console.log(" Valor de stack_id despues creacion: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
     }
 
     function close_tab(stack_id, problem_id)
@@ -341,10 +338,6 @@ Item {
             } else {
                 console.log("The given stack id '" + stack_id + "' doesn't exists");    // debug
             }
-
-        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++)
-                console.log(" Valor de stack_id despues destruccion: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
-
     }
 
     function focus(stack_id, problem_id)
@@ -453,7 +446,7 @@ Item {
         // __last_stack = last_stack_id + 1
         var idx = sustainml_custom_tabview.__tab_model.count
         sustainml_custom_tabview.__tab_model.set(idx, {"idx" : idx, "title": tab_title, "stack_id": stack_id})
-        console.log("Creando un nuevo tab con stack_id: " + stack_id)
+        console.log("Creating new tab with stack_id: " + stack_id)  // debug
         var new_stack = stack_component.createObject(null)
         new_stack.setSource(sustainml_custom_tabview.__get_load_component(initial_component),
                 {"stack_id": stack_id, "problem_id": problem_id})
