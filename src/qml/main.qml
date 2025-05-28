@@ -127,6 +127,7 @@ Window {
         function onModels_available(list_models)
         {
             main_window.model_list = list_models
+            main_window.refreshing = false
         }
 
         function onTask_end()
@@ -265,6 +266,7 @@ Window {
                 __goal_list: main_window.goal_list
                 __hardware_list: main_window.hardware_list
                 __metrics: main_window.metrics_list
+                __model_list: main_window.model_list
                 __refreshing: main_window.refreshing
                 __initializing: main_window.initializing
 
@@ -275,6 +277,7 @@ Window {
                     engine.launch_task(
                             problem_short_description,
                             modality,
+                            metric,
                             problem_definition,
                             inputs,
                             outputs,
@@ -292,7 +295,8 @@ Window {
                             extra_data,
                             previous_problem_id,
                             num_outputs,
-                            model_selected)
+                            model_selected,
+                            type)
                 }
                 onRefresh:
                 {
@@ -308,6 +312,11 @@ Window {
                         metric_req_type,
                         req_type_values)
                 }
+                onAsk_models:
+                {
+                    main_window.refreshing = true
+                    engine.request_model_from_goal(goal_type)
+                }
             }
         }
 
@@ -318,8 +327,7 @@ Window {
             ListElement { label: "Suggested model"; value: "X" }
             ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
-            ListElement { label: "Memory footprint"; value: "X" }
-            ListElement { label: "Carbon footprint [kgCO2e]"; value: "X" }
+            ListElement { label: "Carbon footprint [gCO2eq]"; value: "X" }
             ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
         }
 
@@ -360,6 +368,7 @@ Window {
                             engine.launch_task(
                                 problem_short_description,
                                 modality,
+                                metric,
                                 problem_definition,
                                 inputs,
                                 outputs,
@@ -377,7 +386,8 @@ Window {
                                 extra_data,
                                 previous_problem_id,
                                 num_outputs,
-                                model_selected)
+                                model_selected,
+                                type)
                         }
                         onRefresh: {
                             main_window.refreshing = true
@@ -612,33 +622,8 @@ Window {
             onEntered: settings_icon.start_animation();
             onPressed: settings_icon.pressed = true;
             onReleased: settings_icon.pressed = false;
-            onClicked: ScreenManager.night_mode = !ScreenManager.night_mode
+            onClicked: main_window.load_screen(ScreenManager.Screens.Log)
         }
-    }
-
-    // Logs button
-    SmlButton
-    {
-        id: logs_button
-        icon_name: ""
-        text_kind: SmlText.Header_2
-        text_value: "Logs"
-        rounded: true
-        color: Settings.app_color_green_3
-        color_pressed: Settings.app_color_green_1
-        nightmode_color: Settings.app_color_green_1
-        nightmode_color_pressed: Settings.app_color_green_3
-
-        // Layout constraints
-        anchors
-        {
-            verticalCenter: settings_icon.verticalCenter
-            right: settings_icon.left
-            rightMargin: Settings.spacing_normal
-        }
-
-        // Button actions
-        onClicked: main_window.load_screen(ScreenManager.Screens.Log)
     }
 
     // Screen loader plus background animation trigger
@@ -769,11 +754,11 @@ Window {
         reiterateModel.set(2, { label: "Suggested model", value: results["Suggested model"] })
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
-        reiterateModel.set(5, { label: "Memory footprint", value: results["Memory footprint"] })
-        reiterateModel.set(6, { label: "Carbon footprint [kgCO2e]", value: results["Carbon footprint"] })
-        reiterateModel.set(7, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(5, { label: "Carbon footprint [gCO2eq]", value: results["Carbon footprint"] })
+        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]))
-        engine.request_model_from_goal(String(results["Problem kind"]))
+        var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
+        engine.request_model_from_goal(goal_and_tag)
         load_screen(ScreenManager.Screens.Reiterate)
     }
 }
