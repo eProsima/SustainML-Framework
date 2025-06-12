@@ -153,3 +153,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 # Packaging
 ###############################################################################
 eprosima_packaging()
+
+###############################################################################
+# Framework Install targets
+###############################################################################
+install(PROGRAMS framework_run.sh
+        DESTINATION bin
+        RENAME sustainml-framework)
