@@ -28,6 +28,20 @@ Item
     property var __comparison_interation_ids_list: []
     property var __comparison_values_list: []
 
+    function __getNextComparisonOrder()
+    {
+        var used = __comparison_values_list.map(function(e) { return e.id });
+        used.sort(function(a, b) { return a - b });
+        var next = 0;
+        for (var i = 0; i < used.length; i++) {
+            if (used[i] > next)
+                break;
+            else if (used[i] === next)
+                next++;
+        }
+        return next;
+    }
+
     onProblem_idChanged:
     {
         problem_fragment_view.update_problem_id(problem_id, -1)
@@ -86,6 +100,18 @@ Item
             problem_fragment_view.create_new_tab(components_title_map["general_view"], components_stack_id_map["general_view"], problem_id, "general_view")
             engine.request_current_data(true)
         }
+        onTabClosed:
+        {
+            console.log("Tab closed with stack_id: " + stack_id_closed)
+            for (var i = 0; i < sustainml_fragment_problem.__comparison_values_list.length; ++i)
+            {
+                if (sustainml_fragment_problem.__comparison_values_list[i].id+components_stack_id_map["comparison_view"] === stack_id_closed)
+                {
+                    sustainml_fragment_problem.__comparison_values_list.splice(i, 1)
+                    break
+                }
+            }
+        }
         onLoaded_item_signal:
         {
             console.log("Signal received: " + component + " " + signal_kind + " " + iteration_id)
@@ -96,15 +122,9 @@ Item
                     sustainml_fragment_problem.__comparison_interation_ids_list.push(iteration_id)
                     console.log("Added iteration id " + iteration_id + " to comparison list: " + sustainml_fragment_problem.__comparison_interation_ids_list)
                     problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
-                    if (sustainml_fragment_problem.__comparison_interation_ids_list.length >= 2)
-                    {
-                        // problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
-                    }
                     sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
-                    // problem_fragment_view.focus(components_stack_id_map["general_view"], problem_id)
                 }
 
-                //TODO: create signal for delation of iteration from __comparison_interation_ids_list abd update in SmlIteration and SmlComparison
                 else if (signal_kind === "out_of_compare")
                 {
                     var index = sustainml_fragment_problem.__comparison_interation_ids_list.indexOf(iteration_id);
@@ -115,10 +135,20 @@ Item
 
                     if (sustainml_fragment_problem.__comparison_interation_ids_list.length < 2)
                     {
-                        problem_fragment_view.close_tab(components_stack_id_map["comparison_view"], problem_id)
+                        for (var i = 0; i < sustainml_fragment_problem.__comparison_values_list.length; i++)
+                        {
+                            var entry = sustainml_fragment_problem.__comparison_values_list[i];
+                            console.log("Closing tab for comparison value with id " + entry.id + " and title " + entry.title)
+                            var expectedStackId = components_stack_id_map["comparison_view"] + entry.id
+                            problem_fragment_view.close_tab(expectedStackId, problem_id);
+                        }
+                        sustainml_fragment_problem.__comparison_values_list = [];
 
                         if (sustainml_fragment_problem.__comparison_interation_ids_list.length == 0)
+                        {
+                            console.log("Closing tab of iterations")
                             problem_fragment_view.close_tab(components_stack_id_map["iteration_view"], problem_id)
+                        }
                     }
 
                     sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
@@ -128,17 +158,21 @@ Item
             {
                 if (signal_kind === "add_to_compare")
                 {
-                    sustainml_fragment_problem.__comparison_values_list.push(iteration_id)  // Here iteration_id is the name of value to compare
-                    console.log("Added " + iteration_id + " to comparison list: " + sustainml_fragment_problem.__comparison_values_list)
-                    problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
-                    sustainml_fragment_problem.update_comparison(sustainml_fragment_problem.__comparison_values_list)
-                    sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
-                    problem_fragment_view.focus(components_stack_id_map["comparison_view"], problem_id)
+                    var already = __comparison_values_list.some(function(e){ return e.title === iteration_id })
+                    if (!already)
+                    {
+                        var compare_id = __getNextComparisonOrder()
+                        sustainml_fragment_problem.__comparison_values_list.push({ id: compare_id, title: iteration_id })
+                        problem_fragment_view.create_new_tab(components_title_map["comparison_view"] + " " + (compare_id + 1), components_stack_id_map["comparison_view"] + compare_id, problem_id, "comparison_view")
+                        sustainml_fragment_problem.update_comparison(iteration_id)
+                        sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
+                        problem_fragment_view.focus(components_stack_id_map["comparison_view"] + compare_id, problem_id)
+                    }
+                    else
+                    {
+                        console.log("The comparison " + iteration_id + " already in comparison list: " + sustainml_fragment_problem.__comparison_values_list.map(function(e) { return e.id + ": " + e.title }).join(", "))
+                    }
 
-                }
-                else if (signal_kind === "out_of_compare")
-                {
-                    // TODO: signal to delate comparison value from __comparison_values_list
                 }
             }
             else if (component === "comparison_view")
