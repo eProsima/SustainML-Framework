@@ -26,7 +26,7 @@ Rectangle
     // signal go_reiterate();
 
     // Private properties
-    property var minColumnWidths: [45, 45, 100, 160, 180, 160, 170, 185]
+    property var minColumnWidths: [45, 45, 100, 160, 180, 160, 170, 170, 185]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -34,7 +34,7 @@ Rectangle
         }
         return total;
     }
-    property var columnWidths: [45, 45, 100, 160, 180, 160, 170, 185]
+    property var columnWidths: [45, 45, 100, 160, 180, 160, 170, 170, 185]
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height
     readonly property int __scroll_view_content_height: 700
@@ -50,7 +50,8 @@ Rectangle
     readonly property int __suggested_model_column: 4
     readonly property int __hw_description_column: 5
     readonly property int __power_consumption_column: 6
-    readonly property int __carbon_intensity_column: 7
+    readonly property int __carbon_footprint_column: 7
+    readonly property int __carbon_intensity_column: 8
 
     property string errorMessage: ""
 
@@ -65,6 +66,7 @@ Rectangle
         TableModelColumn {display: "Suggested model"}
         TableModelColumn {display: "Suggested hardware"}
         TableModelColumn {display: "Power consumption"}
+        TableModelColumn {display: "Carbon footprint"}
         TableModelColumn {display: "Carbon intensity"}
 
         rows: []
@@ -109,6 +111,7 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : "",
                             "Power consumption" : "",
+                            "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
                     )
@@ -143,6 +146,7 @@ Rectangle
                             "Suggested model" : model,
                             "Suggested hardware" : "",
                             "Power consumption" : "",
+                            "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
                     )
@@ -178,6 +182,7 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : hw_description,
                             "Power consumption" : power_consumption,
+                            "Carbon footprint" : "",
                             "Carbon intensity" : ""
                         }
                     )
@@ -198,7 +203,7 @@ Rectangle
                 var row = table_model.contains(iteration_id)
                 if(row >= 0)
                 {
-                    // table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
+                    table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
                     table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
                     general_table.height = __data_height * table_model.rows.length;
                 }
@@ -213,6 +218,7 @@ Rectangle
                             "Suggested model" : "",
                             "Suggested hardware" : "",
                             "Power consumption" : "",
+                            "Carbon footprint" : carbon_footprint,
                             "Carbon intensity" : carbon_intensity
                         }
                     )
@@ -319,6 +325,7 @@ Rectangle
                         TableModelColumn {display: "Suggested model"}
                         TableModelColumn {display: "Suggested hardware"}
                         TableModelColumn {display: "Power consumption"}
+                        TableModelColumn {display: "Carbon footprint"}
                         TableModelColumn {display: "Carbon intensity"}
 
                         rows: [
@@ -329,6 +336,7 @@ Rectangle
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
                             "Power consumption" : "Power Consumption [W]",
+                            "Carbon footprint" : "Carbon Footprint [gCO2e]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]"}
                         ]
                     }
