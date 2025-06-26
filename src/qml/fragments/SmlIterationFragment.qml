@@ -23,8 +23,8 @@ Rectangle {
     signal component_signal(string viewType, string signal_kind, string id)
 
     // Property to decide the visibles columns
-    property var visibleColumns: [0,1,2,3,4,5,6,7]
-    property var minColumnWidths: [80, 160, 180, 150, 140, 160, 170, 185]
+    property var visibleColumns: [0,1,2,3,4,5,6,7,8]
+    property var minColumnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -32,7 +32,7 @@ Rectangle {
         }
         return total;
     }
-    property var columnWidths: [80, 160, 180, 150, 140, 160, 170, 185]
+    property var columnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185]
     property var jsonList : []
     readonly property int fixedColumnWidth: 150
     readonly property int __margin: Settings.spacing_big * 2
@@ -52,6 +52,7 @@ Rectangle {
         TableModelColumn { display: "Suggested hardware" }
         TableModelColumn { display: "Latency" }
         TableModelColumn { display: "Power consumption" }
+        TableModelColumn { display: "Carbon footprint"}
         TableModelColumn { display: "Carbon intensity" }
         TableModelColumn { display: "Energy Consumption" }
 
@@ -86,6 +87,7 @@ Rectangle {
                     "Suggested hardware": json.HW_RESOURCES.hw_description,
                     "Latency": formatNumber(json.HW_RESOURCES.latency),
                     "Power consumption": formatNumber(json.HW_RESOURCES.power_consumption),
+                    "Carbon footprint": formatNumber(json.CARBON_FOOTPRINT.carbon_footprint),
                     "Carbon intensity": formatNumber(json.CARBON_FOOTPRINT.carbon_intensity),
                     "Energy Consumption": formatNumber(json.CARBON_FOOTPRINT.energy_consumption)
                 });
@@ -190,6 +192,7 @@ Rectangle {
                         TableModelColumn { display: "Suggested hardware" }
                         TableModelColumn { display: "Latency" }
                         TableModelColumn { display: "Power consumption" }
+                        TableModelColumn { display: "Carbon footprint" }
                         TableModelColumn { display: "Carbon intensity" }
                         TableModelColumn { display: "Energy Consumption" }
 
@@ -200,6 +203,7 @@ Rectangle {
                             "Suggested hardware" : "Hardware",
                             "Latency" : "Latency [ms]",
                             "Power consumption" : "Power Consumption [W]",
+                            "Carbon footprint" : "Carbon Footprint [gCO2e]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
                             "Energy Consumption" : "Energy Consumption [kWh]"}
                         ]
@@ -568,7 +572,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: [1,2,3,4,5,6,7]
+                    model: [1,2,3,4,5,6,7,8]
                     delegate: Row {
                         spacing: 5
                         CheckBox {
@@ -590,7 +594,7 @@ Rectangle {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: {
-                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Intensity", "Energy Consumption"];
+                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption"];
                                 return headers[modelData - 1];
                             }
                         }
