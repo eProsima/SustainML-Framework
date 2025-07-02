@@ -76,6 +76,11 @@ void Engine::launch_task(
         QString problem_definition,
         QString inputs,
         QString outputs,
+        QString dataset_metadata_description,
+        QString dataset_metadata_topic,
+        QString dataset_metadata_profile,
+        QString dataset_metadata_keywords,
+        QString dataset_metadata_applications,
         int minimum_samples,
         int maximum_samples,
         bool optimize_carbon_footprint_auto,
@@ -147,6 +152,11 @@ void Engine::launch_task(
     extra_data["num_outputs"] = num_outputs;
     extra_data["model_selected"] = model_selected;
     extra_data["type"] = type;
+    extra_data["dataset_metadata_description"] = dataset_metadata_description;
+    extra_data["dataset_metadata_topic"] = dataset_metadata_topic;
+    extra_data["dataset_metadata_profile"] = dataset_metadata_profile;
+    extra_data["dataset_metadata_keywords"] = dataset_metadata_keywords;
+    extra_data["dataset_metadata_applications"] = dataset_metadata_applications;
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
     json_data["modality"] = modality;
@@ -174,6 +184,32 @@ void Engine::launch_task(
         user_input_request(json_data);
     }
 }
+
+void Engine::launch_dataset_path_task(
+        QString dataset_path)
+{
+    QJsonObject json_config;
+    json_config["configuration"] = "dataset_path, " + dataset_path;
+    json_config["node_id"] = 4;
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+    {
+        QJsonObject response_obj = json_obj["response"].toObject();
+        if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+        {
+            QJsonDocument config_doc = QJsonDocument::fromJson(
+                response_obj["configuration"].toString().toUtf8());
+            if (config_doc.isObject())
+            {
+                QJsonObject config_obj = config_doc.object();
+
+                emit dataset_metadata_available(config_obj.toVariantMap());
+                
+            }
+        }
+    });
+}
+
 
 void Engine::request_current_data(
         const bool& retrieve_all)
@@ -603,6 +639,11 @@ void Engine::send_reiteration_inputs(
         node_json["problem_definition"].toString(),
         inputs_str,
         outputs_str,
+        node_json["dataset_metadata_description"].toString(),
+        node_json["dataset_metadata_topic"].toString(),
+        node_json["dataset_metadata_profile"].toString(),
+        node_json["dataset_metadata_keywords"].toString(),
+        node_json["dataset_metadata_applications"].toString(),
         node_json["minimum_samples"].toInt(),
         node_json["maximum_samples"].toInt(),
         node_json["optimize_carbon_footprint_manual"].toBool(),

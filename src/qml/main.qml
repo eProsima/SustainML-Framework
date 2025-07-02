@@ -28,6 +28,12 @@ Window {
     property int current_problem_id: -1
     property int current_iteration_id: -1
 
+    property string dataset_description: ""
+    property string dataset_topic: ""
+
+    property var dataset_profile: {}
+    property var dataset_keywords: []
+    property var dataset_applications: []
     property var modality_list: []
     property var goal_list: []
     property var hardware_list: []
@@ -104,6 +110,17 @@ Window {
             main_window.modality_list = ["(empty)"].concat(list_modalities)
             main_window.goal_list = ["(empty)"].concat(list_goals)
             main_window.refreshing = false
+        }
+
+        function onDataset_metadata_available(dataset_metadata)
+        {
+            main_window.dataset_description = dataset_metadata.description ?? ""
+            main_window.dataset_topic = dataset_metadata.topic ?? ""
+            main_window.dataset_keywords = dataset_metadata.keywords.join(", ") ?? ""
+            main_window.dataset_applications = dataset_metadata.applications.join(", ") ?? ""
+            main_window.dataset_profile = dataset_metadata.profile ?? ""
+            main_window.refreshing = false
+
         }
 
         function onGoals_available(list_goals)
@@ -267,6 +284,11 @@ Window {
                 __hardware_list: main_window.hardware_list
                 __metrics: main_window.metrics_list
                 __model_list: main_window.model_list
+                __dataset_description: main_window.dataset_description
+                __dataset_topic: main_window.dataset_topic
+                __dataset_profile: main_window.dataset_profile
+                __dataset_keywords: main_window.dataset_keywords
+                __dataset_applications: main_window.dataset_applications
                 __refreshing: main_window.refreshing
                 __initializing: main_window.initializing
 
@@ -281,6 +303,11 @@ Window {
                             problem_definition,
                             inputs,
                             outputs,
+                            dataset_metadata_description,
+                            dataset_metadata_topic,
+                            dataset_metadata_profile,
+                            dataset_metadata_keywords,
+                            dataset_metadata_applications,
                             minimum_samples,
                             maximum_samples,
                             optimize_carbon_footprint_auto,
@@ -298,6 +325,14 @@ Window {
                             model_selected,
                             type)
                 }
+
+                onSend_dataset_path_task:
+                {
+                    engine.launch_dataset_path_task(
+                        dataset_path
+                        )
+                }
+                                
                 onRefresh:
                 {
                     main_window.refreshing = true
@@ -371,6 +406,11 @@ Window {
                                 problem_definition,
                                 inputs,
                                 outputs,
+                                dataset_metadata_description,
+                                dataset_metadata_topic,
+                                dataset_metadata_profile,
+                                dataset_metadata_keywords,
+                                dataset_metadata_applications,
                                 minimum_samples,
                                 maximum_samples,
                                 optimize_carbon_footprint_auto,

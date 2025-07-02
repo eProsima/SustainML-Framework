@@ -26,6 +26,7 @@ Item
     // Input values
     property string __problem_short_description: ""
     property string __modality: ""
+    property string __dataset_path: ""
     property string __metric: ""
     property string __problem_definition: ""
     property string __inputs: ""
@@ -56,10 +57,20 @@ Item
     property var __metrics: []
     property var __hardware_list: []
     property var __model_list: []
+    property var __dataset_description: ""
+    property var __dataset_topic: ""
+    property var __dataset_profile: ""
+    property var __dataset_keywords: ""
+    property var __dataset_applications: ""
     property bool __refreshing: false
     property bool __reiterate: false
     property bool __initializing: true
 
+    property string __dataset_metadata_description: __dataset_description
+    property string __dataset_metadata_topic: __dataset_topic
+    property string __dataset_metadata_profile: __dataset_profile
+    property string __dataset_metadata_keywords: __dataset_keywords
+    property string __dataset_metadata_applications: __dataset_applications
     // External signals
     signal go_home();
     signal go_results();
@@ -70,6 +81,11 @@ Item
         string problem_definition,
         string inputs,
         string outputs,
+        string dataset_metadata_description,
+        string dataset_metadata_topic,
+        string dataset_metadata_profile,
+        string dataset_metadata_keywords,
+        string dataset_metadata_applications,
         int minimum_samples,
         int maximum_samples,
         bool optimize_carbon_footprint_auto,
@@ -87,6 +103,11 @@ Item
         string model_selected,
         string type
     );
+
+    signal send_dataset_path_task(
+        string dataset_path
+    );
+
     signal refresh();
     signal ask_metrics(
         string metric_req_type,
@@ -100,7 +121,9 @@ Item
     {
         target: engine
         function onReiterate_user_inputs(problem_id, iteration_id, modality, metric, problem_short_description,
-                          problem_definition, inputs, outputs, minimum_samples,
+                          problem_definition, inputs, outputs, dataset_metadata_description,
+                          dataset_metadata_topic, dataset_metadata_profile,
+                          dataset_metadata_keywords, dataset_metadata_applications, minimum_samples,
                           maximum_samples, optimize_carbon_footprint_manual,
                           previous_iteration, optimize_carbon_footprint_auto,
                           desired_carbon_footprint, geo_location_continent,
@@ -113,6 +136,11 @@ Item
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
+            root.__dataset_metadata_description = dataset_metadata_description
+            root.__dataset_metadata_topic = dataset_metadata_topic
+            root.__dataset_metadata_profile = dataset_metadata_profile
+            root.__dataset_metadata_keywords = dataset_metadata_keywords
+            root.__dataset_metadata_applications = dataset_metadata_applications
             root.__minimum_samples = minimum_samples
             root.__maximum_samples = maximum_samples
             root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
@@ -305,6 +333,101 @@ Item
                     scroll_view.scroll_to(problem_definition_input.y - Settings.spacing_big)
                 }
             }
+        }
+
+        // Dataset Path
+        SmlText
+        {
+            id: dataset_path_header
+            visible: !root.__reiterate
+            text_kind: SmlText.TextKind.Header_3
+            color: dataset_path_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            text_value: "Dataset Path"
+            anchors
+            {
+                top: problem_shortdescription_header.top
+                left: problem_short_description_input.right
+                leftMargin: Settings.spacing_big
+            }
+        }
+
+        SmlInput
+        {
+            id: dataset_path_input
+            visible: !root.__reiterate
+            text: root.__dataset_path
+            placeholder_text: "Path to the dataset for which metadata will be collected"
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color:Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_small)/3 * 0.9 + 1 : root.__input_width_small - 16
+            height: root.__input_height
+            KeyNavigation.tab: modality_input
+            anchors
+            {
+                top: problem_short_description_input.top
+                left: problem_short_description_input.right
+                leftMargin: Settings.spacing_big
+            }
+            onTextChanged:
+            {
+                root.__dataset_path = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(dataset_path_input.y - Settings.spacing_big)
+                }
+
+            }
+        }
+
+        // Extract Dataset Metadata Button
+        SmlButton
+        {
+            id: submit_dataset_path_button
+            icon_name: Settings.submit_icon_name
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Submit"
+            rounded: true
+            color: Settings.app_color_light
+            color_pressed: Settings.app_color_green_1
+            nightmode_color: Settings.app_color_dark
+            nightmode_color_pressed: Settings.app_color_green_3
+            anchors
+            {
+                top: dataset_path_input.bottom
+                topMargin: Settings.spacing_small
+                horizontalCenter: dataset_path_input.horizontalCenter
+            }
+            onClicked:
+            {
+                focus = true
+                if (!root.__refreshing && !root.__initializing)
+                {
+                    scroll_view.prepare_dataset_path_task()
+                }
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(dataset_path_input.y - Settings.spacing_big)
+                }
+
+            }
+
+        }
+
+        function prepare_dataset_path_task()
+        {
+            root.send_dataset_path_task(
+                        root.__dataset_path
+                    );
         }
 
         // Modality
@@ -940,6 +1063,247 @@ Item
             }
         }
 
+        // Dataset description
+        SmlText
+        {
+            id: dataset_metadata_description_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Dataset description"
+            color: dataset_metadata_description_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            anchors
+            {
+                top: num_outputs_input.bottom
+                topMargin: Settings.spacing_small
+                left: parent.left
+            }
+        }
+
+        SmlInput
+        {
+            id: dataset_metadata_description_input
+            text: root.__dataset_description
+            placeholder_text: "Dataset description"
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width:root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            height: root.__input_height_big
+            KeyNavigation.tab: problem_short_description_input
+            anchors
+            {
+                top: dataset_metadata_description_header.bottom
+                topMargin: -Settings.spacing_small * 0.25
+                left: dataset_metadata_description_header.left
+            }
+            onTextEdited:
+            {
+                root.__dataset_metadata_description = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
+                }
+            }
+        }
+
+        //Dataset Topic
+
+        SmlText
+        {
+            id: dataset_metadata_topic_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Dataset Topic"
+            color: dataset_metadata_topic_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            anchors
+            {
+                top: dataset_metadata_description_input.bottom
+                topMargin: Settings.spacing_small
+                left: parent.left
+            }
+        }
+
+        SmlInput
+        {
+            id: dataset_metadata_topic_input
+            text: root.__dataset_topic
+            placeholder_text: "Dataset description"
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            height:root.__input_height
+            KeyNavigation.tab: problem_short_description_input
+            anchors
+            {
+                top: dataset_metadata_topic_header.bottom
+                topMargin: -Settings.spacing_small * 0.25
+                left: dataset_metadata_description_header.left
+            }
+            onTextEdited:
+            {
+                root.__dataset_metadata_topic = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
+                }
+            }
+        }
+
+        // Dataset Keywords
+        SmlText
+        {
+            id: dataset_metadata_keywords_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Dataset Keywords"
+            color: dataset_metadata_keywords_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            anchors
+            {
+                top: dataset_metadata_description_input.bottom
+                topMargin: Settings.spacing_small
+                left: dataset_metadata_topic_input.right
+                leftMargin: Settings.spacing_big
+            }
+        }
+        SmlInput
+        {
+            id: dataset_metadata_keywords_input
+            text: root.__dataset_keywords
+            placeholder_text: "Dataset keywords"
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            height: root.__input_height
+            KeyNavigation.tab: optimize_carbon_input
+            anchors
+            {
+                top: dataset_metadata_keywords_header.bottom
+                topMargin: -Settings.spacing_small * 0.25
+                left: dataset_metadata_keywords_header.left
+            }
+            onTextEdited:
+            {
+                root.__dataset_metadata_keywords = text
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
+                }
+            }
+        }
+
+        //Dataset Applications
+        SmlText
+        {
+            id: dataset_metadata_applications_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Dataset Applications"
+            color: dataset_metadata_applications_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            anchors
+            {
+                top: dataset_metadata_keywords_input.bottom
+                topMargin: Settings.spacing_small
+                left: parent.left
+            }
+        }
+        SmlInput
+        {
+            id: dataset_metadata_applications_input
+            text: root.__dataset_applications
+            placeholder_text: "Dataset applications"
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            height: root.__input_height * 2
+            KeyNavigation.tab: optimize_carbon_input
+            anchors
+            {
+                top: dataset_metadata_applications_header.bottom
+                topMargin: -Settings.spacing_small * 0.25
+                left: dataset_metadata_applications_header.left
+            }
+            onTextEdited:
+            {
+                root.__dataset_metadata_applications = text
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
+                }
+            }
+        }
+
+        // Dataset Profile
+
+        SmlText
+        {
+            id: dataset_metadata_profile_header
+            text_kind: SmlText.TextKind.Header_3
+            text_value: "Dataset Profile"
+            color: dataset_metadata_profile_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            anchors
+            {
+                top: dataset_metadata_applications_input.bottom
+                topMargin: Settings.spacing_small
+                left: parent.left
+            }
+        }
+        SmlInput
+        {
+            id: dataset_metadata_profile_input
+            text: root.__dataset_profile
+            placeholder_text: "Dataset profile"
+            border_color: Settings.app_color_green_4
+            border_editting_color: Settings.app_color_blue
+            border_nightmode_color: Settings.app_color_green_1
+            border_nightmode_editting_color: Settings.app_color_green_2
+            background_color: Settings.app_color_light
+            background_nightmode_color: Settings.app_color_dark
+            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            height: root.__input_height_big
+            KeyNavigation.tab: optimize_carbon_input
+            anchors
+            {
+                top: dataset_metadata_profile_header.bottom
+                topMargin: -Settings.spacing_small * 0.25
+                left: dataset_metadata_profile_header.left
+            }
+            onTextEdited:
+            {
+                root.__dataset_metadata_profile = text;
+            }
+            onFocusChanged:
+            {
+                if(focus === true)
+                {
+                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
+                }
+            }
+        }
+
+
         // Carbon footprint optimization
         SmlText
         {
@@ -949,7 +1313,7 @@ Item
             color: optimize_carbon_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
-                top: num_outputs_input.bottom
+                top: dataset_metadata_profile_input.bottom
                 topMargin: Settings.spacing_small
                 left: parent.left
             }
@@ -1242,6 +1606,11 @@ Item
                 root.__problem_definition,
                 root.__inputs,
                 root.__outputs,
+                root.__dataset_metadata_description,
+                root.__dataset_metadata_topic,
+                root.__dataset_metadata_profile,
+                root.__dataset_metadata_keywords,
+                root.__dataset_metadata_applications,
                 root.__minimum_samples,
                 root.__maximum_samples,
                 root.__optimize_carbon_footprint_auto,
