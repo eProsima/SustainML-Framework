@@ -56,9 +56,10 @@ All the Nodes shall import its corresponding Python library, so that each Node c
 
 ---
 
-## Installation manual
+## Installation manual on MacOS
 
 The following sections describe the steps to install the SustainML Framework in Ubuntu.
+> **Note:** Due to conflicts between QT and macOS, the dev-frontend is not supported on macOS.
 
 1. **Installing the dependencies**
 
@@ -67,14 +68,11 @@ The following sections describe the steps to install the SustainML Framework in 
     On Ubuntu use the command:
 
     ```bash
-    sudo apt install --yes --no-install-recommends \
-        curl wget git cmake g++ build-essential python3 python3-pip python3-venv libpython3-dev swig \
-        libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
-        qtdeclarative5-dev libqt5charts5-dev qml-module-qtcharts qtquickcontrols2-5-dev libqt5svg5 \
-        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
+    brew install \
+        curl wget git llvm cmake gcc python swig openssl@3.0 asio tinyxml2 libp11 softhsm
     pip3 install -U \
         colcon-common-extensions vcstool && \
-    curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3
+    brew install ollama && brew services start ollama && ollama pull llama3
     ```
 
 2. **Downloading sources**
@@ -83,7 +81,7 @@ The following sections describe the steps to install the SustainML Framework in 
 
     ```bash
     mkdir -p ~/SustainML/SustainML_ws/src && cd ~/SustainML/SustainML_ws && \
-    wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/v0.1.0/sustainml.repos && \
+    wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/mac-0.1.0/sustainml.repos && \
     vcs import src < sustainml.repos && \
     cd ~/SustainML/SustainML_ws/src/sustainml_lib && \
     git submodule update --init --recursive && \
@@ -97,22 +95,18 @@ The following sections describe the steps to install the SustainML Framework in 
 
     ```bash
     cd ~/SustainML/SustainML_ws && \
-    colcon build && \
-    source ~/SustainML/SustainML_ws/install/setup.bash
+    colcon build --cmake-args -DCMAKE_CXX_STANDARD=17 && \
+    mv ws/install/sustainml_swig/lib/python3.12/site-packages/_sustainml_swig.dylib ws/install/sustainml_swig/lib/python3.12/site-packages/_sustainml_swig.so && \
+    source install/setup.zsh
     ```
-
+    > **Note:** This section is still under development due to issues arising from SWIG compilation.
+    
 4. **Deploy the framework**
-
-    The framework application to retrieve the user inputs is run with the `sustainml` command.
-
-    ```bash
-    sustainml
-    ```
 
     The SustainML Framework needs each of the modules that are part of it for its deployment.
     Set the ``HF_TOKEN`` environment variable on your host to your personal Hugging Face access token.
 
-    The following bash script run each module, the backend orchestrator and the frontend application.
+    The following bash script run each module and the backend orchestrator.
 
 
     ```bash

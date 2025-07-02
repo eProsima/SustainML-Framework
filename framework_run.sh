@@ -43,4 +43,4 @@ start_node python3 sustainml-wp3/carbon_footprint_node.py
 start_node python3 sustainml-wp5/backend_node.py
 
 echo "▶️  Running sustainml CLI"
-sustainml
+# sustainml

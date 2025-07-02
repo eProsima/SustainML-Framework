@@ -3,7 +3,7 @@
 source "/sustainml/install/setup.bash"
 
 if [[ ${SUSTAINML_NODE} == "desktop" ]]; then
-    /sustainml/build/sustainml/sustainml
+    # /sustainml/build/sustainml/sustainml
 else
     cd /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/
     if [[ ${SUSTAINML_NODE} == "back_end" ]]; then

@@ -22,7 +22,6 @@ To run the SustainML Framework using Docker, please follow these steps:
 1. Provide privileges to the X localhost server and deploy the Docker containers using Docker compose:
 
     ```bash
-    xhost local:root && \
     docker compose up
     ```
 
