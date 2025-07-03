@@ -57,11 +57,11 @@ Item
     property var __metrics: []
     property var __hardware_list: []
     property var __model_list: []
-    property var __dataset_description: ""
-    property var __dataset_topic: ""
-    property var __dataset_profile: ""
-    property var __dataset_keywords: ""
-    property var __dataset_applications: ""
+    property string __dataset_description: ""
+    property string __dataset_topic: ""
+    property string __dataset_profile: ""
+    property string __dataset_keywords: ""
+    property string __dataset_applications: ""
     property bool __refreshing: false
     property bool __reiterate: false
     property bool __initializing: true
@@ -71,6 +71,7 @@ Item
     property string __dataset_metadata_profile: __dataset_profile
     property string __dataset_metadata_keywords: __dataset_keywords
     property string __dataset_metadata_applications: __dataset_applications
+
     // External signals
     signal go_home();
     signal go_results();
@@ -136,11 +137,11 @@ Item
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
-            root.__dataset_metadata_description = dataset_metadata_description
-            root.__dataset_metadata_topic = dataset_metadata_topic
-            root.__dataset_metadata_profile = dataset_metadata_profile
-            root.__dataset_metadata_keywords = dataset_metadata_keywords
-            root.__dataset_metadata_applications = dataset_metadata_applications
+            root.__dataset_description = dataset_metadata_description
+            root.__dataset_topic = dataset_metadata_topic
+            root.__dataset_profile = dataset_metadata_profile
+            root.__dataset_keywords = dataset_metadata_keywords
+            root.__dataset_applications = dataset_metadata_applications
             root.__minimum_samples = minimum_samples
             root.__maximum_samples = maximum_samples
             root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
@@ -1067,6 +1068,7 @@ Item
         SmlText
         {
             id: dataset_metadata_description_header
+            visible: root.__dataset_description !== ""
             text_kind: SmlText.TextKind.Header_3
             text_value: "Dataset description"
             color: dataset_metadata_description_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
@@ -1081,6 +1083,8 @@ Item
         SmlInput
         {
             id: dataset_metadata_description_input
+            visible: root.__dataset_description !== ""
+            disabled: root.__reiterate
             text: root.__dataset_description
             placeholder_text: "Dataset description"
             border_color: Settings.app_color_green_4
@@ -1116,6 +1120,7 @@ Item
         SmlText
         {
             id: dataset_metadata_topic_header
+            visible: root.__dataset_topic !== ""
             text_kind: SmlText.TextKind.Header_3
             text_value: "Dataset Topic"
             color: dataset_metadata_topic_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
@@ -1130,6 +1135,8 @@ Item
         SmlInput
         {
             id: dataset_metadata_topic_input
+            visible: root.__dataset_topic !== ""
+            disabled: root.__reiterate
             text: root.__dataset_topic
             placeholder_text: "Dataset description"
             border_color: Settings.app_color_green_4
@@ -1164,6 +1171,7 @@ Item
         SmlText
         {
             id: dataset_metadata_keywords_header
+            visible: root.__dataset_keywords !== ""
             text_kind: SmlText.TextKind.Header_3
             text_value: "Dataset Keywords"
             color: dataset_metadata_keywords_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
@@ -1178,6 +1186,8 @@ Item
         SmlInput
         {
             id: dataset_metadata_keywords_input
+            visible: root.__dataset_keywords !== ""
+            disabled: root.__reiterate
             text: root.__dataset_keywords
             placeholder_text: "Dataset keywords"
             border_color: Settings.app_color_green_4
@@ -1212,6 +1222,7 @@ Item
         SmlText
         {
             id: dataset_metadata_applications_header
+            visible: root.__dataset_applications !== ""
             text_kind: SmlText.TextKind.Header_3
             text_value: "Dataset Applications"
             color: dataset_metadata_applications_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
@@ -1225,6 +1236,8 @@ Item
         SmlInput
         {
             id: dataset_metadata_applications_input
+            visible: root.__dataset_applications !== ""
+            disabled: root.__reiterate
             text: root.__dataset_applications
             placeholder_text: "Dataset applications"
             border_color: Settings.app_color_green_4
@@ -1260,6 +1273,7 @@ Item
         SmlText
         {
             id: dataset_metadata_profile_header
+            visible: root.__dataset_profile !== ""
             text_kind: SmlText.TextKind.Header_3
             text_value: "Dataset Profile"
             color: dataset_metadata_profile_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
@@ -1273,6 +1287,8 @@ Item
         SmlInput
         {
             id: dataset_metadata_profile_input
+            visible: root.__dataset_profile !== ""
+            disabled: root.__reiterate
             text: root.__dataset_profile
             placeholder_text: "Dataset profile"
             border_color: Settings.app_color_green_4
@@ -1313,7 +1329,7 @@ Item
             color: optimize_carbon_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
-                top: dataset_metadata_profile_input.bottom
+                top: dataset_metadata_profile_input.visible ? dataset_metadata_profile_input.bottom : num_outputs_input.bottom
                 topMargin: Settings.spacing_small
                 left: parent.left
             }

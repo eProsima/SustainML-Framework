@@ -31,9 +31,9 @@ Window {
     property string dataset_description: ""
     property string dataset_topic: ""
 
-    property var dataset_profile: {}
-    property var dataset_keywords: []
-    property var dataset_applications: []
+    property string dataset_profile: ""
+    property string dataset_keywords: ""
+    property string dataset_applications: ""
     property var modality_list: []
     property var goal_list: []
     property var hardware_list: []
