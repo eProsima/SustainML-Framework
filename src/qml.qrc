@@ -20,6 +20,7 @@
         <file>qml/fragments/SmlProblemFragment.qml</file>
         <file>qml/screens/SmlHomeScreen.qml</file>
         <file>qml/screens/SmlProblemDefinitionScreen.qml</file>
+        <file>qml/screens/SmlLoadDatasetScreen.qml</file>
         <file>qml/screens/SmlResultsScreen.qml</file>
         <file>qml/screens/SmlSettingsScreen.qml</file>
     </qresource>

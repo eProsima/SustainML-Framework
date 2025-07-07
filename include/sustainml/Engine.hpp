@@ -65,7 +65,6 @@ public slots:
      * @param problem_short_description short description of the problem
      * @param modality modality of the problem
      * @param metric metric of the problem
-     * @param dataset_path path to the dataset for extracting metadata
      * @param problem_definition definition of the problem
      * @param inputs inputs of the problem
      * @param outputs outputs of the problem

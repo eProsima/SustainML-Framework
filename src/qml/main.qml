@@ -119,7 +119,9 @@ Window {
             main_window.dataset_keywords = dataset_metadata.keywords.join(", ") ?? ""
             main_window.dataset_applications = dataset_metadata.applications.join(", ") ?? ""
             main_window.dataset_profile = dataset_metadata.profile ?? ""
+            main_window.load_screen(ScreenManager.Screens.Definition)
             main_window.refreshing = false
+            main_window.tasking = false
 
         }
 
@@ -294,6 +296,7 @@ Window {
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
+                onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onSend_task:
                 {
                     engine.launch_task(
@@ -324,13 +327,6 @@ Window {
                             num_outputs,
                             model_selected,
                             type)
-                }
-
-                onSend_dataset_path_task:
-                {
-                    engine.launch_dataset_path_task(
-                        dataset_path
-                        )
                 }
                                 
                 onRefresh:
@@ -363,6 +359,24 @@ Window {
             ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
             ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
+        }
+
+        // DATASET PATH UPLOAD SCREEN
+        Component {
+            id: dataset_path_upload_screen
+
+            SmlLoadDatasetScreen {
+                id: dataset_path_upload_screen_component
+
+                tasking: main_window.tasking
+
+                onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
+                onGo_back: main_window.load_screen(ScreenManager.Screens.Definition)
+                onSend_dataset_path_task:
+                {
+                    main_window.tasking = true
+                }
+            }
         }
 
         // PROBLEM REITERATION SCREEN
@@ -685,6 +699,9 @@ Window {
                 case ScreenManager.Screens.Log:
                     screen_to_be_loaded = log_screen
                     break
+                case ScreenManager.Screens.DatasetPath:
+                    screen_to_be_loaded = dataset_path_upload_screen
+                    break
                 // Add new screens here
                 case ScreenManager.Screens.Reiterate:
                     screen_to_be_loaded = reiterate_screen
@@ -740,6 +757,12 @@ Window {
             case ScreenManager.Screens.Results:
                 movement[0] = Settings.background_x_final
                 movement[1] = Settings.background_y_final
+                movement[2] = Settings.app_width * 5
+                movement[3] = Settings.app_height * 5
+                break
+            case ScreenManager.Screens.DatasetPath:
+                movement[0] = Settings.background_x_initial
+                movement[1] = Settings.background_y_initial
                 movement[2] = Settings.app_width * 5
                 movement[3] = Settings.app_height * 5
                 break

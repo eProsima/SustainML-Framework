@@ -26,7 +26,6 @@ Item
     // Input values
     property string __problem_short_description: ""
     property string __modality: ""
-    property string __dataset_path: ""
     property string __metric: ""
     property string __problem_definition: ""
     property string __inputs: ""
@@ -75,6 +74,7 @@ Item
     // External signals
     signal go_home();
     signal go_results();
+    signal go_dataset_path();
     signal send_task(
         string problem_short_description,
         string modality,
@@ -103,10 +103,6 @@ Item
         int num_outputs,
         string model_selected,
         string type
-    );
-
-    signal send_dataset_path_task(
-        string dataset_path
     );
 
     signal refresh();
@@ -196,6 +192,7 @@ Item
     // Go results button
     SmlButton
     {
+        id: go_results
         icon_name: Settings.start_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Results"
@@ -214,6 +211,30 @@ Item
             leftMargin: Settings.spacing_normal
         }
         onClicked: root.go_results()
+    }
+
+    // Go dataset path button
+    SmlButton
+    {
+        id: dataset_path_button
+        icon_name: Settings.start_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: "Upload Dataset"
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        anchors
+        {
+            top: parent.top
+            topMargin: Settings.spacing_normal
+            left: go_results.right
+            leftMargin: Settings.spacing_normal
+        }
+        onClicked: root.go_dataset_path()
     }
 
     SmlScrollView
@@ -334,101 +355,6 @@ Item
                     scroll_view.scroll_to(problem_definition_input.y - Settings.spacing_big)
                 }
             }
-        }
-
-        // Dataset Path
-        SmlText
-        {
-            id: dataset_path_header
-            visible: !root.__reiterate
-            text_kind: SmlText.TextKind.Header_3
-            color: dataset_path_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            text_value: "Dataset Path"
-            anchors
-            {
-                top: problem_shortdescription_header.top
-                left: problem_short_description_input.right
-                leftMargin: Settings.spacing_big
-            }
-        }
-
-        SmlInput
-        {
-            id: dataset_path_input
-            visible: !root.__reiterate
-            text: root.__dataset_path
-            placeholder_text: "Path to the dataset for which metadata will be collected"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color:Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_small)/3 * 0.9 + 1 : root.__input_width_small - 16
-            height: root.__input_height
-            KeyNavigation.tab: modality_input
-            anchors
-            {
-                top: problem_short_description_input.top
-                left: problem_short_description_input.right
-                leftMargin: Settings.spacing_big
-            }
-            onTextChanged:
-            {
-                root.__dataset_path = text;
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(dataset_path_input.y - Settings.spacing_big)
-                }
-
-            }
-        }
-
-        // Extract Dataset Metadata Button
-        SmlButton
-        {
-            id: submit_dataset_path_button
-            icon_name: Settings.submit_icon_name
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Submit"
-            rounded: true
-            color: Settings.app_color_light
-            color_pressed: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_dark
-            nightmode_color_pressed: Settings.app_color_green_3
-            anchors
-            {
-                top: dataset_path_input.bottom
-                topMargin: Settings.spacing_small
-                horizontalCenter: dataset_path_input.horizontalCenter
-            }
-            onClicked:
-            {
-                focus = true
-                if (!root.__refreshing && !root.__initializing)
-                {
-                    scroll_view.prepare_dataset_path_task()
-                }
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(dataset_path_input.y - Settings.spacing_big)
-                }
-
-            }
-
-        }
-
-        function prepare_dataset_path_task()
-        {
-            root.send_dataset_path_task(
-                        root.__dataset_path
-                    );
         }
 
         // Modality

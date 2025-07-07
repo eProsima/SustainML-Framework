@@ -188,8 +188,11 @@ void Engine::launch_task(
 void Engine::launch_dataset_path_task(
         QString dataset_path)
 {
+    QUrl file_url(dataset_path);
+    QString local_file_path = file_url.toLocalFile();
+
     QJsonObject json_config;
-    json_config["configuration"] = "dataset_path, " + dataset_path;
+    json_config["configuration"] = "dataset_path, " + local_file_path;
     json_config["node_id"] = 4;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
