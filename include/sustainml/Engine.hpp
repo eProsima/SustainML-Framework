@@ -68,6 +68,11 @@ public slots:
      * @param problem_definition definition of the problem
      * @param inputs inputs of the problem
      * @param outputs outputs of the problem
+     * @param dataset_metadata_description description of the given dataset
+     * @param dataset_metadata_topic topic of the given dataset
+     * @param dataset_metadata_profile profile of the given dataset
+     * @param dataset_metadata_keywords keywords of the given dataset
+     * @param dataset_metadata_applications applications of the given dataset
      * @param minimum_samples minimum samples
      * @param maximum_samples maximum samples
      * @param optimize_carbon_footprint_auto optimize carbon footprint automatically
@@ -92,6 +97,11 @@ public slots:
         QString problem_definition,
         QString inputs,
         QString outputs,
+        QString dataset_metadata_description,
+        QString dataset_metadata_topic,
+        QString dataset_metadata_profile,
+        QString dataset_metadata_keywords,
+        QString dataset_metadata_applications,
         int minimum_samples,
         int maximum_samples,
         bool optimize_carbon_footprint_auto,
@@ -109,6 +119,12 @@ public slots:
         QString model_selected,
         QString type);
 
+    /**
+     * @brief public method to launch a task with dataset path
+     * @param dataset_path path to the dataset for extracting metadata
+     */
+    void launch_dataset_path_task(
+        QString dataset_path);
     /**
      * @brief public method to request all nodes data
      * @param retrieve_all retrieve all data or only last problem received
@@ -369,6 +385,11 @@ signals:
      * @param problem_definition definition of the problem
      * @param inputs_str inputs of the problem
      * @param outputs_str outputs of the problem
+     * @param dataset_metadata_description description of the given dataset
+     * @param dataset_metadata_topic topic of the given dataset
+     * @param dataset_metadata_profile profile of the given dataset
+     * @param dataset_metadata_keywords keywords of the given dataset
+     * @param dataset_metadata_applications applications of the given dataset
      * @param minimum_samples minimum number of samples
      * @param maximum_samples maximum number of samples
      * @param optimize_carbon_footprint_manual optimize carbon footprint manually
@@ -388,6 +409,11 @@ signals:
         const QString& problem_definition,
         const QString& inputs_str,
         const QString& outputs_str,
+        const QString& dataset_metadata_description,
+        const QString& dataset_metadata_topic,
+        const QString& dataset_metadata_profile,
+        const QString& dataset_metadata_keywords,
+        const QString& dataset_metadata_applications,
         int minimum_samples,
         int maximum_samples,
         bool optimize_carbon_footprint_manual,
@@ -427,6 +453,12 @@ signals:
             const QStringList& modalities,
             const QStringList& goals);
 
+    /**
+     * @brief Dataset metadata received signal to display in the GUI
+     * @param dataset_metadata map with dataset metadata
+     */
+    void dataset_metadata_available(
+        const QVariantMap& dataset_metadata);
     /**
      * @brief Goals received signal to display in the GUI
      *

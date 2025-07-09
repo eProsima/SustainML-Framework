@@ -12,6 +12,7 @@ Item
         Home,
         Definition,
         Results,
+        DatasetPath,
         Log,
         Reiterate,
         NewScreen2TODOrename,
