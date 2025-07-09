@@ -111,7 +111,7 @@ Item
         height: root.__input_height
         width: root.__input_width
         placeholder_text: "Select a dataset file..."
-        readOnly: true
+        disabled: true
         anchors
         {
             horizontalCenter: parent.horizontalCenter

@@ -217,6 +217,7 @@ Item
     SmlButton
     {
         id: dataset_path_button
+        visible: !root.__reiterate
         icon_name: Settings.start_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Upload Dataset"
