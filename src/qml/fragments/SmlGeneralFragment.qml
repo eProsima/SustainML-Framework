@@ -369,7 +369,7 @@ Rectangle
                         Rectangle {
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.top: parent.top - 0.5
+                            anchors.top: parent.top
                             height: 0.5
                             color: "#666666"
                         }
