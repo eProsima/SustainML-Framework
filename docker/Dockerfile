@@ -67,4 +67,13 @@ RUN pip install hf_xet
 # Build the projects
 RUN colcon build --event-handlers console_direct+
 
+# Load Neo4j backups and adjust permissions
+RUN sudo neo4j-admin database load system \
+      --from-path=/home/eprosima/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+      --overwrite-destination=true && \
+    sudo neo4j-admin database load neo4j \
+      --from-path=/home/eprosima/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+      --overwrite-destination=true && \
+    sudo chown -R neo4j:neo4j /var/lib/neo4j/data
+
 ENTRYPOINT ["/run.bash" ]

@@ -1,4 +1,13 @@
 #!/bin/bash
+set -e
+
+service neo4j start
+
+function cleanup {
+  service neo4j stop
+}
+trap cleanup EXIT SIGINT SIGTERM
+
 # source sustainml environment
 source "/sustainml/install/setup.bash"
 
