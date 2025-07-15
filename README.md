@@ -88,6 +88,13 @@ The following sections describe the steps to install the SustainML Framework in 
     cd ~/SustainML/SustainML_ws/src/sustainml_lib && \
     git submodule update --init --recursive && \
     pip3 install -r ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/requirements.txt
+    sudo neo4j-admin database load system \
+        --from-path=/home/eprosima/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+        --overwrite-destination=true && \
+    sudo neo4j-admin database load neo4j \
+        --from-path=/home/eprosima/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+        --overwrite-destination=true && \
+    sudo chown -R neo4j:neo4j /var/lib/neo4j/data
     ```
 
 3. **Building framework**
@@ -116,9 +123,7 @@ The following sections describe the steps to install the SustainML Framework in 
 
 
     ```bash
-    cd ~/SustainML/SustainML_ws/src/sustainml_framework
-    chmod +x framework_run.sh && \
-    ./framework_run.sh
+    sustainml-framework
     ```
 
     Additionally, by setting the environment variable ``SUSTAINML_DOMAIN_ID`` the domain for inter-node communication can be changed.
