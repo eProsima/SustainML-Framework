@@ -8,9 +8,12 @@ set -euo pipefail
 BASE_DIR="$HOME/SustainML/SustainML_ws"
 
 if [ ! -d "$BASE_DIR" ]; then
-  echo "❌ ERROR: wasn't able to find the node's directory on: $BASE_DIR"
-  exit 1
+    echo "❌ ERROR: wasn't able to find the node's directory on: $BASE_DIR"
+    exit 1
 fi
+
+echo "▶️  Starting Neo4j"
+sudo systemctl start neo4j
 
 cd "$BASE_DIR"
 cd "build/sustainml_modules/lib/sustainml_modules"
@@ -18,19 +21,22 @@ cd "build/sustainml_modules/lib/sustainml_modules"
 pids=()
 
 start_node() {
-  echo "▶️  Running: $*"
-  "$@" &
-  pids+=($!)
+    echo "▶️  Running: $*"
+    "$@" &
+    pids+=($!)
 }
 
 cleanup() {
-  echo
-  echo "🛑 Killing all processes..."
-  for pid in "${pids[@]}"; do
-    kill "$pid" 2>/dev/null || true
-  done
-  wait >/dev/null 2>&1 || true
-  echo "✅ All processes killed."
+    echo
+    echo "🛑 Killing all processes..."
+    for pid in "${pids[@]}"; do
+        kill "$pid" 2>/dev/null || true
+    done
+    wait >/dev/null 2>&1 || true
+    echo "✅ All processes killed."
+
+    echo "🛑 Stopping Neo4j"
+    sudo systemctl stop neo4j
 }
 trap cleanup EXIT SIGINT SIGTERM
 
