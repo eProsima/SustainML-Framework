@@ -60,7 +60,7 @@ Item {
     Component.onCompleted:{
         sustainml_custom_tabview.__tab_model.append( {"idx" : 0, "title": "New Tab", "stack_id": 0})
         var new_stack = stack_component.createObject(null)
-        new_stack.setSource(sustainml_custom_tabview.__get_load_component(default_stack_component), {"stack_id": 0, "problem_id": -1})
+        new_stack.setSource(sustainml_custom_tabview.__get_load_component(default_stack_component), {"stack_id": 0, "problem_id": -1, "total_tabs": sustainml_custom_tabview.__tab_model.count})
         stack_layout.children.push(new_stack)
         __refresh_layout(__current_tab)
         sustainml_custom_tabview.tab_view_loaded()
@@ -326,7 +326,6 @@ Item {
         {
             var tabExists = false;
             for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
-                console.log(" Valor de stack_id: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
                 if (sustainml_custom_tabview.__tab_model.get(i).stack_id === stack_id) {
                     tabExists = true;
                     break;
@@ -468,8 +467,15 @@ Item {
         sustainml_custom_tabview.__tab_model.set(idx, {"idx" : idx, "title": tab_title, "stack_id": stack_id})
         var new_stack = stack_component.createObject(null)
         new_stack.setSource(sustainml_custom_tabview.__get_load_component(initial_component),
-                {"stack_id": stack_id, "problem_id": problem_id})
+                {"stack_id": stack_id, "problem_id": problem_id, "total_tabs": sustainml_custom_tabview.__tab_model.count})
         stack_layout.children.push(new_stack)
+        for (var i = 0; i < stack_layout.children.length; i++){
+            if (stack_layout.children[i].item) {
+                stack_layout.children[i].item.total_tabs = sustainml_custom_tabview.__tab_model.count;
+            }
+        }
+        // stack_layout.currentIndex = last_stack_id
+        // __refresh_layout(idx)
         __order_tabs()
     }
 
@@ -482,7 +488,13 @@ Item {
             __current_tab = idx
 
             // move to the idx tab in the stack
-            stack_layout.currentIndex = idx
+            var wantedId = sustainml_custom_tabview.__tab_model.get(idx).stack_id
+            for (var j = 0; j < stack_layout.children.length; ++j) {
+                if (stack_layout.children[j].item.stack_id === wantedId) {
+                    stack_layout.currentIndex = j;
+                    break;
+                }
+            }
         }
         // update idx model
         tab_list.model = sustainml_custom_tabview.__tab_model

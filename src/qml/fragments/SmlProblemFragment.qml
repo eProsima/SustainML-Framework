@@ -18,6 +18,7 @@ Item
     // Public properties
     required property int problem_id
     required property int stack_id
+    required property int total_tabs
 
     // Public signals
     signal update_iteration(var comparison_interation_ids_list)
@@ -31,6 +32,17 @@ Item
     onProblem_idChanged:
     {
         problem_fragment_view.update_problem_id(problem_id, -1)
+    }
+
+    Rectangle
+    {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.leftMargin: (problem_id !== total_tabs) ? -5 : 0
+        width: (problem_id !== total_tabs) ? total_tabs * 154 + 10 : total_tabs * 154
+        height: 40
+        color: "white"
+        radius: (problem_id !== total_tabs) ? 5 : 0
     }
 
     SmlTabView
@@ -141,8 +153,7 @@ Item
                         var newStackId = problem_fragment_view.getNextAvailableStackId()
                         var compare_id = newStackId - components_stack_id_map["comparison_view"]
                         sustainml_fragment_problem.__comparison_values_list.push({ id: compare_id, title: iteration_id })
-                        console.log("Creating comparison tab with stack_id: " + newStackId + " (internal id: " + compare_id + ")")
-                        problem_fragment_view.create_new_tab(iteration_id.replace(/\[.*?\]/g, "").trim(), newStackId, problem_id, "comparison_view")
+                        problem_fragment_view.create_new_tab(iteration_id.replace(/\[.*?\]/g, "").trim(), components_stack_id_map["comparison_view"] + compare_id, problem_id, "comparison_view")
                         sustainml_fragment_problem.update_comparison(iteration_id)
                         sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                         problem_fragment_view.focus(newStackId, problem_id)

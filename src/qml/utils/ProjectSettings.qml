@@ -63,6 +63,7 @@ QtObject {
     readonly property string add_tab_icon_name:         "plus"
     readonly property string close_tab_icon_name:       "cross"
     readonly property string refresh_icon_name:         "refresh"
+    readonly property string stop_icon_name:            "square"
 
     // ICON SIZES
     readonly property int button_icon_size:         20
