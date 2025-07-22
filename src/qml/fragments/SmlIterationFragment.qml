@@ -68,6 +68,7 @@ Rectangle {
         target: sustainml_fragment_problem
 
         function onUpdate_iteration(comparison_interation_ids_list) {
+            comparison_interation_ids_list.sort(function(a, b) { return a - b; });
 
             var newList = [];
             var newRows = [];

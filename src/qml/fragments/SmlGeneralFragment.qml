@@ -98,14 +98,13 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : keywords,
                             "Suggested model" : "",
@@ -115,7 +114,6 @@ Rectangle
                             "Carbon intensity" : ""
                         }
                     )
-                    table_model.rows = newRows
                 }
             }
             general_table.forceLayout();
@@ -133,14 +131,13 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : model,
@@ -150,7 +147,6 @@ Rectangle
                             "Carbon intensity" : ""
                         }
                     )
-                    table_model.rows = newRows
                 }
             }
             general_table.forceLayout();
@@ -169,14 +165,13 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __hw_description_column), "display", hw_description)
                     table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -186,7 +181,6 @@ Rectangle
                             "Carbon intensity" : ""
                         }
                     )
-                    table_model.rows = newRows
                 }
             }
             general_table.forceLayout();
@@ -205,14 +199,13 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
                     table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -222,7 +215,6 @@ Rectangle
                             "Carbon intensity" : carbon_intensity
                         }
                     )
-                    table_model.rows = newRows;
                 }
             }
             general_table.forceLayout();
@@ -437,7 +429,7 @@ Rectangle
                 Rectangle {
                     id: tableRect
                     width: headerRect.width
-                    height: __data_height * table_model.rows.length
+                    height: root.__data_height * table_model.rowCount
                     color: "transparent"
                     onWidthChanged: {
                         general_header_table.forceLayout(),
@@ -532,6 +524,11 @@ Rectangle
                                     hoverEnabled: true
                                     width: parent.width * 1.5
                                     height: parent.height * 1.5
+
+                                    enabled         : !main_window.tasking
+                                    acceptedButtons : !main_window.tasking ? Qt.AllButtons : Qt.NoButton
+                                    cursorShape     : main_window.tasking ? Qt.ArrowCursor : Qt.PointingHandCursor
+
                                     onPressed: reiterate_button.pressed = true;
                                     onReleased: reiterate_button.pressed = false;
                                     onClicked:
@@ -545,7 +542,8 @@ Rectangle
                             CheckBox
                             {
                                 visible: column === 1
-                                // checked: model.display === "true"
+                                checked: table_model.data(table_model.index(row, __check_column), "display") === "true"
+                                enabled: !main_window.tasking
                                 anchors{
                                     verticalCenter: value.verticalCenter
                                     horizontalCenter: parent.horizontalCenter
@@ -553,7 +551,9 @@ Rectangle
                                 indicator.height: __data_height /2
                                 indicator.width: indicator.height
 
-                                onCheckedChanged: {
+                                onClicked: {
+                                    var idx = table_model.index(row, __check_column)
+                                    table_model.setData(idx, "display", checked ? "true" : "false")
                                     if (checked) {
                                         root.component_signal("general_view", "add_to_compare", table_model.rows[row]["Iteration"])
                                     }

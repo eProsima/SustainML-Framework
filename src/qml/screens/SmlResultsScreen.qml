@@ -22,7 +22,8 @@ Item
     // Public signals
     signal results_screen_loaded()
     signal go_home();
-    signal go_back();
+    signal go_back_empty_input();
+    signal go_back_previous_input();
 
     // Private properties
     property var list_of_problems: []
@@ -37,76 +38,118 @@ Item
 
         function onNew_app_requirements_node_output(problem_id, iteration_id, app_requirements)
         {
-            if (!list_of_problems.includes(problem_id))
+            if (list_of_problems.length === 0)
+            {
+                tab_view.update_stack_id(problem_id, 0)
+                tab_view.update_problem_id(problem_id, -1)
+                tab_view.update_tab_name("Problem " + problem_id, problem_id)
+                list_of_problems.push(problem_id)
+            }
+            else if (!list_of_problems.includes(problem_id))
             {
                 list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, -1, problem_id, "problem_view")
+                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
-            tab_view.focus(undefined, problem_id)
+            tab_view.focus(problem_id, problem_id)
         }
 
         function onNew_hw_constraints_node_output(problem_id, iteration_id, hw_required, max_memory_footprint)
         {
-            if (!list_of_problems.includes(problem_id))
+            if (list_of_problems.length === 0)
+            {
+                tab_view.update_stack_id(problem_id, 0)
+                tab_view.update_problem_id(problem_id, -1)
+                tab_view.update_tab_name("Problem " + problem_id, problem_id)
+                list_of_problems.push(problem_id)
+            }
+            else if (!list_of_problems.includes(problem_id))
             {
                 list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, -1, problem_id, "problem_view")
+                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
-            tab_view.focus(undefined, problem_id)
+            tab_view.focus(problem_id, problem_id)
         }
 
 
         function onNew_ml_model_metadata_node_output(problem_id, iteration_id, metadata, keywords)
         {
-            if (!list_of_problems.includes(problem_id))
+            if (list_of_problems.length === 0)
+            {
+                tab_view.update_stack_id(problem_id, 0)
+                tab_view.update_problem_id(problem_id, -1)
+                tab_view.update_tab_name("Problem " + problem_id, problem_id)
+                list_of_problems.push(problem_id)
+            }
+            else if (!list_of_problems.includes(problem_id))
             {
                 list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, -1, problem_id, "problem_view")
+                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
-            tab_view.focus(undefined, problem_id)
+            tab_view.focus(problem_id, problem_id)
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
         {
-            if (!list_of_problems.includes(problem_id))
+            if (list_of_problems.length === 0)
+            {
+                tab_view.update_stack_id(problem_id, 0)
+                tab_view.update_problem_id(problem_id, -1)
+                tab_view.update_tab_name("Problem " + problem_id, problem_id)
+                list_of_problems.push(problem_id)
+            }
+            else if (!list_of_problems.includes(problem_id))
             {
                 list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, -1, problem_id, "problem_view")
+                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
-            tab_view.focus(undefined, problem_id)
+            tab_view.focus(problem_id, problem_id)
         }
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
         {
-            if (!list_of_problems.includes(problem_id))
+            if (list_of_problems.length === 0)
+            {
+                tab_view.update_stack_id(problem_id, 0)
+                tab_view.update_problem_id(problem_id, -1)
+                tab_view.update_tab_name("Problem " + problem_id, problem_id)
+                list_of_problems.push(problem_id)
+            }
+            else if (!list_of_problems.includes(problem_id))
             {
                 list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, -1, problem_id, "problem_view")
+                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
-            tab_view.focus(undefined, problem_id)
+            tab_view.focus(problem_id, problem_id)
         }
 
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
         {
-            if (!list_of_problems.includes(problem_id))
+            if (list_of_problems.length === 0)
+            {
+                tab_view.update_stack_id(problem_id, 0)
+                tab_view.update_problem_id(problem_id, -1)
+                tab_view.update_tab_name("Problem " + problem_id, problem_id)
+                list_of_problems.push(problem_id)
+            }
+            else if (!list_of_problems.includes(problem_id))
             {
                 list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, -1, problem_id, "problem_view")
+                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
-            tab_view.focus(undefined, problem_id)
+            tab_view.focus(problem_id, problem_id)
         }
     }
 
     // Detect when data has been received to load tabs components
-    onCurrent_problem_idChanged:
-    {
-        tab_view.update_problem_id(current_problem_id, -1)
-        tab_view.update_tab_name("Problem " + current_problem_id, 0)
-        if (!list_of_problems.includes(current_problem_id))
-        {
-            list_of_problems.push(current_problem_id)
-        }
-    }
+    // onCurrent_problem_idChanged:
+    // {
+    //     tab_view.update_problem_id(current_problem_id, -1)
+    //     tab_view.update_tab_name("Problem " + current_problem_id, 0)
+    //     if (!list_of_problems.includes(current_problem_id))
+    //     {
+    //         list_of_problems.push(current_problem_id)
+    //     }
+    // }
 
     // Go home button
     SmlButton
@@ -115,6 +158,7 @@ Item
         icon_name: Settings.home_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Home"
+        disabled: root.tasking
         rounded: true
         color: Settings.app_color_green_4
         color_pressed: Settings.app_color_green_1
@@ -132,13 +176,14 @@ Item
         onClicked: root.go_home()
     }
 
-    // Go back button
+    // Button for new problem with previous problem data
     SmlButton
     {
-        id: go_back_button
+        id: new_previous_problem_button
         icon_name: Settings.back_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: ""
+        disabled: root.tasking
         rounded: true
         color: Settings.app_color_green_4
         color_pressed: Settings.app_color_green_1
@@ -152,7 +197,54 @@ Item
             left: go_home_button.right
             leftMargin: Settings.spacing_small
         }
-        onClicked: root.go_back()
+        onClicked: root.go_back_previous_input()
+    }
+
+    // Button for new problem from zero
+    SmlButton
+    {
+        id: new_problem_button
+        icon_name: Settings.add_tab_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: ""
+        disabled: root.tasking
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        anchors
+        {
+            top: go_home_button.top
+            left: new_previous_problem_button.right
+            leftMargin: Settings.spacing_small
+        }
+        onClicked: root.go_back_empty_input()
+    }
+
+    // Button to stop the current tasking
+    SmlButton
+    {
+        id: stop_button
+        icon_name: Settings.stop_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: ""
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        anchors
+        {
+            top: go_home_button.top
+            left: new_problem_button.right
+            leftMargin: Settings.spacing_small
+        }
+        // onClicked: root.tasking = false  // Stop the current tasking TODO
     }
 
     // Tasking status text
@@ -229,6 +321,7 @@ Item
         onRetrieve_default_data:
         {
             tab_view.create_new_tab("Problem " + current_problem_id, -1, current_problem_id, "problem_view")
+            tab_view.focus(current_problem_id, current_problem_id)
             engine.request_current_data(true)
         }
     }

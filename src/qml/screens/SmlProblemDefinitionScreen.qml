@@ -44,7 +44,7 @@ Item
     property string __geo_location_region: ""
     property string __extra_data: ""
     property int __previous_problem_id: 0
-    property int __num_outputs: 0
+    property int __num_outputs: 10
     property string __model_selected: ""
     property string __model_selected_copy: __model_selected
 
@@ -71,6 +71,8 @@ Item
     property string __dataset_metadata_keywords: __dataset_keywords
     property string __dataset_metadata_applications: __dataset_applications
 
+    property bool results_available: false
+    
     // External signals
     signal go_home();
     signal go_results();
@@ -124,7 +126,7 @@ Item
                           maximum_samples, optimize_carbon_footprint_manual,
                           previous_iteration, optimize_carbon_footprint_auto,
                           desired_carbon_footprint, geo_location_continent,
-                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type)
+                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type, is_reiteration)
         {
             root.__problem_short_description = problem_short_description
             root.__modality = modality
@@ -148,15 +150,21 @@ Item
             root.__goal = goal
             // root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
-            root.__previous_iteration = iteration_id
-            root.__previous_problem_id = problem_id
-            root.__num_outputs = 1
+            root.__previous_iteration = 0;
+            root.__previous_problem_id = 0;
+            if (is_reiteration)
+            {
+                root.__previous_iteration = iteration_id;
+                root.__previous_problem_id = problem_id;
+            }
         }
 
         function onNotSupportProblem(error_msg)
         {
-            root.notSupportProblemMessage = error_msg
-            notSupportDialog.open()
+            if (!root.__reiterate) {
+                root.notSupportProblemMessage = error_msg
+                notSupportDialog.open()
+            }
         }
     }
 
@@ -193,6 +201,7 @@ Item
     SmlButton
     {
         id: go_results
+        disabled: !results_available
         icon_name: Settings.start_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Results"
@@ -1536,6 +1545,7 @@ Item
         onClicked:
         {
             focus = true
+            root.results_available = true
             root.prepare_task()
         }
     }

@@ -99,9 +99,13 @@ Item {
             id: text
             text_kind: sustainml_custom_button.text_kind
             text_value: sustainml_custom_button.text_value
-            force_color: sustainml_custom_button.__pressed === true ? true : ScreenManager.night_mode
-                ? sustainml_custom_button.nightmode_color_text !== ""
-                : sustainml_custom_button.color_text !== ""
+            force_color: !sustainml_custom_button.disabled && (
+                sustainml_custom_button.__pressed
+                ? true
+                : ScreenManager.night_mode
+                    ? sustainml_custom_button.nightmode_color_text !== ""
+                    : sustainml_custom_button.color_text !== ""
+                )
             forced_color: !sustainml_custom_button.__pressed && sustainml_custom_button.nightmode_color_text !== ""
                      && sustainml_custom_button.color_text !== ""
                 ? ScreenManager.night_mode
