@@ -41,20 +41,21 @@ Rectangle
             }
             jsonList = newList;
             chartView.addDynamicBars(newList);
+            chartView.update()
         }
 
-        function onUpdate_comparison(comparison_values_list) {
-            if (comparison_values_list.length > 0) {
-                values_list = [comparison_values_list[comparison_values_list.length - 1]];  // TODO: Now only show last value, implement multiple barSeries
-            } else {
-                values_list = [];
+        function onUpdate_comparison(comparison_value) {
+            if (comparison_value != "" && values_list.length === 0) {
+                values_list = [comparison_value];
+                chartView.title = root.values_list.length > 0 ? "Comparisons between " + root.values_list[root.values_list.length - 1].toString() : "Comparisons";
+                chartView.update()
             }
         }
     }
 
     ChartView {
         id: chartView
-        title: "Comparisons between iterations"
+        title: root.values_list.length > 0 ? "Comparisons between " + root.values_list[root.values_list.length - 1].toString() : "Comparisons"
         anchors.fill: parent
         legend.alignment: Qt.AlignBottom
         antialiasing: true

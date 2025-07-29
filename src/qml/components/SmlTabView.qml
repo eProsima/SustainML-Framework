@@ -43,6 +43,7 @@ Item {
 
     // Private signals
     signal change_stack_view_(int stack_id, var stack_component_name)
+    signal tabClosed(int stack_id_closed)
 
     // Read only design properties
     readonly property int __max_tabs: 15
@@ -201,7 +202,9 @@ Item {
                     // act as close is close icon shown (same expression as in close_icon visible attribute)
                     if (sustainml_custom_tabview.allow_close_tabs && (idx == __current_tab || parent.width > __min_tab_size))
                     {
+                        console.log("The tab '" + sustainml_custom_tabview.__tab_model.get(idx).title + "' with " + stack_id + " is being closed.");
                         __remove_idx(idx)
+                        tabClosed(stack_id)
                     }
                     // if not, act as open tab action
                     else
@@ -325,19 +328,21 @@ Item {
     function close_tab(stack_id, problem_id)
     {
         var tabExists = false;
-            for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
-                console.log(" Valor de stack_id: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
-                if (sustainml_custom_tabview.__tab_model.get(i).stack_id === stack_id) {
-                    tabExists = true;
-                    break;
-                }
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
+            if (sustainml_custom_tabview.__tab_model.get(i).stack_id === stack_id) {
+                tabExists = true;
+                break;
             }
-         if (tabExists) {
-                __remove_idx(i);
-                console.log("The given stack id '" + stack_id + "' is closed");
-            } else {
-                console.log("The given stack id '" + stack_id + "' doesn't exists");    // debug
-            }
+        }
+        if (tabExists)
+        {
+            console.log("The given stack id '" + stack_id + "' is going to get closed");
+            __remove_idx(i);
+            console.log("The given stack id '" + stack_id + "' is closed");
+        } else
+        {
+            console.log("The given stack id '" + stack_id + "' doesn't exists");
+        }
     }
 
     function focus(stack_id, problem_id)
@@ -496,11 +501,15 @@ Item {
             if (idx == i){
                 swap = true
                 var j
-                for (j=0; j<stack_layout.count; j++)
+                var removedStackId = sustainml_custom_tabview.__tab_model.get(idx).stack_id
+                for (j=0; j<stack_layout.children.length; j++)
                 {
-                    if (stack_layout.children[j].id == sustainml_custom_tabview.__tab_model.get(idx).stack_id)
+                    var loader = stack_layout.children[j]
+                    if (loader.item && loader.item.stack_id === removedStackId)
                     {
-                        stack_layout.children[j].destroy()
+                        console.log("Removing tab with stack_id: " + removedStackId)  // debug
+                        loader.destroy()
+                        break
                     }
                 }
             }
