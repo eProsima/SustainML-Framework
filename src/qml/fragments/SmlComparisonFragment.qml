@@ -98,7 +98,7 @@ Rectangle
                         case "Power Consumption [W]":
                             valuesArray.push(data.HW_RESOURCES.power_consumption);
                             break;
-                        case "Carbon Footprint [kgCO2e]":
+                        case "Carbon Footprint [gCO2e]":
                             valuesArray.push(data.CARBON_FOOTPRINT.carbon_footprint);
                             break;
                         case "Carbon Intensity [gCO2/kW]":
