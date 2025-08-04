@@ -103,14 +103,26 @@ Item
         onTabClosed:
         {
             console.log("Tab closed with stack_id: " + stack_id_closed)
+            var removedIndex = -1
             for (var i = 0; i < sustainml_fragment_problem.__comparison_values_list.length; ++i)
             {
                 if (sustainml_fragment_problem.__comparison_values_list[i].id+components_stack_id_map["comparison_view"] === stack_id_closed)
                 {
+                    removedIndex = i
                     sustainml_fragment_problem.__comparison_values_list.splice(i, 1)
                     break
                 }
             }
+
+            if (removedIndex !== -1) {
+                for (var j = 0; j < sustainml_fragment_problem.__comparison_values_list.length; j++) {
+                    sustainml_fragment_problem.__comparison_values_list[j].id = j
+                }
+
+                console.log("Tab with stack_id " + stack_id_closed + " was already destroyed by SmlTabView")
+            }
+
+            console.log("Current __comparison_values_list content: " + JSON.stringify(sustainml_fragment_problem.__comparison_values_list));
         }
         onLoaded_item_signal:
         {
@@ -158,12 +170,14 @@ Item
             {
                 if (signal_kind === "add_to_compare")
                 {
-                    var already = __comparison_values_list.some(function(e){ return e.title === iteration_id })
+                    console.log("Contenido de __comparison_values_list: " + JSON.stringify(sustainml_fragment_problem.__comparison_values_list))
+                    console.log("Adding iteration id " + iteration_id + " to comparison list")
+                    var already = sustainml_fragment_problem.__comparison_values_list.some(function(e){ return e.title === iteration_id })
                     if (!already)
                     {
                         var compare_id = __getNextComparisonOrder()
                         sustainml_fragment_problem.__comparison_values_list.push({ id: compare_id, title: iteration_id })
-                        problem_fragment_view.create_new_tab(components_title_map["comparison_view"] + " " + (compare_id + 1), components_stack_id_map["comparison_view"] + compare_id, problem_id, "comparison_view")
+                        problem_fragment_view.create_new_tab(iteration_id.replace(/\[.*?\]/g, "").trim(), components_stack_id_map["comparison_view"] + compare_id, problem_id, "comparison_view")
                         sustainml_fragment_problem.update_comparison(iteration_id)
                         sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                         problem_fragment_view.focus(components_stack_id_map["comparison_view"] + compare_id, problem_id)
