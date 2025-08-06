@@ -66,6 +66,18 @@ Item {
         sustainml_custom_tabview.tab_view_loaded()
     }
 
+    function getNextAvailableStackId()
+    {
+        var maxStackId = -1;
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
+            var currentStackId = sustainml_custom_tabview.__tab_model.get(i).stack_id;
+            if (currentStackId > maxStackId) {
+                maxStackId = currentStackId;
+            }
+        }
+        return maxStackId + 1;
+    }
+
     // stack layout (where idx referred to the tab, which would contain different views)
     StackLayout {
         id: stack_layout
@@ -448,23 +460,14 @@ Item {
         {
             initial_component = default_stack_component;
         }
-        // var last_stack_id = __last_stack
-        // if (last_stack_id < stack_id)
-        // {
-        //     last_stack_id = stack_id
-        // }
-        // __last_stack = last_stack_id + 1
+
         var idx = sustainml_custom_tabview.__tab_model.count
         sustainml_custom_tabview.__tab_model.set(idx, {"idx" : idx, "title": tab_title, "stack_id": stack_id})
-        console.log("Creating new tab with stack_id: " + stack_id)  // debug
         var new_stack = stack_component.createObject(null)
         new_stack.setSource(sustainml_custom_tabview.__get_load_component(initial_component),
                 {"stack_id": stack_id, "problem_id": problem_id})
         stack_layout.children.push(new_stack)
-        // stack_layout.currentIndex = last_stack_id
-        // __refresh_layout(idx)
         __order_tabs()
-        // focus(undefined, problem_id)
     }
 
     // the given idx update current tab displayed (if != current)
@@ -476,7 +479,7 @@ Item {
             __current_tab = idx
 
             // move to the idx tab in the stack
-            stack_layout.currentIndex = sustainml_custom_tabview.__tab_model.get(idx).stack_id
+            stack_layout.currentIndex = idx
         }
         // update idx model
         tab_list.model = sustainml_custom_tabview.__tab_model
@@ -509,42 +512,47 @@ Item {
 
         sustainml_custom_tabview.__tab_model.remove(idx)
 
-        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++)
+        {
             sustainml_custom_tabview.__tab_model.setProperty(i, "idx", i)
         }
 
-        // DEBUG
-        for (var c = 0; c < stack_layout.children.length-1; c++) {
-            console.log("stack_layout.children[" + c + "]:", stack_layout.children[c]);
-        }
-
-        for (var m = 0; m < stack_layout.children.length-1; m++) {
-            console.log(" Stack_id update: stack_layout.children[" + m + "]:", sustainml_custom_tabview.__tab_model.get(m).title + ", stack_id = " + sustainml_custom_tabview.__tab_model.get(m).stack_id)
-            if (stack_layout.children[m].item) {
-                sustainml_custom_tabview.__tab_model.setProperty(m, "stack_id", m)
-            }
-        }
-
+        var newCurrentTab = __current_tab
         if (__current_tab >= sustainml_custom_tabview.__tab_model.count)
         {
-            __current_tab = Math.max(0, sustainml_custom_tabview.__tab_model.count - 1)
-        }
-        else if (idx <= __current_tab && __current_tab > 0) {
-            __current_tab = __current_tab - 1
+            newCurrentTab = Math.max(0, sustainml_custom_tabview.__tab_model.count - 1)
+        } else if (idx <= __current_tab && __current_tab > 0)
+        {
+            newCurrentTab = __current_tab - 1
         }
 
         if (should_add_new_tab)
         {
             sustainml_custom_tabview.retrieve_default_data()
-        }
-        else {
+        } else
+        {
+            if (newCurrentTab >= 0 && newCurrentTab < sustainml_custom_tabview.__tab_model.count)
+            {
+                var targetStackId = sustainml_custom_tabview.__tab_model.get(newCurrentTab).stack_id
 
-            __refresh_layout(__current_tab)
-        }
+                var correctStackIndex = -1
+                for (var k = 0; k < stack_layout.children.length; k++)
+                {
+                    if (stack_layout.children[k].item && stack_layout.children[k].item.stack_id === targetStackId)
+                    {
+                        correctStackIndex = k
+                        break
+                    }
+                }
 
-        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
-            console.log("Tab " + i + ": title = " + sustainml_custom_tabview.__tab_model.get(i).title + // debug
-                        ", stack_id = " + sustainml_custom_tabview.__tab_model.get(i).stack_id);
+                if (correctStackIndex !== -1)
+                {
+                    __current_tab = newCurrentTab
+                    stack_layout.currentIndex = correctStackIndex
+                }
+            }
+
+            tab_list.model = sustainml_custom_tabview.__tab_model
         }
     }
 

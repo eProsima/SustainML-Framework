@@ -28,34 +28,10 @@ Item
     property var __comparison_interation_ids_list: []
     property var __comparison_values_list: []
 
-    function __getNextComparisonOrder()
-    {
-        var used = __comparison_values_list.map(function(e) { return e.id });
-        used.sort(function(a, b) { return a - b });
-        var next = 0;
-        for (var i = 0; i < used.length; i++) {
-            if (used[i] > next)
-                break;
-            else if (used[i] === next)
-                next++;
-        }
-        return next;
-    }
-
     onProblem_idChanged:
     {
         problem_fragment_view.update_problem_id(problem_id, -1)
     }
-
-
-    // Rectangle
-    // {
-    //     anchors.top: parent.top
-    //     anchors.left: parent.left
-    //     width: 50
-    //     height: 20
-    //     color: ScreenManager.night_mode ? "#303030" : "white" //"transparent"
-    // }
 
     SmlTabView
     {
@@ -91,8 +67,6 @@ Item
             problem_fragment_view.update_stack_id(components_stack_id_map["general_view"], -1)
             problem_fragment_view.update_problem_id(problem_id, -1)
             problem_fragment_view.update_tab_name(components_title_map["general_view"], components_stack_id_map["general_view"])
-            // problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
-            // problem_fragment_view.create_new_tab(components_title_map["comparison_view"], components_stack_id_map["comparison_view"], problem_id, "comparison_view")
             problem_fragment_view.focus(components_stack_id_map["general_view"], problem_id)
         }
         onRetrieve_default_data:
@@ -102,7 +76,6 @@ Item
         }
         onTabClosed:
         {
-            console.log("Tab closed with stack_id: " + stack_id_closed)
             var removedIndex = -1
             for (var i = 0; i < sustainml_fragment_problem.__comparison_values_list.length; ++i)
             {
@@ -150,7 +123,6 @@ Item
                         for (var i = 0; i < sustainml_fragment_problem.__comparison_values_list.length; i++)
                         {
                             var entry = sustainml_fragment_problem.__comparison_values_list[i];
-                            console.log("Closing tab for comparison value with id " + entry.id + " and title " + entry.title)
                             var expectedStackId = components_stack_id_map["comparison_view"] + entry.id
                             problem_fragment_view.close_tab(expectedStackId, problem_id);
                         }
@@ -158,7 +130,6 @@ Item
 
                         if (sustainml_fragment_problem.__comparison_interation_ids_list.length == 0)
                         {
-                            console.log("Closing tab of iterations")
                             problem_fragment_view.close_tab(components_stack_id_map["iteration_view"], problem_id)
                         }
                     }
@@ -170,17 +141,19 @@ Item
             {
                 if (signal_kind === "add_to_compare")
                 {
-                    console.log("Contenido de __comparison_values_list: " + JSON.stringify(sustainml_fragment_problem.__comparison_values_list))
+                    console.log("Content of __comparison_values_list: " + JSON.stringify(sustainml_fragment_problem.__comparison_values_list))
                     console.log("Adding iteration id " + iteration_id + " to comparison list")
                     var already = sustainml_fragment_problem.__comparison_values_list.some(function(e){ return e.title === iteration_id })
                     if (!already)
                     {
-                        var compare_id = __getNextComparisonOrder()
+                        var newStackId = problem_fragment_view.getNextAvailableStackId()
+                        var compare_id = newStackId - components_stack_id_map["comparison_view"]
                         sustainml_fragment_problem.__comparison_values_list.push({ id: compare_id, title: iteration_id })
-                        problem_fragment_view.create_new_tab(iteration_id.replace(/\[.*?\]/g, "").trim(), components_stack_id_map["comparison_view"] + compare_id, problem_id, "comparison_view")
+                        console.log("Creating comparison tab with stack_id: " + newStackId + " (internal id: " + compare_id + ")")
+                        problem_fragment_view.create_new_tab(iteration_id.replace(/\[.*?\]/g, "").trim(), newStackId, problem_id, "comparison_view")
                         sustainml_fragment_problem.update_comparison(iteration_id)
                         sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
-                        problem_fragment_view.focus(components_stack_id_map["comparison_view"] + compare_id, problem_id)
+                        problem_fragment_view.focus(newStackId, problem_id)
                     }
                     else
                     {
