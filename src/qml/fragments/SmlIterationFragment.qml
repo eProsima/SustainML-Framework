@@ -15,6 +15,11 @@ import "../components"
 Rectangle {
     id: root
     anchors.fill: parent
+
+    // Public properties
+    required property int problem_id
+    required property int stack_id
+
     // width: 800
     // height: 400
     color: ScreenManager.night_mode ?  Settings.app_color_dark : Settings.app_color_light
@@ -67,14 +72,17 @@ Rectangle {
             var newList = [];
             var newRows = [];
 
-            for (var i = 0; i < comparison_interation_ids_list.length; i++) {
+            console.log("Updating iteration view with comparison_iteration_ids_list: " + comparison_interation_ids_list);
+
+            for (var i = 0; i < comparison_interation_ids_list.length; i++)
+            {
                 var iterationId = comparison_interation_ids_list[i];
                 var json = engine.request_specific_results(problem_id, iterationId);
                 newList.push(json);
 
-                function formatNumber(val) {
+                function formatNumber(val)
+                {
                     var num = Number(val);
-                    // Usa notación científica si el valor es mayor o igual a 1e5 o menor que 1e-3 (pero distinto de 0)
                     if (Math.abs(num) >= 1e5 || (Math.abs(num) > 0 && Math.abs(num) < 1e-3))
                         return num.toExponential(4);
                     else
@@ -236,7 +244,7 @@ Rectangle {
                         Rectangle {
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.top: parent.top - 0.5
+                            anchors.top: parent.top
                             height: 0.5
                             color: "#666666"
                         }
@@ -720,7 +728,7 @@ Rectangle {
 
                     visible: Object.keys(infoPopup.jsonData).length > 0
                     anchors {
-                        top: iterationTextHeader.bottom
+                        top: parent.top
                         topMargin: Settings.spacing_small
                         left: parent.left
                         leftMargin: Settings.spacing_normal

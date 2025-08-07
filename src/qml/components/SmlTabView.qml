@@ -43,6 +43,7 @@ Item {
 
     // Private signals
     signal change_stack_view_(int stack_id, var stack_component_name)
+    signal tabClosed(int stack_id_closed)
 
     // Read only design properties
     readonly property int __max_tabs: 15
@@ -63,6 +64,18 @@ Item {
         stack_layout.children.push(new_stack)
         __refresh_layout(__current_tab)
         sustainml_custom_tabview.tab_view_loaded()
+    }
+
+    function getNextAvailableStackId()
+    {
+        var maxStackId = -1;
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
+            var currentStackId = sustainml_custom_tabview.__tab_model.get(i).stack_id;
+            if (currentStackId > maxStackId) {
+                maxStackId = currentStackId;
+            }
+        }
+        return maxStackId + 1;
     }
 
     // stack layout (where idx referred to the tab, which would contain different views)
@@ -176,7 +189,10 @@ Item {
             // close tab icon
             SmlIcon {
                 id: close_icon
-                visible: allow_close_tabs ? idx == __current_tab ? true : parent.width > __min_tab_size : false
+                visible: allow_close_tabs &&
+                         title !== "Overview" &&
+                         title !== "Iteration" &&
+                         (idx == __current_tab || parent.width > __min_tab_size)
                 anchors.right: parent.right
                 anchors.rightMargin: __tabs_margins
                 anchors.verticalCenter: parent.verticalCenter
@@ -199,9 +215,16 @@ Item {
                 anchors.left: close_icon.left; anchors.leftMargin: - __tabs_margins
                 onClicked: {
                     // act as close is close icon shown (same expression as in close_icon visible attribute)
-                    if (sustainml_custom_tabview.allow_close_tabs && (idx == __current_tab || parent.width > __min_tab_size))
+                    if (sustainml_custom_tabview.allow_close_tabs && title !== "Overview" && title !== "Iteration" && (idx == __current_tab || parent.width > __min_tab_size))
                     {
+                        console.log("The tab '" + sustainml_custom_tabview.__tab_model.get(idx).title + "' with " + stack_id + " is being closed.");
+                        tabClosed(stack_id)
                         __remove_idx(idx)
+                        if (idx > 0) {
+                            __refresh_layout(idx - 1)
+                        } else {
+                            __refresh_layout(0)
+                        }
                     }
                     // if not, act as open tab action
                     else
@@ -325,19 +348,21 @@ Item {
     function close_tab(stack_id, problem_id)
     {
         var tabExists = false;
-            for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
-                console.log(" Valor de stack_id: '" + sustainml_custom_tabview.__tab_model.get(i).stack_id + "'");
-                if (sustainml_custom_tabview.__tab_model.get(i).stack_id === stack_id) {
-                    tabExists = true;
-                    break;
-                }
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++) {
+            if (sustainml_custom_tabview.__tab_model.get(i).stack_id === stack_id) {
+                tabExists = true;
+                break;
             }
-         if (tabExists) {
-                __remove_idx(i);
-                console.log("The given stack id '" + stack_id + "' is closed");
-            } else {
-                console.log("The given stack id '" + stack_id + "' doesn't exists");    // debug
-            }
+        }
+        if (tabExists)
+        {
+            console.log("The given stack id '" + stack_id + "' is going to get closed");
+            __remove_idx(i);
+            console.log("The given stack id '" + stack_id + "' is closed");
+        } else
+        {
+            console.log("The given stack id '" + stack_id + "' doesn't exists");
+        }
     }
 
     function focus(stack_id, problem_id)
@@ -438,23 +463,14 @@ Item {
         {
             initial_component = default_stack_component;
         }
-        // var last_stack_id = __last_stack
-        // if (last_stack_id < stack_id)
-        // {
-        //     last_stack_id = stack_id
-        // }
-        // __last_stack = last_stack_id + 1
+
         var idx = sustainml_custom_tabview.__tab_model.count
         sustainml_custom_tabview.__tab_model.set(idx, {"idx" : idx, "title": tab_title, "stack_id": stack_id})
-        console.log("Creating new tab with stack_id: " + stack_id)  // debug
         var new_stack = stack_component.createObject(null)
         new_stack.setSource(sustainml_custom_tabview.__get_load_component(initial_component),
                 {"stack_id": stack_id, "problem_id": problem_id})
         stack_layout.children.push(new_stack)
-        // stack_layout.currentIndex = last_stack_id
-        // __refresh_layout(idx)
         __order_tabs()
-        // focus(undefined, problem_id)
     }
 
     // the given idx update current tab displayed (if != current)
@@ -466,7 +482,7 @@ Item {
             __current_tab = idx
 
             // move to the idx tab in the stack
-            stack_layout.currentIndex = sustainml_custom_tabview.__tab_model.get(idx).stack_id
+            stack_layout.currentIndex = idx
         }
         // update idx model
         tab_list.model = sustainml_custom_tabview.__tab_model
@@ -482,67 +498,64 @@ Item {
             should_add_new_tab = true
         }
 
-        var i, idx_prev
-        var swap = false
-        for (i=0, idx_prev=-1; i<sustainml_custom_tabview.__tab_model.count; i++, idx_prev++)
+        var removedStackId = sustainml_custom_tabview.__tab_model.get(idx).stack_id
+        console.log("Removing tab with stack_id: " + removedStackId)
+
+        var removedLoaderIndex = -1
+        for (var j = 0; j < stack_layout.children.length; j++)
         {
-            // if tab removed, reorder remain tabs
-            if (swap)
+            var loader = stack_layout.children[j]
+            if (loader.item && loader.item.stack_id === removedStackId)
             {
-                sustainml_custom_tabview.__tab_model.setProperty(idx_prev, "title", sustainml_custom_tabview.__tab_model.get(i).title)
-                sustainml_custom_tabview.__tab_model.setProperty(idx_prev, "stack_id", sustainml_custom_tabview.__tab_model.get(i).stack_id)
+                removedLoaderIndex = j
+                loader.destroy()
+                break
             }
-            // reorder model idx usage, and delete idx tab components (stack layout content)
-            if (idx == i){
-                swap = true
-                var j
-                for (j=0; j<stack_layout.count; j++)
-                {
-                    if (stack_layout.children[j].id == sustainml_custom_tabview.__tab_model.get(idx).stack_id)
-                    {
-                        stack_layout.children[j].destroy()
-                    }
-                }
-            }
-        }
-        // if removed, remove tab from model (repeater tab bar)
-        if (swap)
-        {
-            sustainml_custom_tabview.__tab_model.remove(idx_prev)
         }
 
-        // if last tab closed
+        sustainml_custom_tabview.__tab_model.remove(idx)
+
+        for (var i = 0; i < sustainml_custom_tabview.__tab_model.count; i++)
+        {
+            sustainml_custom_tabview.__tab_model.setProperty(i, "idx", i)
+        }
+
+        var newCurrentTab = __current_tab
+        if (__current_tab >= sustainml_custom_tabview.__tab_model.count)
+        {
+            newCurrentTab = Math.max(0, sustainml_custom_tabview.__tab_model.count - 1)
+        } else if (idx <= __current_tab && __current_tab > 0)
+        {
+            newCurrentTab = __current_tab - 1
+        }
+
         if (should_add_new_tab)
         {
-            //__create_new_custom_tab(tab_title, stack_id, component_identifier)
             sustainml_custom_tabview.retrieve_default_data()
-        }
-        // reset the focus to the new "current" tab
-        else
+        } else
         {
-            var new_current = __current_tab
-            if (idx == __current_tab)
+            if (newCurrentTab >= 0 && newCurrentTab < sustainml_custom_tabview.__tab_model.count)
             {
-                if (idx -1 >= 1)
+                var targetStackId = sustainml_custom_tabview.__tab_model.get(newCurrentTab).stack_id
+
+                var correctStackIndex = -1
+                for (var k = 0; k < stack_layout.children.length; k++)
                 {
-                    new_current = idx -1
+                    if (stack_layout.children[k].item && stack_layout.children[k].item.stack_id === targetStackId)
+                    {
+                        correctStackIndex = k
+                        break
+                    }
                 }
-                else
+
+                if (correctStackIndex !== -1)
                 {
-                    new_current = 0
+                    __current_tab = newCurrentTab
+                    stack_layout.currentIndex = correctStackIndex
                 }
-                // move to the idx tab in the stack
-                stack_layout.currentIndex = sustainml_custom_tabview.__tab_model.get(new_current).stack_id
             }
-            else
-            {
-                if (__current_tab == sustainml_custom_tabview.__tab_model.count)
-                {
-                    new_current = __current_tab -1
-                }
-            }
-            // perform changes in the view
-            __refresh_layout(new_current)
+
+            tab_list.model = sustainml_custom_tabview.__tab_model
         }
     }
 
