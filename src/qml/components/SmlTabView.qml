@@ -189,7 +189,10 @@ Item {
             // close tab icon
             SmlIcon {
                 id: close_icon
-                visible: allow_close_tabs ? idx == __current_tab ? true : parent.width > __min_tab_size : false
+                visible: allow_close_tabs &&
+                         title !== "Overview" &&
+                         title !== "Iteration" &&
+                         (idx == __current_tab || parent.width > __min_tab_size)
                 anchors.right: parent.right
                 anchors.rightMargin: __tabs_margins
                 anchors.verticalCenter: parent.verticalCenter
@@ -212,7 +215,7 @@ Item {
                 anchors.left: close_icon.left; anchors.leftMargin: - __tabs_margins
                 onClicked: {
                     // act as close is close icon shown (same expression as in close_icon visible attribute)
-                    if (sustainml_custom_tabview.allow_close_tabs && (idx == __current_tab || parent.width > __min_tab_size))
+                    if (sustainml_custom_tabview.allow_close_tabs && title !== "Overview" && title !== "Iteration" && (idx == __current_tab || parent.width > __min_tab_size))
                     {
                         console.log("The tab '" + sustainml_custom_tabview.__tab_model.get(idx).title + "' with " + stack_id + " is being closed.");
                         tabClosed(stack_id)
