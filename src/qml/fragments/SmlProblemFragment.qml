@@ -87,14 +87,6 @@ Item
                 }
             }
 
-            if (removedIndex !== -1) {
-                for (var j = 0; j < sustainml_fragment_problem.__comparison_values_list.length; j++) {
-                    sustainml_fragment_problem.__comparison_values_list[j].id = j
-                }
-
-                console.log("Tab with stack_id " + stack_id_closed + " was already destroyed by SmlTabView")
-            }
-
             console.log("Current __comparison_values_list content: " + JSON.stringify(sustainml_fragment_problem.__comparison_values_list));
         }
         onLoaded_item_signal:
