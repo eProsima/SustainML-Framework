@@ -697,29 +697,14 @@ Window {
         nightmode_color:  Settings.app_color_green_4
         nightmode_color_pressed:  Settings.app_color_green_3
         size: Settings.button_big_icon_size
+        clickable_text: "Go to Node Status screen"
 
         x: parent.width - (size * 2)
         y: ScreenManager.current_screen === ScreenManager.Screens.Reiterate ?
             main_window.height - 2 * Settings.spacing_big :
             Settings.spacing_big
 
-        SmlMouseArea
-        {
-            anchors.centerIn: parent
-            hoverEnabled: true
-            width: parent.width * 1.5
-            height: parent.height * 1.5
-
-            enabled         : !main_window.tasking
-            acceptedButtons : !main_window.tasking ? Qt.AllButtons : Qt.NoButton
-            default_cursor_shape: Qt.ArrowCursor
-            custom_cursor_shape : main_window.tasking ? Qt.ArrowCursor : Qt.PointingHandCursor
-
-            onEntered:  if (!main_window.tasking) settings_icon.start_animation();
-            onPressed:  if (!main_window.tasking) settings_icon.pressed = true;
-            onReleased: if (!main_window.tasking) settings_icon.pressed = false;
-            onClicked:  if (!main_window.tasking) main_window.load_screen(ScreenManager.Screens.Log);
-        }
+        onClicked: main_window.load_screen(ScreenManager.Screens.Log);
     }
 
     // Screen loader plus background animation trigger

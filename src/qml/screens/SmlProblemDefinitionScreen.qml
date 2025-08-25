@@ -72,7 +72,7 @@ Item
     property string __dataset_metadata_applications: __dataset_applications
 
     property bool results_available: false
-    
+
     // External signals
     signal go_home();
     signal go_results();
@@ -187,6 +187,7 @@ Item
         color_pressed: Settings.app_color_green_1
         nightmode_color: Settings.app_color_green_1
         nightmode_color_pressed: Settings.app_color_green_3
+        tooltip_text: "Go to Home screen"
         anchors
         {
             top: parent.top
@@ -212,6 +213,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Go to Results screen"
         anchors
         {
             top: parent.top
@@ -237,6 +239,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Go to Dataset Selector screen"
         anchors
         {
             top: parent.top
@@ -1535,6 +1538,7 @@ Item
         color_pressed: Settings.app_color_green_1
         nightmode_color: Settings.app_color_dark
         nightmode_color_pressed: Settings.app_color_green_3
+        tooltip_text: "Submit the problem and start task"
         anchors
         {
             bottom: parent.bottom
@@ -1592,24 +1596,12 @@ Item
         nightmode_color:  Settings.app_color_green_4
         nightmode_color_pressed:  Settings.app_color_green_3
         size: Settings.button_icon_size
+        clickable_text: "Refresh information from server"
 
         x: scroll_view.width - size/2 - Settings.spacing_big * 2
         y: Settings.spacing_big + size/2
 
-        SmlMouseArea
-        {
-            anchors.centerIn: parent
-            hoverEnabled: true
-            width: parent.width * 1.5
-            height: parent.height * 1.5
-            onEntered: refresh_button.start_animation();
-            onPressed: refresh_button.pressed = true;
-            onReleased: refresh_button.pressed = false;
-            onClicked:
-            {
-                root.refresh()
-            }
-        }
+        onClicked: root.refresh()
     }
 
     SequentialAnimation {

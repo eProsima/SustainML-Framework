@@ -21,7 +21,7 @@ Item
     // Public signals
     signal go_home();
     signal go_back();
-    
+
     // Internal properties
     readonly property int __margin: Settings.spacing_big * 1
     readonly property int __input_height: 50
@@ -55,6 +55,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Go to Home screen"
         anchors
         {
             top: parent.top
@@ -80,6 +81,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Go to Problem Definition screen"
         anchors
         {
             top: go_home_button.top
@@ -132,6 +134,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Browse for a dataset file"
         anchors
         {
             top: dataset_path_input.bottom
@@ -141,7 +144,7 @@ Item
         onClicked: dataset_file_dialog.open()
         height: root.__input_height
     }
-    
+
 
     FileDialog {
         id: dataset_file_dialog

@@ -511,6 +511,7 @@ Rectangle
                                 nightmode_color:  Settings.app_color_green_4
                                 nightmode_color_pressed:  Settings.app_color_green_3
                                 size: Settings.button_icon_size
+                                clickable_text: "Reiterate"
 
                                 anchors
                                 {
@@ -518,24 +519,7 @@ Rectangle
                                     horizontalCenter: parent.horizontalCenter
                                 }
 
-                                SmlMouseArea
-                                {
-                                    anchors.centerIn: parent
-                                    hoverEnabled: true
-                                    width: parent.width * 1.5
-                                    height: parent.height * 1.5
-
-                                    enabled         : !main_window.tasking
-                                    acceptedButtons : !main_window.tasking ? Qt.AllButtons : Qt.NoButton
-                                    cursorShape     : main_window.tasking ? Qt.ArrowCursor : Qt.PointingHandCursor
-
-                                    onPressed: reiterate_button.pressed = true;
-                                    onReleased: reiterate_button.pressed = false;
-                                    onClicked:
-                                    {
-                                        main_window.reiterate_problem(root.problem_id, table_model.rows[row])
-                                    }
-                                }
+                                onClicked: main_window.reiterate_problem(root.problem_id, table_model.rows[row])
                             }
 
                             // Checkbox to select iterations
