@@ -299,6 +299,14 @@ Rectangle {
                                     root.component_signal("iteration_view", "add_to_compare", model.display);
                                 }
                             }
+                            MenuItem {
+                                text: "More info"
+                                onTriggered: {
+                                    console.log("More info or " + model.display);
+                                    metricInfoPopup.metricName = model.display
+                                    metricInfoPopup.open()
+                                }
+                            }
                         }
 
                         MouseArea {
@@ -825,6 +833,94 @@ Rectangle {
                 x = 0;
             } else {
                 x = -width;
+            }
+        }
+    }
+
+    Popup {
+        id: metricInfoPopup
+        modal: true
+        focus: true
+        width: 300
+        height: 150
+        x: (parent.width - width)/2
+        y: (parent.height - height)/2
+        property string metricName: ""
+        property var metricDescriptions: ({
+            "latency": "Time it takes for a complete inference of the model in the suggested hardware (ms).",
+            "power consumption": "Instantaneous power consumed during execution of the model on the hardware (W).",
+            "carbon footprint": "Total CO2e emissions from the use of the model on the suggested hardware (gCO2e).",
+            "carbon intensity": "Emissions per unit of energy consumed (gCO2/kW).",
+            "energy consumption": "Total energy used by the execution (kWh)."
+        })
+
+        function descriptionFor(name) {
+            if (!name || name.length === 0) return "No description available."
+            var key = name.toLowerCase()
+
+            for (var k in metricInfoPopup.metricDescriptions) {
+                if (key.indexOf(k) !== -1) {
+                    return metricInfoPopup.metricDescriptions[k]
+                }
+            }
+            return "No description available."
+        }
+
+        background: Rectangle {
+            color: "white"
+            border.color: "#888"
+            radius: 6
+        }
+
+        Button {
+            text: "X"
+            anchors.top: parent.top
+            anchors.right: parent.right
+            width: 20
+            height: 20
+            onClicked: metricInfoPopup.close()
+        }
+
+        SmlText {
+            id: metricTitle
+            text_kind: SmlText.TextKind.Header_3
+            text_value: metricInfoPopup.metricName
+            font.bold: true
+            anchors {
+                top: parent.top
+                topMargin: 12
+                left: parent.left
+                leftMargin: 16
+                right: closeMetricInfo.left
+                rightMargin: 8
+            }
+            wrapMode: Text.WordWrap
+        }
+
+        SmlScrollView {
+            id: metricDescScroll
+            anchors {
+                top: metricTitle.bottom
+                topMargin: 8
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                leftMargin: 16
+                rightMargin: 16
+                bottomMargin: 16
+            }
+            content_height: descText.implicitHeight
+            layout: SmlScrollBar.ScrollBarLayout.Vertical
+            scrollbar_backgound_color: Settings.app_color_light
+            scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+            clip: true
+
+            SmlText {
+                id: descText
+                text_kind: SmlText.TextKind.Body
+                text_value: metricInfoPopup.descriptionFor(metricInfoPopup.metricName)
+                wrapMode: Text.WordWrap
+                width: metricDescScroll.width - 12
             }
         }
     }

@@ -166,6 +166,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Go to Home screen"
         anchors
         {
             top: parent.top
@@ -191,6 +192,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "New Problem with Previous Input"
         anchors
         {
             top: go_home_button.top
@@ -215,6 +217,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "New Problem from Scratch"
         anchors
         {
             top: go_home_button.top
@@ -238,6 +241,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Stop Current Task"
         anchors
         {
             top: go_home_button.top
