@@ -153,7 +153,7 @@ Item
                         var newStackId = problem_fragment_view.getNextAvailableStackId()
                         var compare_id = newStackId - components_stack_id_map["comparison_view"]
                         sustainml_fragment_problem.__comparison_values_list.push({ id: compare_id, title: iteration_id })
-                        problem_fragment_view.create_new_tab(iteration_id.replace(/\[.*?\]/g, "").trim(), components_stack_id_map["comparison_view"] + compare_id, problem_id, "comparison_view")
+                        problem_fragment_view.create_new_tab(iteration_id.replace(/\[.*?\]/g, "").trim(), newStackId, problem_id, "comparison_view")
                         sustainml_fragment_problem.update_comparison(iteration_id)
                         sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                         problem_fragment_view.focus(newStackId, problem_id)

@@ -470,12 +470,10 @@ Item {
                 {"stack_id": stack_id, "problem_id": problem_id, "total_tabs": sustainml_custom_tabview.__tab_model.count})
         stack_layout.children.push(new_stack)
         for (var i = 0; i < stack_layout.children.length; i++){
-            if (stack_layout.children[i].item) {
+            if (stack_layout.children[i].item && stack_layout.children[i].item.total_tabs !== undefined) {
                 stack_layout.children[i].item.total_tabs = sustainml_custom_tabview.__tab_model.count;
             }
         }
-        // stack_layout.currentIndex = last_stack_id
-        // __refresh_layout(idx)
         __order_tabs()
     }
 
@@ -488,13 +486,7 @@ Item {
             __current_tab = idx
 
             // move to the idx tab in the stack
-            var wantedId = sustainml_custom_tabview.__tab_model.get(idx).stack_id
-            for (var j = 0; j < stack_layout.children.length; ++j) {
-                if (stack_layout.children[j].item.stack_id === wantedId) {
-                    stack_layout.currentIndex = j;
-                    break;
-                }
-            }
+            stack_layout.currentIndex = idx
         }
         // update idx model
         tab_list.model = sustainml_custom_tabview.__tab_model
