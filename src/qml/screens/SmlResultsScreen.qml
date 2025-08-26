@@ -317,6 +317,7 @@ Item
         default_stack_component: "problem_view"
         allow_close_tabs: false
         reduced_tabs: true
+        allow_tab_rename: true
 
         onTab_view_loaded:
         {

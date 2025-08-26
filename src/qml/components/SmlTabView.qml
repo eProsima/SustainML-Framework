@@ -20,6 +20,7 @@ Item {
     property bool allow_close_tabs: true
     property bool reduced_tabs: false
     property bool rounded: true
+    property bool allow_tab_rename: false
     property string selected_tab_color: "white"
     property string selected_tab_nightmode_color: "#303030"
     property string tab_background_color: "transparent"
@@ -168,6 +169,7 @@ Item {
             }
 
             TextEdit {
+                id: tab_title
                 horizontalAlignment: Qt.AlignLeft; verticalAlignment: Qt.AlignVCenter
                 anchors.left: parent.left
                 anchors.leftMargin: __tabs_margins
@@ -181,10 +183,38 @@ Item {
                 font.pixelSize: Settings.body_font_size
                 color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
                 wrapMode: TextEdit.WrapAnywhere
-                readOnly: true
-                selectByMouse: true
                 selectByKeyboard: true
                 selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
+                readOnly: !sustainml_custom_tabview.allow_tab_rename
+                focus: editing
+                property bool editing: false
+                property string __original: title
+
+                Keys.onReturnPressed: { commitRename(); }
+                Keys.onEnterPressed:  { commitRename(); }
+                Keys.onEscapePressed: { cancelRename(); }
+
+                onFocusChanged: {
+                    if (!focus && editing) commitRename();
+                }
+
+                function commitRename() {
+                    if (!editing) return;
+                    editing = false;
+                    var newTitle = text.trim();
+                    if (newTitle.length === 0) {
+                        text = __original;
+                        return;
+                    }
+                    __original = newTitle;
+                    sustainml_custom_tabview.update_tab_name(newTitle, stack_id);
+                }
+
+                function cancelRename() {
+                    if (!editing) return;
+                    editing = false;
+                    text = __original;
+                }
             }
             // close tab icon
             SmlIcon {
@@ -207,6 +237,13 @@ Item {
                 anchors.right: close_icon.left; anchors.rightMargin: - __tabs_margins
                 onClicked: {
                     __refresh_layout(idx)
+                }
+                onDoubleClicked: {
+                    if (sustainml_custom_tabview.allow_tab_rename) {
+                        tab_title.editing = true;
+                        tab_title.forceActiveFocus();
+                        tab_title.selectAll();
+                    }
                 }
             }
             // close tab action
