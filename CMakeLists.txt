@@ -127,7 +127,8 @@ file(GLOB_RECURSE PROJECT_SOURCE_FILES
     "${PROJECT_SOURCE_DIR}/src/cpp/*.cxx"
     "${PROJECT_SOURCE_DIR}/src/cpp/**/*.c"
     "${PROJECT_SOURCE_DIR}/src/cpp/**/*.cpp"
-    "${PROJECT_SOURCE_DIR}/src/cpp/**/*.cxx")
+    "${PROJECT_SOURCE_DIR}/src/cpp/**/*.cxx"
+    "${PROJECT_SOURCE_DIR}/src/tree/*.cpp")
 
 file(GLOB_RECURSE PROJECT_HEADER_FILES
     "${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}/*.h"
