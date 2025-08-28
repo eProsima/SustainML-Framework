@@ -79,6 +79,9 @@ QString REST_requester::request_type_to_url(
         case RequestType::REQUEST_CONFIG:
             url += "/config_request";
             break;
+        case RequestType::REQUEST_AVAILABLE_TASKS:
+            url += "/available_tasks";
+            break;
     }
     return url;
 }

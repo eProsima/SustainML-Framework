@@ -262,7 +262,7 @@ Item
         anchors {
             horizontalCenter: parent.horizontalCenter
             top: parent.top
-            topMargin: Settings.spacing_big*1.5
+            topMargin: Settings.spacing_big
         }
     }
 

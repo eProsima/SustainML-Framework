@@ -20,7 +20,7 @@
 #include <sustainml/tree/TreeItem.h>
 #include <sustainml/tree/TreeModel.h>
 
-#include <iostream> // debug
+#include <iostream>
 
 TreeModel::TreeModel(
         const json& data,
@@ -219,18 +219,6 @@ void TreeModel::updateFromJsonString(const QString& json_str)
     try
     {
         json parsed = json::parse(json_str.toStdString());
-        std::cout << "TreeModel::updateFromJsonString: parsing succeeded." << std::endl;    // debug
-        if (parsed.is_object() || parsed.is_array())
-        {
-            std::cout << "TreeModel::updateFromJsonString: container type = "
-                      << (parsed.is_object() ? "object" : "array")
-                      << ", size = " << parsed.size() << std::endl;
-        }
-        else
-        {
-            std::cout << "TreeModel::updateFromJsonString: primitive JSON value" << std::endl;
-        }
-        std::cout << "TreeModel::updateFromJsonString: content:\n" << parsed.dump(2) << std::endl;  // debug
         update(parsed);
     }
     catch (const std::exception& e)

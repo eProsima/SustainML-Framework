@@ -59,6 +59,8 @@ QObject* Engine::enable()
     // Start timer
     node_status_timer_->start();
 
+    available_tasks_request();
+
     return rootObjects().value(0);
 }
 
@@ -208,7 +210,7 @@ void Engine::launch_dataset_path_task(
                 QJsonObject config_obj = config_doc.object();
 
                 emit dataset_metadata_available(config_obj.toVariantMap());
-                
+
             }
         }
     });
@@ -622,6 +624,23 @@ void Engine::request_orchestrator(
     orchestrator_request(node_json_data);
 }
 
+void Engine::add_known_tasks(const QVariantList& tasks)
+{
+    for (const QVariant& v : tasks)
+    {
+        const QVariantMap m = v.toMap();
+        const int p = m.value("problem_id").toInt();
+        const int it = m.value("iteration_id").toInt();
+        types::TaskId tid(p, it);
+
+        auto dup = std::find(received_task_ids.begin(), received_task_ids.end(), tid);
+        if (dup == received_task_ids.end())
+        {
+            received_task_ids.push_back(tid);
+        }
+    }
+}
+
 void Engine::send_reiteration_inputs(
     const QJsonObject& json_obj)
 {
@@ -1013,6 +1032,82 @@ void Engine::config_response(
         }
     }
     // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            (ptr)->disconnect();
+            (ptr)->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::available_tasks_request()
+{
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::available_tasks_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::REQUEST_AVAILABLE_TASKS,
+        QJsonObject()
+    );
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::available_tasks_response(
+    const REST_requester* requester,
+    const QJsonObject& json_obj)
+{
+    if (!json_obj.empty())
+    {
+        QVariantList tasks;
+        if (json_obj.contains("task_ids") && json_obj["task_ids"].isArray())
+        {
+            QJsonArray arr = json_obj["task_ids"].toArray();
+            for (const QJsonValue& v : arr)
+            {
+                int problem_id = -1;
+                int iteration_id = -1;
+
+                if (v.isObject())
+                {
+                    QJsonObject o = v.toObject();
+                    problem_id = o.value("problem_id").toInt(-1);
+                    iteration_id = o.value("iteration_id").toInt(-1);
+                }
+                else if (v.isArray())
+                {
+                    QJsonArray a = v.toArray();
+                    if (a.size() >= 2)
+                    {
+                        problem_id = a.at(0).toInt(-1);
+                        iteration_id = a.at(1).toInt(-1);
+                    }
+                }
+                if (problem_id >= 0 && iteration_id >= 0)
+                {
+                    QVariantMap m;
+                    m["problem_id"] = problem_id;
+                    m["iteration_id"] = iteration_id;
+                    tasks.push_back(m);
+                }
+            }
+        }
+
+        if (!tasks.isEmpty())
+        {
+            add_known_tasks(tasks);
+
+            request_current_data(true);
+        }
+    }
+
     std::lock_guard<std::mutex> lock(requesters_mutex_);
     for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
     {
