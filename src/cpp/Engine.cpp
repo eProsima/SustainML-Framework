@@ -208,7 +208,7 @@ void Engine::launch_dataset_path_task(
                 QJsonObject config_obj = config_doc.object();
 
                 emit dataset_metadata_available(config_obj.toVariantMap());
-                
+
             }
         }
     });
@@ -244,6 +244,15 @@ QJsonObject Engine::request_specific_results(
     node_json_data["node_id"] = 9;  // Request all information
     node_json_data["task_id"] = task_json;
     return specific_node_results_request(node_json_data);
+}
+
+void Engine::cancelIteration(
+    const int problem_id, const int iteration_id)
+{
+    QJsonObject payload;
+    payload["problem_id"]   = problem_id;
+    payload["iteration_id"] = iteration_id;
+    cancel_request(payload);
 }
 
 void Engine::request_status()
@@ -1022,6 +1031,64 @@ void Engine::config_response(
             requesters_.erase(it);
             (ptr)->disconnect();
             (ptr)->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::cancel_request(
+        const QJsonObject& json_obj)
+{
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::cancel_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::CANCEL_REQUEST,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::cancel_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    if (!json_obj.empty())
+    {
+        std::cout << "Cancel response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
+                std::endl;
+        if (json_obj.contains("status"))
+        {
+            QString status = json_obj["status"].toString();
+            if (status == "cancelled")
+            {
+                std::cout << "Task cancelled successfully" << std::endl;
+            }
+            else if (status == "not_found")
+            {
+                std::cout << "Cancellation failed: Task not found" << std::endl;
+            }
+            else
+            {
+                std::cout << "Unexpected cancel response: " << QJsonDocument(json_obj).toJson().toStdString() << std::endl;
+            }
+        }
+        else if (json_obj.contains("error"))
+        {
+            std::cout << "Cancel error: " << json_obj["error"].toString().toStdString() << std::endl;
+        }
+    }
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
             break;
         }
     }
