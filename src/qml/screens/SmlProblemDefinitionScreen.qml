@@ -71,7 +71,7 @@ Item
     property string __dataset_metadata_keywords: __dataset_keywords
     property string __dataset_metadata_applications: __dataset_applications
 
-    property bool results_available: false
+    property bool results_available: true
 
     // External signals
     signal go_home();

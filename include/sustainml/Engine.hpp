@@ -213,6 +213,14 @@ public slots:
         int iteration_id,
         bool reiteration = false);
 
+    /**
+     * @brief private method to request previous task information.
+     *
+     * @param tasks list of tasks to add
+     */
+    void add_known_tasks(
+        const QVariantList& tasks);
+
 signals:
 
     /**
@@ -470,6 +478,7 @@ signals:
      */
     void dataset_metadata_available(
         const QVariantMap& dataset_metadata);
+
     /**
      * @brief Goals received signal to display in the GUI
      *
@@ -600,6 +609,14 @@ private:
     void config_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
+
+    //! Request all tasks available on the backend
+    void available_tasks_request();
+
+    //! Receive and propagate the available tasks
+    void available_tasks_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj);
 
     QTimer* node_status_timer_;
 
