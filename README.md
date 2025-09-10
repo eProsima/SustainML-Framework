@@ -74,7 +74,7 @@ The following sections describe the steps to install the SustainML Framework in 
         qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
     pip3 install -U \
         colcon-common-extensions vcstool && \
-    curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3
+    curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3 && ollama pull mistral-small
     ```
 
 2. **Downloading sources**
