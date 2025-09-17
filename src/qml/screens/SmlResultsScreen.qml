@@ -17,7 +17,7 @@ Item
 
     // Public properties
     property int current_problem_id: -1
-
+    property string errorMessage: ""
 
     // Public signals
     signal results_screen_loaded()
@@ -86,6 +86,11 @@ Item
                 tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+
+            if (keywords === "Error" && !errorDialog.visible) {
+                errorMessage = "Error in node ML Model Metadata. Please check the logs for more details."
+                errorDialog.open()
+            }
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
@@ -103,6 +108,11 @@ Item
                 tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+
+            if (model === "Error" && !errorDialog.visible) {
+                errorMessage = "Error in node ML Model Provider. Please check the logs for more details."
+                errorDialog.open()
+            }
         }
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
@@ -120,6 +130,11 @@ Item
                 tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+
+            if (hw_description === "Error" && !errorDialog.visible) {
+                errorMessage = "Error in node HW Resource. Please check the logs for more details."
+                errorDialog.open()
+            }
         }
 
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
@@ -137,7 +152,14 @@ Item
                 tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+
+            if (carbon_intensity === 0 && !errorDialog.visible) {
+                errorMessage = "Error in node Carbon Footprint. Please check the logs for more details."
+                errorDialog.open()
+            }
+
         }
+        
     }
 
     // Detect when data has been received to load tabs components
@@ -262,7 +284,7 @@ Item
         anchors {
             horizontalCenter: parent.horizontalCenter
             top: parent.top
-            topMargin: Settings.spacing_big*1.5
+            topMargin: Settings.spacing_normal
         }
     }
 
@@ -330,4 +352,22 @@ Item
             engine.request_current_data(true)
         }
     }
+
+SmlDialog
+{
+    id: errorDialog
+    placeholder_text: "ERROR!!"
+    text_value: errorMessage
+    background_color: Settings.app_color_light
+    border_color: Settings.app_color_green_4
+    border_width: 1
+    rounded: true
+    placeholder_text_color: Settings.app_color_blue
+    text_color: Settings.app_color_blue
+
+    // Opcional: limpiar estado al cerrar
+    onClosed: errorMessage = ""
 }
+
+}
+

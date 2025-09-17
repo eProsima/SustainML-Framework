@@ -53,7 +53,6 @@ Rectangle
     readonly property int __carbon_footprint_column: 7
     readonly property int __carbon_intensity_column: 8
 
-    property string errorMessage: ""
 
     color: ScreenManager.night_mode ?  Settings.app_color_dark : Settings.app_color_light
 
@@ -117,10 +116,6 @@ Rectangle
                 }
             }
             general_table.forceLayout();
-            if (keywords === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node ML Model Metadata. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
@@ -150,10 +145,6 @@ Rectangle
                 }
             }
             general_table.forceLayout();
-            if (model === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node ML Model Provider. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
@@ -184,10 +175,6 @@ Rectangle
                 }
             }
             general_table.forceLayout();
-            if (hw_description === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node HW Resource. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
 
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
@@ -218,10 +205,6 @@ Rectangle
                 }
             }
             general_table.forceLayout();
-            if (carbon_intensity === 0 && !errorDialog.visible) {
-                errorMessage = "Error in node Carbon Footprint. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
     }
 
@@ -605,16 +588,4 @@ Rectangle
         }
     }
 
-    SmlDialog
-    {
-        id: errorDialog
-        placeholder_text: "ERROR!!"
-        text_value: errorMessage
-        background_color: Settings.app_color_light
-        border_color: Settings.app_color_green_4
-        border_width: 1
-        rounded: true
-        placeholder_text_color: Settings.app_color_blue
-        text_color: Settings.app_color_blue
-    }
 }
