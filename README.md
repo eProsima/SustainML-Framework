@@ -71,7 +71,7 @@ The following sections describe the steps to install the SustainML Framework in 
         curl wget git cmake g++ build-essential python3 python3-pip python3-venv libpython3-dev swig \
         libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
         qtdeclarative5-dev libqt5charts5-dev qml-module-qtcharts qtquickcontrols2-5-dev libqt5svg5 \
-        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
+        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels qml-module-qtquick-dialogs && \
     pip3 install -U \
         colcon-common-extensions vcstool && \
     curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3 && ollama pull mistral-small
