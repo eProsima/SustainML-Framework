@@ -13,7 +13,14 @@ if [ ! -d "$BASE_DIR" ]; then
 fi
 
 echo "▶️  Starting Neo4j"
-sudo systemctl start neo4j
+if command -v systemctl >/dev/null 2>&1; then
+    # Entorno local
+    sudo systemctl start neo4j
+else
+    # Docker u otro sin systemd
+    neo4j start
+fi
+
 
 cd "$BASE_DIR"
 cd "build/sustainml_modules/lib/sustainml_modules"
@@ -36,7 +43,13 @@ cleanup() {
     echo "✅ All processes killed."
 
     echo "🛑 Stopping Neo4j"
-    sudo systemctl stop neo4j
+    if command -v systemctl >/dev/null 2>&1; then
+        # Entorno local con systemd
+        sudo systemctl stop neo4j
+    else
+        # Docker u otro sin systemd
+        neo4j stop
+    fi
 }
 trap cleanup EXIT SIGINT SIGTERM
 
