@@ -102,3 +102,5 @@ log/
 ### Visual Studio ###
 .vs
 .vscode
+
+docker/models_index.ann
