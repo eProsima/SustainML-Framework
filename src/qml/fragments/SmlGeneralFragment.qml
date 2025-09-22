@@ -39,7 +39,7 @@ Rectangle
     readonly property int __scroll_view_height: height
     readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 40
-    readonly property int __data_height: __header_height * 1.25
+    readonly property int __data_height: __header_height * 1.5
     readonly property int __cell_padding: 10
     readonly property string __cell_background_color: "#e0e0e0"
     readonly property string __cell_background_nightmode_color: "#505050"
