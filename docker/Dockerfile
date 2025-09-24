@@ -13,12 +13,11 @@ SHELL ["/bin/bash", "-c"]
 
 # Install dependencies
 RUN apt update && apt install --yes --no-install-recommends \
-        wget git git-lfs cmake g++ build-essential python3 python3-venv python3-pip libpython3-dev swig \
+        wget git cmake g++ build-essential python3 python3-venv python3-pip libpython3-dev swig \
         libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
         qtdeclarative5-dev libqt5charts5-dev qml-module-qtcharts \
         qtquickcontrols2-5-dev libqt5svg5 qml-module-qtquick-controls qml-module-qtquick-dialogs \
         qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
-    git lfs install --system && \
     pip3 install --break-system-packages -U \
         colcon-common-extensions vcstool gdown
 
