@@ -20,7 +20,7 @@ RUN apt update && apt install --yes --no-install-recommends \
         qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
     git lfs install --system && \
     pip3 install --break-system-packages -U \
-        colcon-common-extensions vcstool
+        colcon-common-extensions vcstool gdown
 
 # Install OpenJDK 21(required by Neo4j)
 RUN apt update && apt install -y openjdk-21-jdk
@@ -79,8 +79,7 @@ RUN wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sus
 
 # Initialize the sustainml library submodules
 RUN cd /sustainml/src/sustainml_lib && git submodule update --init --recursive && cd /sustainml 
-#RUN cd /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && git lfs pull --include "rag/models_index.ann" --exclude ""
-COPY models_index.ann /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/models_index.ann
+RUN cd /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && gdown --id 1gTXqQtP9JS92gAtPzhKgZpdIHSV_Lcnp -O rag/models_index.ann
 
 # Install the submodules dependencies
 RUN pip3 install --break-system-packages -r /sustainml/src/sustainml_lib/sustainml_modules/requirements.txt
