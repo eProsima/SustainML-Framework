@@ -1,6 +1,6 @@
 #!/bin/bash
 
-default_version="0.1.0"
+default_version="0.2.0"
 
 if [ -z $1 ]; then
     echo "Using the default version: " $default_version
