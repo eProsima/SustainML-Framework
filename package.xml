@@ -3,7 +3,7 @@
 <package format="3">
   <name>sustainml</name>
   <!-->There must be a release. Update version accordingly<-->
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <description>
     Qt application written in C++ that acts as a frontend for the SustainML project.
   </description>
