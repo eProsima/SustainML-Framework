@@ -1,4 +1,4 @@
-// Copyright 2021 Proyectos y Sistemas de Mantenimiento SL (eProsima).
+// Copyright 2025 Proyectos y Sistemas de Mantenimiento SL (eProsima).
 //
 // This file is part of eProsima Fast DDS Monitor.
 //
@@ -30,7 +30,7 @@
  *
  * Tree Item is an information structure in tree format, where each node is a \c TreeItem .
  * Every node has its own information: QString value.
- * Every node can have non, one or multiple children that are of \c TreeItem class.
+ * Every node can have none, one or multiple children that are of \c TreeItem class.
  *
  * These items are created from \c TreeModel object, that works as a \c TreeItem factory.
  */
@@ -101,4 +101,4 @@ private:
     TreeItem* parent_item_;
 };
 
-#endif // _EPROSIMA_FASTDDS_MONITOR_MODEL_TREE_TREEITEM_H
+#endif // _EPROSIMA_SUSTAINML_MODEL_TREE_TREEITEM_H

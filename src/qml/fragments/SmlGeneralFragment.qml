@@ -223,8 +223,8 @@ Rectangle
             content_width: general_header_table.contentWidth
             // content_height: general_header_table.height + general_table.height + 1
             layout: SmlScrollBar.ScrollBarLayout.Horizontal
-            scrollbar_backgound_color: Settings.app_color_light
-            scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+            scrollbar_background_color: Settings.app_color_light
+            scrollbar_background_nightmodel_color: Settings.app_color_dark
             interactive: false
             onWidthChanged: {
                 general_header_table.forceLayout(),
@@ -405,8 +405,8 @@ Rectangle
                 height: root.height - headerRect.height
                 contentHeight: general_table.height + 20
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_backgound_color: Settings.app_color_light
-                scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+                scrollbar_background_color: Settings.app_color_light
+                scrollbar_background_nightmodel_color: Settings.app_color_dark
                 flickableDirection: Flickable.VerticalFlick
 
                 Rectangle {

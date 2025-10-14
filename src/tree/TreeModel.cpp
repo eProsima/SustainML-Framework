@@ -1,4 +1,4 @@
-// Copyright 2021 Proyectos y Sistemas de Mantenimiento SL (eProsima).
+// Copyright 2025 Proyectos y Sistemas de Mantenimiento SL (eProsima).
 //
 // This file is part of eProsima Fast DDS Monitor.
 //
@@ -149,15 +149,15 @@ QModelIndex TreeModel::parent(
         return QModelIndex();
     }
 
-    if (parent_item == root_item_)
-    {
-        return QModelIndex();
-    }
-
     if ((child_item = get_item(index)) != nullptr)
     {
         if ((parent_item = child_item->parent_item()) != nullptr)
         {
+            if (parent_item == root_item_)
+            {
+                return QModelIndex();
+            }
+
             return createIndex(parent_item->row(), 0, parent_item);
         }
     }

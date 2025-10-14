@@ -263,8 +263,8 @@ Rectangle
                 height: parent.height - iterationTextHeader.height - Settings.spacing_small * 2
                 content_height: columnContent.implicitHeight
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_backgound_color: Settings.app_color_light
-                scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+                scrollbar_background_color: Settings.app_color_light
+                scrollbar_background_nightmodel_color: Settings.app_color_dark
 
                 Rectangle {
                     id: tableContent

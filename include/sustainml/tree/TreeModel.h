@@ -1,4 +1,4 @@
-// Copyright 2021 Proyectos y Sistemas de Mantenimiento SL (eProsima).
+// Copyright 2025 Proyectos y Sistemas de Mantenimiento SL (eProsima).
 //
 // This file is part of eProsima Fast DDS Monitor.
 //
@@ -91,7 +91,7 @@ public:
             int column,
             const QModelIndex& parent = QModelIndex()) const Q_DECL_OVERRIDE;
 
-    //! Returns the index of the parend of the node indexed in \c index
+    //! Returns the index of the parent of the node indexed in \c index
     QModelIndex parent(
             const QModelIndex& index) const Q_DECL_OVERRIDE;
 
@@ -110,7 +110,7 @@ public:
     void update(
             json data);
 
-    //! Return the role names of the values in nodes to acces them via \c data
+    //! Return the role names of the values in nodes to access them via \c data
     QHash<int, QByteArray> roleNames() const Q_DECL_OVERRIDE;
 
     //! Retrieve the item in the position \c index
@@ -156,4 +156,4 @@ private:
 
 };
 
-#endif // _EPROSIMA_FASTDDS_MONITOR_MODEL_TREE_TREEMODEL_H
+#endif // _EPROSIMA_SUSTAINML_MODEL_TREE_TREEMODEL_H

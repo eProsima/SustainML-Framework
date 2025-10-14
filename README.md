@@ -138,17 +138,9 @@ The following sections describe the steps to install the SustainML Framework in 
 
 5. **Deploy the framework**
 
-    The framework application to retrieve the user inputs is run with the `sustainml` command.
+    The SustainML Framework requires all of its modules to be running for full deployment.
 
-    ```bash
-    sustainml
-    ```
-
-    The SustainML Framework needs each of the modules that are part of it for its deployment.
-    Set the ``HF_TOKEN`` environment variable on your host to your personal Hugging Face access token.
-
-    The following bash script run each module, the backend orchestrator and the frontend application.
-
+    Before starting, set the HF_TOKEN environment variable on your host to your personal Hugging Face access token:
 
     ```bash
     sustainml-framework
@@ -158,9 +150,9 @@ The following sections describe the steps to install the SustainML Framework in 
 
 ### Running SustainML Framework using Docker
 
-The installation task can be omitted if using the [Dockerimage](docker/Dockerfile) proposed in this repository.
+The installation task can be omitted if using the [Dockerfile](docker/Dockerfile) proposed in this repository.
 
-To deploy the SustainML Framework within docker, please refer to the [docker instructions](docker/README.md).
+To deploy the SustainML Framework within docker, please refer to the [Docker instructions](docker/README.md).
 
 ## Getting Help
 
