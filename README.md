@@ -71,13 +71,38 @@ The following sections describe the steps to install the SustainML Framework in 
         curl wget git cmake g++ build-essential python3 python3-pip python3-venv libpython3-dev swig \
         libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
         qtdeclarative5-dev libqt5charts5-dev qml-module-qtcharts qtquickcontrols2-5-dev libqt5svg5 \
-        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
+        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels qml-module-qtquick-dialogs && \
     pip3 install -U \
         colcon-common-extensions vcstool && \
-    curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3
+    curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3 && ollama pull mistral-small
     ```
 
-2. **Downloading sources**
+2. **Installing neo4j**
+
+    To ensure the framework has access to the database, the latest version of Neo4j must be installed. Additionally, Java 21 must be installed and added to the system path to guarantee proper functionality.
+
+    * Install Java 21
+
+    ```bash
+    sudo apt-get update
+    sudo apt-get install -y openjdk-21-jdk
+
+    # Add Java 21 to the path (bashrc or .zshrc)
+    echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc
+    echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
+    ```
+
+    * Install neo4j
+
+    ```bash
+    sudo apt update && sudo apt install -y gnupg ca-certificates wget
+    wget -O - https://debian.neo4j.com/neotechnology.gpg.key | gpg --dearmor | sudo tee /usr/share/keyrings/neo4j.gpg > /dev/null
+    echo "deb [signed-by=/usr/share/keyrings/neo4j.gpg] https://debian.neo4j.com stable latest" | sudo tee /etc/apt/sources.list.d/neo4j.list
+    sudo apt update
+    sudo apt install -y neo4j
+    ```
+
+3. **Downloading sources**
 
     Create a SustainML directory and download the repositories file that will be used to install SustainML Framework and its dependencies.
 
@@ -87,10 +112,20 @@ The following sections describe the steps to install the SustainML Framework in 
     vcs import src < sustainml.repos && \
     cd ~/SustainML/SustainML_ws/src/sustainml_lib && \
     git submodule update --init --recursive && \
+    pip3 install gdown && \
     pip3 install -r ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/requirements.txt
+    cd ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && \
+    gdown --id 1gTXqQtP9JS92gAtPzhKgZpdIHSV_Lcnp -O rag/models_index.ann && \
+    sudo neo4j-admin database load system \
+        --from-path=~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+        --overwrite-destination=true && \
+    sudo neo4j-admin database load neo4j \
+        --from-path=~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+        --overwrite-destination=true && \
+    sudo chown -R neo4j:neo4j /var/lib/neo4j/data
     ```
 
-3. **Building framework**
+4. **Building framework**
 
     Colcon is a command line tool based on CMake aimed at building sets of software packages.
     With the following command, colcon builds and installs the SustainML framework, and sources the generated libraries and applications.
@@ -101,33 +136,23 @@ The following sections describe the steps to install the SustainML Framework in 
     source ~/SustainML/SustainML_ws/install/setup.bash
     ```
 
-4. **Deploy the framework**
+5. **Deploy the framework**
 
-    The framework application to retrieve the user inputs is run with the `sustainml` command.
+    The SustainML Framework requires all of its modules to be running for full deployment.
 
-    ```bash
-    sustainml
-    ```
-
-    The SustainML Framework needs each of the modules that are part of it for its deployment.
-    Set the ``HF_TOKEN`` environment variable on your host to your personal Hugging Face access token.
-
-    The following bash script run each module, the backend orchestrator and the frontend application.
-
+    Before starting, set the HF_TOKEN environment variable on your host to your personal Hugging Face access token:
 
     ```bash
-    cd ~/SustainML/SustainML_ws/src/sustainml_framework
-    chmod +x framework_run.sh && \
-    ./framework_run.sh
+    sustainml-framework
     ```
 
     Additionally, by setting the environment variable ``SUSTAINML_DOMAIN_ID`` the domain for inter-node communication can be changed.
 
 ### Running SustainML Framework using Docker
 
-The installation task can be omitted if using the [Dockerimage](docker/Dockerfile) proposed in this repository.
+The installation task can be omitted if using the [Dockerfile](docker/Dockerfile) proposed in this repository.
 
-To deploy the SustainML Framework within docker, please refer to the [docker instructions](docker/README.md).
+To deploy the SustainML Framework within docker, please refer to the [Docker instructions](docker/README.md).
 
 ## Getting Help
 

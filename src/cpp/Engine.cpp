@@ -173,16 +173,17 @@ void Engine::launch_task(
     json_data["geo_location_region"] = geo_location_region;
     json_data["extra_data"] = extra_data;
 
-    if(previous_problem_id == 0 && has_active_problem_)
-    {
-        emit notSupportProblem("Second problem not supported yet");
-    }
-    else
-    {
-        has_active_problem_ = true;
-        // Launch user input request
-        user_input_request(json_data);
-    }
+    // if(previous_problem_id == 0 && has_active_problem_)
+    // {
+    //     emit notSupportProblem("Second problem not supported yet");
+    // }
+    // else
+    // {
+    //     has_active_problem_ = true;
+    //     // Launch user input request
+    //     user_input_request(json_data);
+    // }
+    user_input_request(json_data);
 }
 
 void Engine::launch_dataset_path_task(
@@ -606,8 +607,11 @@ void Engine::print_results(
 
 void Engine::request_orchestrator(
     int problem_id,
-    int iteration_id)
+    int iteration_id,
+    bool reiteration)
 {
+    last_reiteration_flag_ = reiteration;
+
     QJsonObject task_json;
     task_json["problem_id"] = problem_id;
     task_json["iteration_id"] = iteration_id;
@@ -630,6 +634,7 @@ void Engine::send_reiteration_inputs(
     QJsonObject extraData = node_json["extra_data"].toObject();
     QString goal = extraData["goal"].toString();
     QString hardware_required = extraData["hardware_required"].toString();
+    QString metric = extraData["metric"].toString();
     int max_memory_footprint = extraData["max_memory_footprint"].toInt();
     int num_outputs = extraData["num_outputs"].toInt();
 
@@ -637,7 +642,7 @@ void Engine::send_reiteration_inputs(
         task_id.problem_id(),
         task_id.iteration_id(),
         node_json["modality"].toString(),
-        extraData["metric"].toString(),
+        metric,
         node_json["problem_short_description"].toString(),
         node_json["problem_definition"].toString(),
         inputs_str,
@@ -659,7 +664,8 @@ void Engine::send_reiteration_inputs(
         hardware_required,
         max_memory_footprint,
         num_outputs,
-        extraData["type"].toString());
+        extraData["type"].toString(),
+        last_reiteration_flag_);
 }
 
 void Engine::user_input_request(

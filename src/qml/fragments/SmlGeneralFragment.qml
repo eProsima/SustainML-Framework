@@ -39,7 +39,7 @@ Rectangle
     readonly property int __scroll_view_height: height
     readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 40
-    readonly property int __data_height: __header_height * 1.25
+    readonly property int __data_height: __header_height * 1.5
     readonly property int __cell_padding: 10
     readonly property string __cell_background_color: "#e0e0e0"
     readonly property string __cell_background_nightmode_color: "#505050"
@@ -53,7 +53,6 @@ Rectangle
     readonly property int __carbon_footprint_column: 7
     readonly property int __carbon_intensity_column: 8
 
-    property string errorMessage: ""
 
     color: ScreenManager.night_mode ?  Settings.app_color_dark : Settings.app_color_light
 
@@ -98,14 +97,13 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : keywords,
                             "Suggested model" : "",
@@ -115,14 +113,9 @@ Rectangle
                             "Carbon intensity" : ""
                         }
                     )
-                    table_model.rows = newRows
                 }
             }
             general_table.forceLayout();
-            if (keywords === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node ML Model Metadata. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
@@ -133,14 +126,13 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : model,
@@ -150,14 +142,9 @@ Rectangle
                             "Carbon intensity" : ""
                         }
                     )
-                    table_model.rows = newRows
                 }
             }
             general_table.forceLayout();
-            if (model === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node ML Model Provider. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
@@ -169,14 +156,13 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __hw_description_column), "display", hw_description)
                     table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -186,14 +172,9 @@ Rectangle
                             "Carbon intensity" : ""
                         }
                     )
-                    table_model.rows = newRows
                 }
             }
             general_table.forceLayout();
-            if (hw_description === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node HW Resource. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
 
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
@@ -205,14 +186,13 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
                     table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
-                    general_table.height = __data_height * table_model.rows.length;
+                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
-                    var newRows = table_model.rows
-                    newRows.push({
+                    table_model.appendRow({
                             "Reiterate" : "",
-                            "Checkbox" : "",
+                            "Checkbox" : "false",
                             "Iteration" : iteration_id,
                             "Problem kind" : "",
                             "Suggested model" : "",
@@ -222,14 +202,9 @@ Rectangle
                             "Carbon intensity" : carbon_intensity
                         }
                     )
-                    table_model.rows = newRows;
                 }
             }
             general_table.forceLayout();
-            if (carbon_intensity === 0 && !errorDialog.visible) {
-                errorMessage = "Error in node Carbon Footprint. Please check the logs for more details.";
-                errorDialog.open();
-            }
         }
     }
 
@@ -248,8 +223,8 @@ Rectangle
             content_width: general_header_table.contentWidth
             // content_height: general_header_table.height + general_table.height + 1
             layout: SmlScrollBar.ScrollBarLayout.Horizontal
-            scrollbar_backgound_color: Settings.app_color_light
-            scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+            scrollbar_background_color: Settings.app_color_light
+            scrollbar_background_nightmodel_color: Settings.app_color_dark
             interactive: false
             onWidthChanged: {
                 general_header_table.forceLayout(),
@@ -430,14 +405,14 @@ Rectangle
                 height: root.height - headerRect.height
                 contentHeight: general_table.height + 20
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_backgound_color: Settings.app_color_light
-                scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+                scrollbar_background_color: Settings.app_color_light
+                scrollbar_background_nightmodel_color: Settings.app_color_dark
                 flickableDirection: Flickable.VerticalFlick
 
                 Rectangle {
                     id: tableRect
                     width: headerRect.width
-                    height: __data_height * table_model.rows.length
+                    height: root.__data_height * table_model.rowCount
                     color: "transparent"
                     onWidthChanged: {
                         general_header_table.forceLayout(),
@@ -519,6 +494,7 @@ Rectangle
                                 nightmode_color:  Settings.app_color_green_4
                                 nightmode_color_pressed:  Settings.app_color_green_3
                                 size: Settings.button_icon_size
+                                clickable_text: "Reiterate"
 
                                 anchors
                                 {
@@ -526,26 +502,15 @@ Rectangle
                                     horizontalCenter: parent.horizontalCenter
                                 }
 
-                                SmlMouseArea
-                                {
-                                    anchors.centerIn: parent
-                                    hoverEnabled: true
-                                    width: parent.width * 1.5
-                                    height: parent.height * 1.5
-                                    onPressed: reiterate_button.pressed = true;
-                                    onReleased: reiterate_button.pressed = false;
-                                    onClicked:
-                                    {
-                                        main_window.reiterate_problem(root.problem_id, table_model.rows[row])
-                                    }
-                                }
+                                onClicked: main_window.reiterate_problem(root.problem_id, table_model.rows[row])
                             }
 
                             // Checkbox to select iterations
                             CheckBox
                             {
                                 visible: column === 1
-                                // checked: model.display === "true"
+                                checked: table_model.data(table_model.index(row, __check_column), "display") === "true"
+                                enabled: !main_window.tasking
                                 anchors{
                                     verticalCenter: value.verticalCenter
                                     horizontalCenter: parent.horizontalCenter
@@ -553,7 +518,9 @@ Rectangle
                                 indicator.height: __data_height /2
                                 indicator.width: indicator.height
 
-                                onCheckedChanged: {
+                                onClicked: {
+                                    var idx = table_model.index(row, __check_column)
+                                    table_model.setData(idx, "display", checked ? "true" : "false")
                                     if (checked) {
                                         root.component_signal("general_view", "add_to_compare", table_model.rows[row]["Iteration"])
                                     }
@@ -621,16 +588,4 @@ Rectangle
         }
     }
 
-    SmlDialog
-    {
-        id: errorDialog
-        placeholder_text: "ERROR!!"
-        text_value: errorMessage
-        background_color: Settings.app_color_light
-        border_color: Settings.app_color_green_4
-        border_width: 1
-        rounded: true
-        placeholder_text_color: Settings.app_color_blue
-        text_color: Settings.app_color_blue
-    }
 }

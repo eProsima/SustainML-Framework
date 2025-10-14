@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import QtQuick.Controls 2.15
 
 // Project imports
 import eProsima.SustainML.Settings 1.0
@@ -25,6 +26,9 @@ Item {
     property int anim_angle: Settings.button_movement_anim_angle
     property int anim_duration: Settings.button_movement_anim_duration
     property bool disabled: false
+    property string tooltip_text: ""
+    property int tooltip_delay: 1000    // ms before showing
+    property int tooltip_timeout: 0     // ms visible
 
 
     property string __font_color:  sustainml_custom_button.text_kind === SmlText.TextKind.App_name ? ScreenManager.app_name_color  :
@@ -99,9 +103,13 @@ Item {
             id: text
             text_kind: sustainml_custom_button.text_kind
             text_value: sustainml_custom_button.text_value
-            force_color: sustainml_custom_button.__pressed === true ? true : ScreenManager.night_mode
-                ? sustainml_custom_button.nightmode_color_text !== ""
-                : sustainml_custom_button.color_text !== ""
+            force_color: !sustainml_custom_button.disabled && (
+                sustainml_custom_button.__pressed
+                ? true
+                : ScreenManager.night_mode
+                    ? sustainml_custom_button.nightmode_color_text !== ""
+                    : sustainml_custom_button.color_text !== ""
+                )
             forced_color: !sustainml_custom_button.__pressed && sustainml_custom_button.nightmode_color_text !== ""
                      && sustainml_custom_button.color_text !== ""
                 ? ScreenManager.night_mode
@@ -132,5 +140,52 @@ Item {
         onClicked: { if (!sustainml_custom_button.disabled) sustainml_custom_button.clicked(); }
         onEntered: { if (!sustainml_custom_button.disabled) { mouse_area.cursorShape = Qt.PointingHandCursor; icon.start_animation(); } }
         onExited:  { if (!sustainml_custom_button.disabled) mouse_area.cursorShape = Qt.ArrowCursor; }
+    }
+
+    ToolTip
+    {
+        id: internalTooltip
+        visible: tooltip_text !== "" && mouse_area.containsMouse && !disabled
+        text: tooltip_text
+        delay: tooltip_delay
+        timeout: tooltip_timeout
+
+        // Dynamic positioning: prefer right, fallback left, never covering cursor horizontally
+        function updatePos() {
+            var root = sustainml_custom_button
+            while (root.parent) root = root.parent
+            var margin = 12
+            var global = sustainml_custom_button.mapToItem(root, mouse_area.mouseX, mouse_area.mouseY)
+
+            x = (root.width - (global.x + margin) >= implicitWidth)
+                    ? mouse_area.mouseX + margin
+                    : mouse_area.mouseX - implicitWidth - margin
+
+            var top = Math.max(margin, Math.min(global.y - implicitHeight / 2, root.height - implicitHeight - margin))
+            y = sustainml_custom_button.mapFromItem(root, 0, top).y
+        }
+
+        onVisibleChanged: if (visible) updatePos()
+        onImplicitWidthChanged: if (visible) updatePos()
+        onImplicitHeightChanged: if (visible) updatePos()
+        Connections {
+            target: mouse_area
+            function onPositionChanged() {
+                if (internalTooltip.visible) internalTooltip.updatePos()
+            }
+        }
+
+        background: Rectangle {
+            color: Qt.rgba(0.18, 0.18, 0.18, 0.75)
+            radius: 6
+        }
+        contentItem: Text {
+            text: internalTooltip.text
+            color: "white"
+            wrapMode: Text.WordWrap
+            font.pixelSize: 12
+            padding: 8
+            width: Math.min(280, implicitWidth)
+        }
     }
 }

@@ -55,6 +55,7 @@ Item
             color_pressed: Settings.app_color_green_1
             nightmode_color: Settings.app_color_green_1
             nightmode_color_pressed: Settings.app_color_green_3
+            tooltip_text: "Go to Home screen"
             anchors
             {
                 top: parent.top

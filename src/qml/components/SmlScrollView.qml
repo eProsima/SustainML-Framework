@@ -16,8 +16,8 @@ Flickable
     property int content_width: 0
     property int content_height: 0
     property int layout: SmlScrollBar.ScrollBarLayout.Vertical
-    property string scrollbar_backgound_color: "transparent"
-    property string scrollbar_backgound_nightmodel_color: "transparent"
+    property string scrollbar_background_color: "transparent"
+    property string scrollbar_background_nightmodel_color: "transparent"
 
     contentWidth: sustainml_custom_scrollview.content_width
     contentHeight: sustainml_custom_scrollview.content_height
@@ -34,8 +34,8 @@ Flickable
         anchors.right: sustainml_custom_scrollview.right
 
         policy: ScrollBar.AsNeeded
-        background_color: sustainml_custom_scrollview.scrollbar_backgound_color
-        background_nightmode_color: sustainml_custom_scrollview.scrollbar_backgound_nightmodel_color
+        background_color: sustainml_custom_scrollview.scrollbar_background_color
+        background_nightmode_color: sustainml_custom_scrollview.scrollbar_background_nightmodel_color
         layout: sustainml_custom_scrollview.layout
         visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Horizontal && sustainml_custom_scrollview.contentHeight > sustainml_custom_scrollview.height
     }
@@ -48,8 +48,8 @@ Flickable
         anchors.bottom: sustainml_custom_scrollview.bottom
 
         policy: ScrollBar.AsNeeded
-        background_color: sustainml_custom_scrollview.scrollbar_backgound_color
-        background_nightmode_color: sustainml_custom_scrollview.scrollbar_backgound_nightmodel_color
+        background_color: sustainml_custom_scrollview.scrollbar_background_color
+        background_nightmode_color: sustainml_custom_scrollview.scrollbar_background_nightmodel_color
         layout: sustainml_custom_scrollview.layout
         visible: sustainml_custom_scrollview.layout !== SmlScrollBar.ScrollBarLayout.Vertical && sustainml_custom_scrollview.contentWidth > sustainml_custom_scrollview.width
     }

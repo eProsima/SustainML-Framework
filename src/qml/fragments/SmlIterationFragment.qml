@@ -3,11 +3,13 @@ import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
+import QtQuick.Controls 1.4 as C1
 
 // Project imports
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Tree 1.0
 
 // Component imports
 import "../components"
@@ -68,6 +70,7 @@ Rectangle {
         target: sustainml_fragment_problem
 
         function onUpdate_iteration(comparison_interation_ids_list) {
+            comparison_interation_ids_list.sort(function(a, b) { return a - b; });
 
             var newList = [];
             var newRows = [];
@@ -125,8 +128,8 @@ Rectangle {
             content_width: general_header_table.contentWidth
             // content_height: general_header_table.height + general_table.height + 1
             layout: SmlScrollBar.ScrollBarLayout.Horizontal
-            scrollbar_backgound_color: Settings.app_color_light
-            scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+            scrollbar_background_color: Settings.app_color_light
+            scrollbar_background_nightmodel_color: Settings.app_color_dark
             interactive: false
 
             // Header
@@ -298,6 +301,14 @@ Rectangle {
                                     root.component_signal("iteration_view", "add_to_compare", model.display);
                                 }
                             }
+                            MenuItem {
+                                text: "More info"
+                                onTriggered: {
+                                    console.log("More info or " + model.display);
+                                    metricInfoPopup.metricName = model.display
+                                    metricInfoPopup.open()
+                                }
+                            }
                         }
 
                         MouseArea {
@@ -344,8 +355,8 @@ Rectangle {
                 height: root.height - headerRect.height
                 contentHeight: general_table.height + 20
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_backgound_color: Settings.app_color_light
-                scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+                scrollbar_background_color: Settings.app_color_light
+                scrollbar_background_nightmodel_color: Settings.app_color_dark
                 flickableDirection: Flickable.VerticalFlick
 
                 Rectangle {
@@ -707,113 +718,80 @@ Rectangle {
 
             }
 
-            SmlScrollView {
-                // anchors.fill: parent
-                anchors.top: iterationTextHeader.bottom
-                anchors.topMargin: Settings.spacing_small
-                anchors.left: parent.left
-                anchors.right: parent.right
-                width: parent.width
-                height: parent.height - iterationTextHeader.height - Settings.spacing_small * 2
-                content_height: columnContent.implicitHeight
-                layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_backgound_color: Settings.app_color_light
-                scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+            SustainMLTreeModel {
+                id: jsonTreeModel
+            }
 
-                Rectangle {
-                    id: tableContent
-                    width: parent.width
-                    color: "transparent"
-                    border.color: "transparent"
+            function expandAllNodes() {
+                try {
+                    var rootRowCount = jsonTreeModel.rowCount();
+                    console.log("Root row count:", rootRowCount);
 
-                    visible: Object.keys(infoPopup.jsonData).length > 0
-                    anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_small
-                        left: parent.left
-                        leftMargin: Settings.spacing_normal
+                    for (var i = 0; i < rootRowCount; i++) {
+                        var rootIndex = jsonTreeModel.index(i, 0);
+                        jsonTreeView.expand(rootIndex);
+                        expandChildren(rootIndex);
                     }
+                } catch (e) {
+                    console.log("Error expanding nodes:", e);
+                }
+            }
 
-                    Column {
-                        id: columnContent
-                        spacing: Settings.spacing_small
-                        width: parent.width
+            function expandChildren(parentIndex) {
+                try {
+                    var childCount = jsonTreeModel.rowCount(parentIndex);
+                    for (var i = 0; i < childCount; i++) {
+                        var childIndex = jsonTreeModel.index(i, 0, parentIndex);
+                        jsonTreeView.expand(childIndex);
+                        expandChildren(childIndex);
+                    }
+                } catch (e) {
+                    console.log("Error expanding children:", e);
+                }
+            }
 
-                        SmlText {
-                            text_value: "Node ML_MODEL"
-                            font.bold: true
-                            font.pointSize: 13
-                        }
-                        SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.ML_MODEL, null, 2)
-                            font.family: "monospace"
-                            wrapMode: Text.WordWrap
-                            font.pointSize: 10
-                        }
+            C1.TreeView {
+                id: jsonTreeView
+                anchors {
+                    top: iterationTextHeader.bottom
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                    topMargin: Settings.spacing_normal
+                    leftMargin: Settings.spacing_normal
+                    rightMargin: Settings.spacing_normal
+                }
+                model: jsonTreeModel
+                clip: true
+                selectionMode: C1.SelectionMode.NoSelection
+                frameVisible: false
 
-                        SmlText {
-                            text_value: "Node CARBON_FOOTPRINT"
-                            font.bold: true
-                            font.pointSize: 13
-                        }
-                        SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.CARBON_FOOTPRINT, null, 2)
-                            font.family: "monospace"
-                            wrapMode: Text.WordWrap
-                            font.pointSize: 10
-                        }
+                itemDelegate: Item {
 
-                        SmlText {
-                            text_value: "Node APP_REQUIREMENTS"
-                            font.bold: true
-                            font.pointSize: 13
-                        }
+                    Text {
+                        anchors.fill: parent
+                        elide: styleData.elideMode
+                        text: styleData.value
+                        font.family: styleData.column === 0 ? SustainMLFont.body_font : "monospace"
+                        color: "black"
+                    }
+                }
 
-                        SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.APP_REQUIREMENTS, null, 2)
-                            font.family: "monospace"
-                            wrapMode: Text.WordWrap
-                            font.pointSize: 10
-                        }
+                C1.TableViewColumn {
+                    role: "name"
+                    title: "Name"
+                    width: jsonTreeView.width * 0.40
+                }
+                C1.TableViewColumn {
+                    role: "value"
+                    title: "Value"
+                    width: jsonTreeView.width * 0.60
+                }
 
-                        SmlText {
-                            text_value: "Node HW_CONSTRAINTS"
-                            font.bold: true
-                            font.pointSize: 13
-                        }
-
-                        SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.HW_CONSTRAINTS, null, 2)
-                            font.family: "monospace"
-                            wrapMode: Text.WordWrap
-                            font.pointSize: 10
-                        }
-
-                        SmlText {
-                            text_value: "Node HW_RESOURCES"
-                            font.bold: true
-                            font.pointSize: 13
-                        }
-
-                        SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.HW_RESOURCES, null, 2)
-                            font.family: "monospace"
-                            wrapMode: Text.WordWrap
-                            font.pointSize: 10
-                        }
-
-                        SmlText {
-                            text_value: "Node ML_MODEL_METADATA"
-                            font.bold: true
-                            font.pointSize: 13
-                        }
-
-                        SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.ML_MODEL_METADATA, null, 2)
-                            font.family: "monospace"
-                            wrapMode: Text.WordWrap
-                            font.pointSize: 10
-                        }
+                Connections {
+                    target: jsonTreeModel
+                    function onUpdatedData() {
+                        jsonScrollView.expandAllNodes();
                     }
                 }
             }
@@ -822,8 +800,106 @@ Rectangle {
         onVisibleChanged: {
             if (visible) {
                 x = 0;
+                // pass the JSON object to the C++ model as a string
+                try {
+                    var s = JSON.stringify(infoPopup.jsonData);
+                    jsonTreeModel.updateFromJsonString(s);
+                    jsonTreeView.model = null;
+                    jsonTreeView.model = jsonTreeModel;
+
+                } catch (e) {
+                    console.log("Failed to stringify jsonData:", e);
+                }
             } else {
                 x = -width;
+            }
+        }
+    }
+
+    Popup {
+        id: metricInfoPopup
+        modal: true
+        focus: true
+        width: 300
+        height: 150
+        x: (parent.width - width)/2
+        y: (parent.height - height)/2
+        property string metricName: ""
+        property var metricDescriptions: ({
+            "latency": "Time it takes for a complete inference of the model in the suggested hardware (ms).",
+            "power consumption": "Instantaneous power consumed during execution of the model on the hardware (W).",
+            "carbon footprint": "Total CO2e emissions from the use of the model on the suggested hardware (gCO2e).",
+            "carbon intensity": "Emissions per unit of energy consumed (gCO2/kW).",
+            "energy consumption": "Total energy used by the execution (kWh)."
+        })
+
+        function descriptionFor(name) {
+            if (!name || name.length === 0) return "No description available."
+            var key = name.toLowerCase()
+
+            for (var k in metricInfoPopup.metricDescriptions) {
+                if (key.indexOf(k) !== -1) {
+                    return metricInfoPopup.metricDescriptions[k]
+                }
+            }
+            return "No description available."
+        }
+
+        background: Rectangle {
+            color: "white"
+            border.color: "#888"
+            radius: 6
+        }
+
+        Button {
+            text: "X"
+            anchors.top: parent.top
+            anchors.right: parent.right
+            width: 20
+            height: 20
+            onClicked: metricInfoPopup.close()
+        }
+
+        SmlText {
+            id: metricTitle
+            text_kind: SmlText.TextKind.Header_3
+            text_value: metricInfoPopup.metricName
+            font.bold: true
+            anchors {
+                top: parent.top
+                topMargin: 12
+                left: parent.left
+                leftMargin: 16
+                right: parent.right
+                rightMargin: 8
+            }
+            wrapMode: Text.WordWrap
+        }
+
+        SmlScrollView {
+            id: metricDescScroll
+            anchors {
+                top: metricTitle.bottom
+                topMargin: 8
+                left: parent.left
+                right: parent.right
+                bottom: parent.bottom
+                leftMargin: 16
+                rightMargin: 16
+                bottomMargin: 16
+            }
+            content_height: descText.implicitHeight
+            layout: SmlScrollBar.ScrollBarLayout.Vertical
+            scrollbar_background_color: Settings.app_color_light
+            scrollbar_background_nightmodel_color: Settings.app_color_dark
+            clip: true
+
+            SmlText {
+                id: descText
+                text_kind: SmlText.TextKind.Body
+                text_value: metricInfoPopup.descriptionFor(metricInfoPopup.metricName)
+                wrapMode: Text.WordWrap
+                width: metricDescScroll.width - 12
             }
         }
     }

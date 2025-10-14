@@ -29,6 +29,16 @@ Rectangle
     property var _barSets: []
     property var jsonList : []
 
+    function getYAxisUnits() {
+        if (values_list.length === 1) {
+            var txt = values_list[0].toString()
+            var m = txt.match(/\[(.+?)\]/)
+            if (m && m.length > 1)
+                return m[1]
+        }
+        return "" 
+    }
+
     Connections {
         target: sustainml_fragment_problem
 
@@ -47,7 +57,7 @@ Rectangle
         function onUpdate_comparison(comparison_value) {
             if (comparison_value != "" && values_list.length === 0) {
                 values_list = [comparison_value];
-                chartView.title = root.values_list.length > 0 ? "Comparisons between " + root.values_list[root.values_list.length - 1].toString() : "Comparisons";
+                yAxis.titleText = getYAxisUnits();
                 chartView.update()
             }
         }
@@ -55,7 +65,7 @@ Rectangle
 
     ChartView {
         id: chartView
-        title: root.values_list.length > 0 ? "Comparisons between " + root.values_list[root.values_list.length - 1].toString() : "Comparisons"
+        title: ""
         anchors.fill: parent
         legend.alignment: Qt.AlignBottom
         antialiasing: true
@@ -66,6 +76,8 @@ Rectangle
             labelsFormat: "@value"
             axisX: BarCategoryAxis { categories: root.values_list }
             axisY: ValueAxis {
+                id: yAxis
+                titleText: root.getYAxisUnits()
                 min: 0
                 max: 100
             }
@@ -251,8 +263,8 @@ Rectangle
                 height: parent.height - iterationTextHeader.height - Settings.spacing_small * 2
                 content_height: columnContent.implicitHeight
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_backgound_color: Settings.app_color_light
-                scrollbar_backgound_nightmodel_color: Settings.app_color_dark
+                scrollbar_background_color: Settings.app_color_light
+                scrollbar_background_nightmodel_color: Settings.app_color_dark
 
                 Rectangle {
                     id: tableContent

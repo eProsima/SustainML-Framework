@@ -42,6 +42,9 @@ class Engine : public QQmlApplicationEngine
 {
     Q_OBJECT
 
+private:
+    bool last_reiteration_flag_{ false };
+
 public:
 
     //! Standard void constructor
@@ -203,10 +206,12 @@ public slots:
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
+     * @param reiteration flag indicating if the task is a reiteration
      */
     void request_orchestrator(
         int problem_id,
-        int iteration_id);
+        int iteration_id,
+        bool reiteration = false);
 
 signals:
 
@@ -398,7 +403,12 @@ signals:
      * @param desired_carbon_footprint desired carbon footprint value
      * @param geo_location_continent continent of the location
      * @param geo_location_region region of the location
-     * @param extra_data extra data as JSON object
+     * @param goal goal of the task
+     * @param hardware_required required hardware specification
+     * @param max_memory_footprint maximum memory footprint allowed
+     * @param num_outputs number of outputs requested
+     * @param type type of the problem
+     * @param is_reiteration flag indicating if the task is a reiteration
      */
     void reiterate_user_inputs(
         const int& problem_id,
@@ -426,7 +436,8 @@ signals:
         const QString& hardware_required,
         const int& max_memory_footprint,
         const int& num_outputs,
-        const QString& type);
+        const QString& type,
+        bool is_reiteration);
 
     /**
      * @brief Update qml tasking bool signal as task end
@@ -537,7 +548,7 @@ private:
     std::vector<types::TaskId> received_task_ids;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
-    bool has_active_problem_ = false;
+    // bool has_active_problem_ = false;
 
     // --------------- REST requester --------------- //
     //! Send user input to the Framework pipeline

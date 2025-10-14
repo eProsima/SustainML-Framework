@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 # source sustainml environment
 source "/sustainml/install/setup.bash"
 
@@ -19,6 +21,7 @@ else
     elif [[ ${SUSTAINML_NODE} == "hw_resources" ]]; then
         python3 sustainml-wp2/hw_resources_provider_node.py
     elif [[ ${SUSTAINML_NODE} == "ml_model_metadata" ]]; then
+        service neo4j start
         python3 sustainml-wp1/ml_model_metadata_node.py
     elif [[ ${SUSTAINML_NODE} == "ml_model" ]]; then
         python3 sustainml-wp1/ml_model_provider_node.py

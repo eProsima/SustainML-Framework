@@ -8,9 +8,19 @@ set -euo pipefail
 BASE_DIR="$HOME/SustainML/SustainML_ws"
 
 if [ ! -d "$BASE_DIR" ]; then
-  echo "❌ ERROR: wasn't able to find the node's directory on: $BASE_DIR"
-  exit 1
+    echo "❌ ERROR: wasn't able to find the node's directory on: $BASE_DIR"
+    exit 1
 fi
+
+echo "▶️  Starting Neo4j"
+if command -v systemctl >/dev/null 2>&1; then
+    # Entorno local
+    sudo systemctl start neo4j
+else
+    # Docker u otro sin systemd
+    neo4j start
+fi
+
 
 cd "$BASE_DIR"
 cd "build/sustainml_modules/lib/sustainml_modules"
@@ -18,19 +28,28 @@ cd "build/sustainml_modules/lib/sustainml_modules"
 pids=()
 
 start_node() {
-  echo "▶️  Running: $*"
-  "$@" &
-  pids+=($!)
+    echo "▶️  Running: $*"
+    "$@" &
+    pids+=($!)
 }
 
 cleanup() {
-  echo
-  echo "🛑 Killing all processes..."
-  for pid in "${pids[@]}"; do
-    kill "$pid" 2>/dev/null || true
-  done
-  wait >/dev/null 2>&1 || true
-  echo "✅ All processes killed."
+    echo
+    echo "🛑 Killing all processes..."
+    for pid in "${pids[@]}"; do
+        kill "$pid" 2>/dev/null || true
+    done
+    wait >/dev/null 2>&1 || true
+    echo "✅ All processes killed."
+
+    echo "🛑 Stopping Neo4j"
+    if command -v systemctl >/dev/null 2>&1; then
+        # Entorno local con systemd
+        sudo systemctl stop neo4j
+    else
+        # Docker u otro sin systemd
+        neo4j stop
+    fi
 }
 trap cleanup EXIT SIGINT SIGTERM
 

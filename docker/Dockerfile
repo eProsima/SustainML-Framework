@@ -1,7 +1,7 @@
-FROM  ubuntu:22.04
+FROM  ubuntu:24.04
 LABEL author=raul@eprosima.com
 
-# Avoid interactuation with installation of some package that needs the locale.
+# Avoid interaction with installation of some package that needs the locale.
 ENV TZ=Europe/Madrid
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
@@ -13,13 +13,30 @@ SHELL ["/bin/bash", "-c"]
 
 # Install dependencies
 RUN apt update && apt install --yes --no-install-recommends \
-        wget git cmake g++ build-essential python3 python3.10-venv python3-pip libpython3-dev swig \
+        wget git cmake g++ build-essential python3 python3-venv python3-pip libpython3-dev swig \
         libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
         qtdeclarative5-dev libqt5charts5-dev qml-module-qtcharts \
-        qtquickcontrols2-5-dev libqt5svg5 qml-module-qtquick-controls \
+        qtquickcontrols2-5-dev libqt5svg5 qml-module-qtquick-controls qml-module-qtquick-dialogs \
         qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels && \
-    pip3 install -U \
-        colcon-common-extensions vcstool
+    pip3 install --break-system-packages -U \
+        colcon-common-extensions vcstool gdown
+
+# Install OpenJDK 21(required by Neo4j)
+RUN apt update && apt install -y openjdk-21-jdk
+
+# Install gnupg and add Neo4j repo
+RUN apt update && apt install -y gnupg ca-certificates && \
+    wget -O - https://debian.neo4j.com/neotechnology.gpg.key | gpg --dearmor -o /usr/share/keyrings/neo4j.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/neo4j.gpg] https://debian.neo4j.com stable latest" > /etc/apt/sources.list.d/neo4j.list && \
+    apt update && \
+    apt install -y neo4j && neo4j --version
+
+# Install additional libraries required by sustainml
+RUN apt update && apt install -y \
+    libfreetype6-dev \
+    libjpeg-dev \
+    libpng-dev \
+    zlib1g-dev
 
 # Set the SustainML working directory
 WORKDIR /sustainml
@@ -60,11 +77,22 @@ RUN wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sus
     fi
 
 # Initialize the sustainml library submodules
-RUN cd /sustainml/src/sustainml_lib && git submodule update --init --recursive && cd /sustainml
+RUN cd /sustainml/src/sustainml_lib && git submodule update --init --recursive && cd /sustainml 
+RUN cd /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && gdown --id 1gTXqQtP9JS92gAtPzhKgZpdIHSV_Lcnp -O rag/models_index.ann
+
 # Install the submodules dependencies
-RUN pip3 install -r /sustainml/src/sustainml_lib/sustainml_modules/requirements.txt
-RUN pip install hf_xet
+RUN pip3 install --break-system-packages -r /sustainml/src/sustainml_lib/sustainml_modules/requirements.txt
+RUN pip install --break-system-packages hf_xet
 # Build the projects
 RUN colcon build --event-handlers console_direct+
+
+# Load Neo4j backups and adjust permissions
+RUN neo4j-admin database load system \
+      --from-path=/sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+      --overwrite-destination=true && \
+    neo4j-admin database load neo4j \
+      --from-path=/sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
+      --overwrite-destination=true && \
+    chown -R neo4j:neo4j /var/lib/neo4j/data
 
 ENTRYPOINT ["/run.bash" ]

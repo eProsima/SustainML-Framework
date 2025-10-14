@@ -43,6 +43,8 @@ Window {
     property bool tasking: false
     property bool initializing: true
 
+    property var _screenInst: ({})
+
     // Main view properties
     width:  Settings.app_width
     height: Settings.app_height
@@ -328,7 +330,7 @@ Window {
                             model_selected,
                             type)
                 }
-                                
+
                 onRefresh:
                 {
                     main_window.refreshing = true
@@ -403,6 +405,7 @@ Window {
                         __goal_list: main_window.goal_list
                         __hardware_list: main_window.hardware_list
                         __model_list: main_window.model_list
+                        __metrics: main_window.metrics_list
                         __refreshing: main_window.refreshing
                         __initializing: main_window.initializing
                         __reiterate: true
@@ -520,10 +523,44 @@ Window {
             SmlResultsScreen
             {
                 id: results_screen_component
-                current_problem_id: -1
+                current_problem_id: 1
                 tasking: main_window.tasking
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
-                onGo_back: main_window.load_screen(ScreenManager.Screens.Definition) // todo update this
+                onGo_back_empty_input:
+                {
+                    var defInstance = _screenInst[ScreenManager.Screens.Definition];
+                    if (defInstance !== undefined) {
+                        defInstance.__problem_short_description = "";
+                        defInstance.__modality = "";
+                        defInstance.__metric = "";
+                        defInstance.__problem_definition = "";
+                        defInstance.__inputs = "";
+                        defInstance.__outputs = "";
+                        defInstance.__minimum_samples = 1;
+                        defInstance.__maximum_samples = 1;
+                        defInstance.__optimize_carbon_footprint_auto = false;
+                        defInstance.__goal = "";
+                        defInstance.__types = "transformers";
+                        defInstance.__optimize_carbon_footprint_manual = false;
+                        defInstance.__previous_iteration = 0;
+                        defInstance.__desired_carbon_footprint = 0.0;
+                        defInstance.__max_memory_footprint = 0;
+                        defInstance.__hardware_required = "PIM-AI-1chip";
+                        defInstance.__geo_location_continent = "";
+                        defInstance.__geo_location_region = "";
+                        defInstance.__extra_data = "";
+                        defInstance.__previous_problem_id = 0;
+                        defInstance.__num_outputs = 10;
+                        defInstance.__model_selected = "";
+                        defInstance.__model_selected_copy = "";
+                    }
+                    main_window.load_screen(ScreenManager.Screens.Definition)
+                }
+                onGo_back_previous_input:
+                {
+                    engine.request_orchestrator(parseInt(main_window.current_problem_id), 1, false)
+                    main_window.load_screen(ScreenManager.Screens.Definition)
+                }
                 onResults_screen_loaded:
                 {
                     results_screen_component.current_problem_id = main_window.current_problem_id
@@ -660,23 +697,14 @@ Window {
         nightmode_color:  Settings.app_color_green_4
         nightmode_color_pressed:  Settings.app_color_green_3
         size: Settings.button_big_icon_size
+        clickable_text: "Go to Node Status screen"
 
         x: parent.width - (size * 2)
         y: ScreenManager.current_screen === ScreenManager.Screens.Reiterate ?
             main_window.height - 2 * Settings.spacing_big :
             Settings.spacing_big
 
-        SmlMouseArea
-        {
-            anchors.centerIn: parent
-            hoverEnabled: true
-            width: parent.width * 1.5
-            height: parent.height * 1.5
-            onEntered: settings_icon.start_animation();
-            onPressed: settings_icon.pressed = true;
-            onReleased: settings_icon.pressed = false;
-            onClicked: main_window.load_screen(ScreenManager.Screens.Log)
-        }
+        onClicked: main_window.load_screen(ScreenManager.Screens.Log);
     }
 
     // Screen loader plus background animation trigger
@@ -721,6 +749,12 @@ Window {
                     break
             }
 
+            var inst = _screenInst[screen]
+            if (!inst) {
+                inst = screen_to_be_loaded.createObject(stack_view, {})
+                _screenInst[screen] = inst
+            }
+
             // Select actual screen location
             var position_to_be_moved = main_window.get_movement(screen)
 
@@ -734,7 +768,7 @@ Window {
             ScreenManager.current_screen = screen
 
             // Run the animations and perform screen change
-            stack_view.replace({item: screen_to_be_loaded, replace: true, destroyOnPop: true})
+            stack_view.replace({item: inst, replace: true, destroyOnPop: false})
             background_x_animation.start()
             background_y_animation.start()
             background_2_x_animation.start()
@@ -817,7 +851,7 @@ Window {
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
         reiterateModel.set(5, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
-        engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]))
+        engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         engine.request_model_from_goal(goal_and_tag)
         main_window.refreshing = true

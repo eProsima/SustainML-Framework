@@ -14,6 +14,13 @@ MouseArea {
 
     hoverEnabled: true
 
-    onEntered: sustainml_custom_mouse_area.cursorShape = sustainml_custom_mouse_area.custom_cursor_shape
-    onExited:  sustainml_custom_mouse_area.cursorShape = sustainml_custom_mouse_area.default_cursor_shape
+    onEntered: {
+        if (enabled && acceptedButtons !== Qt.NoButton)
+            cursorShape = custom_cursor_shape
+        else
+            cursorShape = default_cursor_shape
+    }
+    onExited:  {
+        cursorShape = default_cursor_shape
+    }
 }

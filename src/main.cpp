@@ -22,6 +22,7 @@
 #include <QtQuick/QQuickView>
 
 #include <sustainml/Engine.hpp>
+#include <sustainml/tree/TreeModel.h>
 
 int main(
         int argc,
@@ -40,6 +41,9 @@ int main(
 
     // Register project screen manager
     qmlRegisterSingletonType( QUrl("qrc:/ScreenManager"), "eProsima.SustainML.ScreenMan", 1, 0, "ScreenManager" );
+
+    // Register TreeModel for QML
+    qmlRegisterType<TreeModel>("eProsima.SustainML.Tree", 1, 0, "SustainMLTreeModel");
 
     // Register fonts
     QFontDatabase::addApplicationFont("qrc:/font/ArimaMadurai-ExtraBold.ttf");
