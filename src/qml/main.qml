@@ -853,7 +853,8 @@ Window {
         reiterateModel.set(5, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
-        engine.request_model_from_goal(goal_and_tag)
+        var goal_only = String(results["Problem kind"])
+        engine.request_model_from_goal(goal_only)
         main_window.refreshing = true
         load_screen(ScreenManager.Screens.Reiterate)
     }
