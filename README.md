@@ -115,7 +115,7 @@ The following sections describe the steps to install the SustainML Framework in 
     pip3 install gdown && \
     pip3 install -r ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/requirements.txt
     cd ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && \
-    gdown --id 1eR9IKrO0yS9ITl29rFjoWfARBlIYnDLq -O rag/models_index.ann && \
+    gdown --id 1TQvt1bSXares-I9l7Wki0Jge3oubRkOJ -O rag/models_index.ann && \
     sudo neo4j-admin database load system \
         --from-path=~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
         --overwrite-destination=true && \

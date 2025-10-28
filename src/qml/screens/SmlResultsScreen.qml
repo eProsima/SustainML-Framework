@@ -109,9 +109,14 @@ Item
             }
             tab_view.focus(problem_id, problem_id)
 
-            if (model === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node ML Model Provider. Please check the logs for more details."
-                errorDialog.open()
+            if (!errorDialog.visible) {
+                if (model === "NO_MODEL") {
+                    errorMessage = "No suitable model found for this task. Please refine the problem or constraints."
+                    errorDialog.open()
+                } else if (model === "Error") {
+                    errorMessage = "Error in node ML Model Provider. Please check the logs for more details."
+                    errorDialog.open()
+                }
             }
         }
 
@@ -131,7 +136,7 @@ Item
             }
             tab_view.focus(problem_id, problem_id)
 
-            if (hw_description === "Error" && !errorDialog.visible) {
+            if (hw_description === "Error" && model !== "Error" && model !== "NO_MODEL"  && !errorDialog.visible) {
                 errorMessage = "Error in node HW Resource. Please check the logs for more details."
                 errorDialog.open()
             }
@@ -159,7 +164,7 @@ Item
             }
 
         }
-        
+
     }
 
     // Detect when data has been received to load tabs components
@@ -370,4 +375,3 @@ SmlDialog
 }
 
 }
-
