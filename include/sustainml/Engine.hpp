@@ -144,14 +144,6 @@ public slots:
         const int problem_id, const int iteration_id);
 
     /**
-     * @brief Public method to cancel a specific iteration for a given problem.
-     * @param problem_id Identifier of the problem.
-     * @param iteration_id Identifier of the iteration to cancel.
-     */
-    void cancelIteration(
-    const int problem_id, const int iteration_id);
-
-    /**
      * @brief public method to request status periodically
      *
      */
