@@ -228,6 +228,7 @@ void Engine::request_current_data(
     for (int i = iterator_start; i < received_task_ids.size(); i++)
     {
         // Request results for all nodes, for the given task ids
+        std::cout << "Requesting current data for " << Utils::task_string(received_task_ids.at(i)).toStdString() << std::endl;
         request_results(received_task_ids.at(i), sustainml::NodeID::MAX);
     }
 }
@@ -707,6 +708,7 @@ void Engine::user_input_response(
             received_task_ids.push_back(task_id);
             emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
         }
+        std::cout << "User input response received for " << Utils::task_string(task_id).toStdString() << std::endl;
         // Request results for all nodes, last task id
         request_results(task_id, sustainml::NodeID::MAX);
         emit update_log(QString("User input send for ") + Utils::task_string(task_id));
@@ -756,9 +758,10 @@ void Engine::node_results_response(
             QJsonObject node_json = json_obj[Utils::node_name(id)].toObject();
             {
                 QJsonObject extra_data = node_json["extra_data"].toObject();
-                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1)
+                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 && cancel_success_ == false)
                 {
                     types::TaskId task_id = Utils::task_id(node_json);
+                    std::cout << "Requesting reiteration for " << Utils::task_string(task_id).toStdString() << std::endl;
                     task_id = types::TaskId(task_id.problem_id(), task_id.iteration_id() + 1);
                     received_task_ids.push_back(task_id);
                     emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
@@ -1039,6 +1042,8 @@ void Engine::config_response(
 void Engine::cancel_request(
         const QJsonObject& json_obj)
 {
+    cancel_success_ = false; 
+
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::cancel_response, this, std::placeholders::_1, std::placeholders::_2),
         REST_requester::RequestType::CANCEL_REQUEST,
@@ -1064,6 +1069,10 @@ void Engine::cancel_response(
             if (status == "cancelled")
             {
                 std::cout << "Task cancelled successfully" << std::endl;
+                // __FLAG__
+                cancel_success_ = true;
+                emit task_end();
+                //////////////////
             }
             else if (status == "not_found")
             {

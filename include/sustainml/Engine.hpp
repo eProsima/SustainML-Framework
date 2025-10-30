@@ -44,6 +44,7 @@ class Engine : public QQmlApplicationEngine
 
 private:
     bool last_reiteration_flag_{ false };
+    bool cancel_success_{ false };
 
 public:
 
