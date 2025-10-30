@@ -540,7 +540,7 @@ Window {
                         defInstance.__maximum_samples = 1;
                         defInstance.__optimize_carbon_footprint_auto = false;
                         defInstance.__goal = "";
-                        defInstance.__types = "transformers";
+                        defInstance.__types = defInstance.__types;
                         defInstance.__optimize_carbon_footprint_manual = false;
                         defInstance.__previous_iteration = 0;
                         defInstance.__desired_carbon_footprint = 0.0;
@@ -854,6 +854,9 @@ Window {
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         var goal_only = String(results["Problem kind"])
+        var defInstance = _screenInst[ScreenManager.Screens.Definition]
+        var fam = (defInstance && defInstance.__types) ? defInstance.__types : "transformers"
+        engine.request_model_from_goal(goal_only + ", " + fam)
         engine.request_model_from_goal(goal_only)
         main_window.refreshing = true
         load_screen(ScreenManager.Screens.Reiterate)

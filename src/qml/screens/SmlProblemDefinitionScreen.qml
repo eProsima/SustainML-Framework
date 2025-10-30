@@ -518,11 +518,11 @@ Item
         {
             activeFocusOnTab: true
             focus: true
-            disabled: true  // Right now, this is not editable
+            disabled: false
             id: types_input
             displayText: root.__types
             placeholder_text: displayText !== "" ? "" : "Select type limiter"
-            model: ["transformers", "..."]
+            model: ["transformers", "CNNs"]
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
