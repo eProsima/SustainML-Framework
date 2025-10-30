@@ -143,14 +143,6 @@ public slots:
         const int problem_id, const int iteration_id);
 
     /**
-     * @brief Public method to cancel a specific iteration for a given problem.
-     * @param problem_id Identifier of the problem.
-     * @param iteration_id Identifier of the iteration to cancel.
-     */
-    void cancelIteration(
-    const int problem_id, const int iteration_id);
-
-    /**
      * @brief public method to request status periodically
      *
      */
@@ -221,6 +213,9 @@ public slots:
         int problem_id,
         int iteration_id,
         bool reiteration = false);
+
+    //! Send cancellation request to nodes
+    void cancel_request();
 
 signals:
 
@@ -610,9 +605,6 @@ private:
             const REST_requester* requester,
             const QJsonObject& json_obj);
 
-    //! Send cancellation request to nodes
-    void cancel_request(
-            const QJsonObject& json_obj);
 
     //! Manage cancellation request response
     void cancel_response(

@@ -286,7 +286,7 @@ Item
             leftMargin: Settings.spacing_small
         }
         onClicked: {
-            engine.cancelIteration(root.current_problem_id, root.current_iteration_id)  // Stop the current tasking TODO
+            engine.cancel_request()  // Stop the current tasking TODO
         }
     }
 

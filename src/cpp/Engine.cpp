@@ -102,6 +102,7 @@ void Engine::launch_task(
     QJsonArray outs;
     Utils::split_string(inputs.toStdString(), ins, ' ');
     Utils::split_string(outputs.toStdString(), outs, ' ');
+    cancel_success_ = false;
 
     uint32_t min = 1;
     uint32_t max = sizeof(uint32_t) - 1;
@@ -247,14 +248,6 @@ QJsonObject Engine::request_specific_results(
     return specific_node_results_request(node_json_data);
 }
 
-void Engine::cancelIteration(
-    const int problem_id, const int iteration_id)
-{
-    QJsonObject payload;
-    payload["problem_id"]   = problem_id;
-    payload["iteration_id"] = iteration_id;
-    cancel_request(payload);
-}
 
 void Engine::request_status()
 {
@@ -1039,10 +1032,10 @@ void Engine::config_response(
     }
 }
 
-void Engine::cancel_request(
-        const QJsonObject& json_obj)
+void Engine::cancel_request()
 {
-    cancel_success_ = false; 
+    cancel_success_ = false;
+    QJsonObject json_obj; 
 
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::cancel_response, this, std::placeholders::_1, std::placeholders::_2),
@@ -1071,7 +1064,7 @@ void Engine::cancel_response(
                 std::cout << "Task cancelled successfully" << std::endl;
                 // __FLAG__
                 cancel_success_ = true;
-                emit task_end();
+                //emit task_end();
                 //////////////////
             }
             else if (status == "not_found")
