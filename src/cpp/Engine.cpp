@@ -1064,7 +1064,7 @@ void Engine::response_for_cancel(
                 std::cout << "Task cancelled successfully" << std::endl;
                 // __FLAG__
                 cancel_success_ = true;
-                emit task_end();
+                //emit task_end();
                 //////////////////
             }
             else if (status == "not_found")
