@@ -48,7 +48,8 @@ public:
         SEND_USER_INPUT,
         REQUEST_RESULTS,
         REQUEST_NODE_STATUS,
-        REQUEST_CONFIG
+        REQUEST_CONFIG,
+        CANCEL_REQUEST
     };
 
     //! Object performs a REST request and registers the functor for the response management

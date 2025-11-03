@@ -44,6 +44,7 @@ class Engine : public QQmlApplicationEngine
 
 private:
     bool last_reiteration_flag_{ false };
+    bool cancel_success_{ false };
 
 public:
 
@@ -212,6 +213,9 @@ public slots:
         int problem_id,
         int iteration_id,
         bool reiteration = false);
+
+    //! Send cancellation request to nodes
+    void cancel_request();
 
 signals:
 
@@ -598,6 +602,12 @@ private:
 
     //! Receive and propagate the node configuration
     void config_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+
+    //! Manage cancellation request response
+    void cancel_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
 

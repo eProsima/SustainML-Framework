@@ -79,6 +79,9 @@ QString REST_requester::request_type_to_url(
         case RequestType::REQUEST_CONFIG:
             url += "/config_request";
             break;
+        case RequestType::CANCEL_REQUEST:
+            url += "/cancel";
+            break;
     }
     return url;
 }

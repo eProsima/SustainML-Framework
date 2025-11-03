@@ -18,6 +18,8 @@ Item
     // Public properties
     property int current_problem_id: -1
     property string errorMessage: ""
+    property int current_iteration_id: -1
+
 
     // Public signals
     signal results_screen_loaded()
@@ -38,6 +40,8 @@ Item
 
         function onNew_app_requirements_node_output(problem_id, iteration_id, app_requirements)
         {
+            root.current_problem_id = problem_id;
+            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -55,6 +59,8 @@ Item
 
         function onNew_hw_constraints_node_output(problem_id, iteration_id, hw_required, max_memory_footprint)
         {
+            root.current_problem_id = problem_id;
+            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -73,6 +79,8 @@ Item
 
         function onNew_ml_model_metadata_node_output(problem_id, iteration_id, metadata, keywords)
         {
+            root.current_problem_id = problem_id;
+            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -95,6 +103,8 @@ Item
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
         {
+            root.current_problem_id = problem_id;
+            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -122,6 +132,8 @@ Item
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
         {
+            root.current_problem_id = problem_id;
+            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -144,6 +156,8 @@ Item
 
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
         {
+            root.current_problem_id = problem_id;
+            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -261,6 +275,7 @@ Item
         icon_name: Settings.stop_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: ""
+        disabled: !root.tasking
         rounded: true
         color: Settings.app_color_green_4
         color_pressed: Settings.app_color_green_1
@@ -275,7 +290,9 @@ Item
             left: new_problem_button.right
             leftMargin: Settings.spacing_small
         }
-        // onClicked: root.tasking = false  // Stop the current tasking TODO
+        onClicked: {
+            engine.cancel_request()  // Stop the current tasking TODO
+        }
     }
 
     // Tasking status text
