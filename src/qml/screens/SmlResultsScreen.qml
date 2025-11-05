@@ -19,6 +19,25 @@ Item
     property int current_problem_id: -1
     property string errorMessage: ""
     property int current_iteration_id: -1
+    // Gate: suppress HW error popup if the model stage already failed (Error/NO_MODEL)
+    property var __suppress_hw_error: ({})   // key: "problem:iteration" -> true | false
+
+    // Queue popups so both NO_MODEL and HW errors can show in order
+    property var __errorQueue: []
+
+    function __enqueueError(msg) {
+        __errorQueue.push(msg)
+        if (!errorDialog.visible) {
+            __showNextError()
+        }
+    }
+
+    function __showNextError() {
+        if (__errorQueue.length > 0) {
+            errorMessage = __errorQueue.shift()
+            errorDialog.open()
+        }
+    }
 
 
     // Public signals
@@ -119,14 +138,17 @@ Item
             }
             tab_view.focus(problem_id, problem_id)
 
-            if (!errorDialog.visible) {
-                if (model === "NO_MODEL") {
-                    errorMessage = "No suitable model found for this task. Please refine the problem or constraints."
-                    errorDialog.open()
-                } else if (model === "Error") {
-                    errorMessage = "Error in node ML Model Provider. Please check the logs for more details."
-                    errorDialog.open()
-                }
+            var key = problem_id + ":" + iteration_id
+            var modelFailed = (model === "Error" || model === "NO_MODEL")
+
+            // 1) Record suppression for HW errors
+            __suppress_hw_error[key] = modelFailed
+
+            // 2) Always show NO_MODEL (priority), show ML error too when applicable
+            if (model === "NO_MODEL") {
+                __enqueueError("No suitable model found for this task. Please refine the problem or constraints.")
+            } else if (model === "Error") {
+                __enqueueError("Error in node ML Model Provider. Please check the logs for more details.")
             }
         }
 
@@ -148,9 +170,19 @@ Item
             }
             tab_view.focus(problem_id, problem_id)
 
-            if (hw_description === "Error" && model !== "Error" && model !== "NO_MODEL"  && !errorDialog.visible) {
-                errorMessage = "Error in node HW Resource. Please check the logs for more details."
-                errorDialog.open()
+            var key = problem_id + ":" + iteration_id
+            var hwIsError = (typeof hw_description === "string") &&
+                            (hw_description.toLowerCase().indexOf("error") !== -1)
+
+            // If model outcome is still unknown, be conservative: do nothing now
+            var suppress = __suppress_hw_error[key]
+            if (suppress === undefined) {
+                return
+            }
+
+            // Only show HW error if the model stage succeeded
+            if (hwIsError && suppress === false) {
+                __enqueueError("Error in node HW Resource. Please check the logs for more details.")
             }
         }
 
@@ -291,7 +323,7 @@ Item
             leftMargin: Settings.spacing_small
         }
         onClicked: {
-            engine.cancel_request()  // Stop the current tasking TODO
+            engine.request_for_cancel()  // Stop the current tasking TODO
         }
     }
 
@@ -388,7 +420,10 @@ SmlDialog
     text_color: Settings.app_color_blue
 
     // Opcional: limpiar estado al cerrar
-    onClosed: errorMessage = ""
+    onClosed: {
+        errorMessage = ""
+        __showNextError()
+    }
 }
 
 }

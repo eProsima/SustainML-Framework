@@ -22,6 +22,7 @@
 #ifndef EPROSIMA_SUSTAINML_ENGINE_HPP
 #define EPROSIMA_SUSTAINML_ENGINE_HPP
 
+#include <atomic>
 #include <memory>
 
 #include <QNetworkAccessManager>
@@ -44,7 +45,7 @@ class Engine : public QQmlApplicationEngine
 
 private:
     bool last_reiteration_flag_{ false };
-    bool cancel_success_{ false };
+    std::atomic_bool cancel_requested_{false};
 
 public:
 
@@ -215,7 +216,7 @@ public slots:
         bool reiteration = false);
 
     //! Send cancellation request to nodes
-    void cancel_request();
+    void request_for_cancel();
 
 signals:
 
@@ -607,7 +608,7 @@ private:
 
 
     //! Manage cancellation request response
-    void cancel_response(
+    void response_for_cancel(
             const REST_requester* requester,
             const QJsonObject& json_obj);
 

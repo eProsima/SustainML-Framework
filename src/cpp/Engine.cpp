@@ -102,7 +102,7 @@ void Engine::launch_task(
     QJsonArray outs;
     Utils::split_string(inputs.toStdString(), ins, ' ');
     Utils::split_string(outputs.toStdString(), outs, ' ');
-    cancel_success_ = false;
+    cancel_requested_.store(false);
 
     uint32_t min = 1;
     uint32_t max = sizeof(uint32_t) - 1;
@@ -751,7 +751,7 @@ void Engine::node_results_response(
             QJsonObject node_json = json_obj[Utils::node_name(id)].toObject();
             {
                 QJsonObject extra_data = node_json["extra_data"].toObject();
-                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 && cancel_success_ == false)
+                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 && !cancel_requested_.load())
                 {
                     types::TaskId task_id = Utils::task_id(node_json);
                     std::cout << "Requesting reiteration for " << Utils::task_string(task_id).toStdString() << std::endl;
@@ -1032,13 +1032,13 @@ void Engine::config_response(
     }
 }
 
-void Engine::cancel_request()
+void Engine::request_for_cancel()
 {
-    cancel_success_ = false;
-    QJsonObject json_obj; 
+    cancel_requested_.store(true);
+    QJsonObject json_obj;
 
     REST_requester* requester = new REST_requester(
-        std::bind(&Engine::cancel_response, this, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&Engine::response_for_cancel, this, std::placeholders::_1, std::placeholders::_2),
         REST_requester::RequestType::CANCEL_REQUEST,
         json_obj);
 
@@ -1048,7 +1048,7 @@ void Engine::cancel_request()
     }
 }
 
-void Engine::cancel_response(
+void Engine::response_for_cancel(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
@@ -1062,10 +1062,6 @@ void Engine::cancel_response(
             if (status == "cancelled")
             {
                 std::cout << "Task cancelled successfully" << std::endl;
-                // __FLAG__
-                cancel_success_ = true;
-                //emit task_end();
-                //////////////////
             }
             else if (status == "not_found")
             {
