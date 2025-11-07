@@ -5,7 +5,6 @@ from .vendor.sustain_ml_predictor.predictor import predict  # vendored DFKI code
 HERE = os.path.dirname(__file__)
 PREDICTOR_HOME = os.path.join(HERE, "vendor", "sustain_ml_predictor")
 DEFAULT_DEVICE = "xczu19eg-ffvb1517-2-i"
-DEFAULT_STATS  = os.path.join(PREDICTOR_HOME, "unet_models_stats.json")
 DEFAULT_DEVICE_DIR = os.path.join(PREDICTOR_HOME, DEFAULT_DEVICE)
 
 def _hash_file(path: str) -> str:
@@ -17,13 +16,16 @@ def _hash_file(path: str) -> str:
 
 def predict_latency_power(onnx_model_path: str,
                           device: str = DEFAULT_DEVICE,
-                          stats_file: str = DEFAULT_STATS) -> dict:
-    if not os.path.isfile(onnx_model_path):
-        raise FileNotFoundError(f"ONNX model not found: {onnx_model_path}")
+                          stats_file: str = None) -> dict:
+    if stats_file is None:
+        stats_file = os.path.join(PREDICTOR_HOME, device, "unet_models_stats.json")
 
     device_dir = DEFAULT_DEVICE_DIR if device == DEFAULT_DEVICE else os.path.join(PREDICTOR_HOME, device)
     lat_path = os.path.join(device_dir, "predictor_model_latency.onnx")
     pow_path = os.path.join(device_dir, "predictor_model_power.onnx")
+
+    print(f"[FPGA adapter] stats_file={stats_file}")
+    print(f"[FPGA adapter] latency_model={lat_path}, power_model={pow_path}")
 
     for p in (stats_file, lat_path, pow_path):
         if not os.path.isfile(p):
@@ -53,4 +55,3 @@ def predict_latency_power(onnx_model_path: str,
             "assets_dir": os.path.relpath(device_dir, HERE),
         }
     }
-
