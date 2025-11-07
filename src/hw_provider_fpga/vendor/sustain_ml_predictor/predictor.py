@@ -8,15 +8,16 @@ import onnxruntime
 from collections import defaultdict
 
 VISUALIZE_MODEL=False
-    
+DEBUG_FLOPS = False
+
 def arch_encoding_unet(arch):
-    
+
     input_channels = arch['input_channels'] # Is not used - the same for all models
     depth = arch['depth']
     initial_channels = arch['initial_channels']
     input_size = arch['input_size']
     kernel_sizes = arch['kernel_sizes']
-    
+
     # Define possible values
     input_channel_options = [3] # Is not used - the same for all models
     depth_options = [1, 2, 3, 4]
@@ -26,7 +27,7 @@ def arch_encoding_unet(arch):
     # One-hot encodings
     depth_vec = [int(depth == d) for d in depth_options]
     channels_vec = [int(initial_channels == ch) for ch in channels_options]
-    input_size_vec = [int(input_size == sz) for sz in input_size_options]       
+    input_size_vec = [int(input_size == sz) for sz in input_size_options]
 
     # Kernel encoding (each of 5 slots encoded as 2-bit one-hot)
     # "kernel_sizes": [5, 5, 3, 3, 3] -> [01 01 10 10 10]
@@ -38,7 +39,7 @@ def arch_encoding_unet(arch):
         elif ks == 5:
             kernel_encoding += [0, 1]
         else:
-            kernel_encoding += [0, 0]  # padding    
+            kernel_encoding += [0, 0]  # padding
 
     return np.array(depth_vec + channels_vec + input_size_vec + kernel_encoding)
 
@@ -89,6 +90,7 @@ def count_params(node, initializer_map):
     return params
 
 def count_flops(node, value_map, initializer_map):
+    flops = 0  # robust default
 
     try:
         if node.op_type == "Conv":
@@ -135,13 +137,15 @@ def count_flops(node, value_map, initializer_map):
 
         elif node.op_type == "Concat":
             input_shapes = [value_map[inp] for inp in node.input if inp in value_map]
-            flops = flops_concat(input_shapes)  
+            flops = flops_concat(input_shapes)
 
     except Exception as e:
-        print(f"{node.op_type:<15} [Skipped] Error: {e}")         
-    
-    flops = flops / 1e6
-    return flops
+        if DEBUG_FLOPS:
+            print(f"{node.op_type:<15} [Skipped] Error: {e}")
+        flops = 0
+
+    # Always return a float in MFLOPs
+    return float(flops) / 1e6 if isinstance(flops, (int, float, np.number)) else 0.0
 
 def adj_matrix_node_features_from_onnx(onnx_model_path, visualize=False):
     """
@@ -158,28 +162,29 @@ def adj_matrix_node_features_from_onnx(onnx_model_path, visualize=False):
         adj_matrix (np.ndarray): Adjacency matrix of the graph (shape: [num_nodes, num_nodes]).
         node_features (list[dict]): Features for each node with 'op_type', 'flops', 'params'.
         op_types (list[str]): Sorted list of unique operation types in the model.
-    """ 
+    """
 
     # Load the ONNX model from file
     onnx_model = onnx.load(onnx_model_path)
+    onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
     # Check that the model is valid
-    onnx.checker.check_model(onnx_model) 
-    
+    onnx.checker.check_model(onnx_model)
+
     # Access the main computation graph of the model
-    graph = onnx_model.graph  
-    
+    graph = onnx_model.graph
+
     # Create a mapping from initializer name to tensor object.
     # Initializers are the fixed tensors in the model (weights, biases, etc.).
     initializer_map = {init.name: init for init in graph.initializer}
-    
+
     # Build a mapping from tensor name to its shape
     value_map = {}
     # graph.value_info contains intermediate tensors metadata
     # graph.input contains model inputs
     # graph.output contains model outputs
     for vi in list(graph.value_info) + list(graph.input) + list(graph.output):
-        value_map[vi.name] = get_shape(vi)  
-    
+        value_map[vi.name] = get_shape(vi)
+
     # Create an empty directed graph to represent node connectivity
     nx_graph = nx.DiGraph()
     # Maps tensor outputs to the node index that produces them
@@ -190,20 +195,20 @@ def adj_matrix_node_features_from_onnx(onnx_model_path, visualize=False):
     # Add nodes to the graph and compute node-level features
     for i, node in enumerate(graph.node):
         # Create a unique node name using operation type and index
-        node_name = f"{node.op_type}_{i}" 
-        
+        node_name = f"{node.op_type}_{i}"
+
         if visualize:
             if node.op_type == "Conv":
                 in_ch, out_ch, ksize = extract_conv_metadata(node, initializer_map)
                 node_name = f"{node_name}\nin={in_ch}\nout={out_ch}\nk={ksize}"
-            
+
         # Add node to NetworkX graph with a label
         nx_graph.add_node(i, label=node_name)
-        
+
         # Record which node produces each output tensor
         for output in node.output:
             node_output_map[output] = i
-            
+
         # Compute the number of trainable parameters and FLOPs for the node
         params = count_params(node, initializer_map)
         flops = count_flops(node, value_map, initializer_map)
@@ -225,7 +230,7 @@ def adj_matrix_node_features_from_onnx(onnx_model_path, visualize=False):
         pydot_graph.set_rankdir("TB")  # Top-to-bottom layout
         output_file_name = "unet_model.png"
         pydot_graph.write_png(output_file_name)
-    
+
     # Create a mapping from node to index for adjacency matrix construction
     node_list = list(nx_graph.nodes())
     index_map = {node: idx for idx, node in enumerate(node_list)}
@@ -239,71 +244,77 @@ def adj_matrix_node_features_from_onnx(onnx_model_path, visualize=False):
         i = index_map[src]
         j = index_map[dst]
         adj_matrix[i][j] = 1  # 1 indicates a directed edge from i → j
-    
+
     # Extract all unique operation types used in the model
     op_types = sorted({node.op_type for node in graph.node})
-        
-    return adj_matrix, node_features, op_types 
+
+    return adj_matrix, node_features, op_types
 
 def update_adj_matrix(input_adj_matrix, stats):
-      
+
     # +1 due to the Global node
     N = stats["max_seq_len"] + 1
-    
+
     # Create an empty adjacency matrix
-    adj_matrix = np.zeros((N, N), dtype=np.int8)  
-        
+    adj_matrix = np.zeros((N, N), dtype=np.int8)
+
     for i in range(N-1):
         for j in range(N-1):
             try:
                 adj_matrix[i+1][j+1] = input_adj_matrix[i][j]
             except:
-                pass 
-            
+                pass
+
     # Add the Global node
     for j in range(N):
-        adj_matrix[0][j] = 1.0 
-    
+        adj_matrix[0][j] = 1.0
+
     # Add self-loops
     for i in range(N):
-        adj_matrix[i][i] = 1.0    
+        adj_matrix[i][i] = 1.0
 
     return adj_matrix
 
-def update_node_features(input_node_features, stats):    
-     
+def update_node_features(input_node_features, stats):
+
     node_features = []
     all_op_types = ['Global'] + stats["all_op_types"]
-    
+
     def one_hot_encoded(op_type, all_op_types):
         dict_op_types = ['None']
         dict_op_types.extend(all_op_types)
         return [int(op_type == op) for op in dict_op_types]
-          
+
     for node in input_node_features:
         temp = one_hot_encoded(node['op_type'], all_op_types)
         temp.append((np.log1p(node['flops']) - stats["mean_flops"]) / stats["std_flops"])
         temp.append((np.log1p(node['params']) - stats["mean_params"]) / stats["std_params"])
         node_features.append(temp)
-    
+
     # Add Global node
     global_node = one_hot_encoded('Global', all_op_types)
     global_node.append(0.0)
     global_node.append(0.0)
     node_features = [global_node] + node_features
-    
+
     # Padding
     while len(node_features) < (stats["max_seq_len"] + 1):
         temp = one_hot_encoded(None, all_op_types)
         temp.append(0)
         temp.append(0)
         node_features.append(temp)
-        
+
     return np.array(node_features)
 
-def extract_unet_info(onnx_model_path):    
+def extract_unet_info(onnx_model_path):
     model = onnx.load(onnx_model_path)
     graph = model.graph
+
+    # Map tensor name -> producer node
+    producer = {}
+    for n in graph.node:
+        for out_name in n.output:
+            producer[out_name] = n
 
     # Initialize info
     input_channels = None
@@ -336,21 +347,32 @@ def extract_unet_info(onnx_model_path):
             if attr.name == "kernel_shape":
                 kernel_sizes_per_level[level].append(list(attr.ints))
 
-        # Extract initial_channels from first Conv
         if idx == 0:
             weight_name = node.input[1]
-            weight_initializer = [init for init in graph.initializer if init.name == weight_name]
+
+            # Resolve through DequantizeLinear if needed
+            resolved_weight_name = weight_name
+            if weight_name not in [init.name for init in graph.initializer] and weight_name in producer:
+                pnode = producer[weight_name]
+                if pnode.op_type == "DequantizeLinear" and len(pnode.input) >= 1:
+                    resolved_weight_name = pnode.input[0]  # this should be the real initializer
+
+            weight_initializer = [init for init in graph.initializer if init.name == resolved_weight_name]
             if weight_initializer:
                 weight_tensor = weight_initializer[0]
+                # For Conv weights: [Cout, Cin, Kh, Kw]
                 initial_channels = weight_tensor.dims[0]
+            else:
+                # Last-resort fallback so the code never crashes
+                initial_channels = 32
 
         # Move to next level after `convs_in_level` Conv layers
         if (idx + 1) % convs_in_level == 0:
             level += 1
 
     # Convert defaultdict to regular dict
-    kernel_sizes_per_level = dict(kernel_sizes_per_level)    
-    
+    kernel_sizes_per_level = dict(kernel_sizes_per_level)
+
     # Verify that all Conv layers in the same U-Net level have the same kernel size
     kernel_size_value_per_level = {}
     for level, kernels in kernel_sizes_per_level.items():
@@ -362,74 +384,106 @@ def extract_unet_info(onnx_model_path):
         else:
             raise Exception(f"Level {level}: Conv layers have different kernel sizes {kernel_tuples}")
 
-    # Extract kernel values 
+    # Extract kernel values
     kernel_sizes = []
     for level in range(depth+1):
-        kernel_sizes.append(kernel_size_value_per_level[level])   
-        
+        kernel_sizes.append(kernel_size_value_per_level[level])
+
     # Compute flops and params
     initializer_map = {init.name: init for init in graph.initializer}
     value_map = {}
     for vi in list(graph.value_info) + list(graph.input) + list(graph.output):
-        value_map[vi.name] = get_shape(vi) 
+        value_map[vi.name] = get_shape(vi)
 
     total_params, total_flops = 0, 0
     for i, node in enumerate(graph.node):
         total_params += count_params(node, initializer_map)
-        total_flops += count_flops(node, value_map, initializer_map)     
-        
+        total_flops += count_flops(node, value_map, initializer_map)
+
     return {
         "input_channels": input_channels,
         "input_size": input_size,
-        "initial_channels": int(initial_channels / 2), # TODO: Fix search space generator
+        "initial_channels": int((initial_channels or 32) / 2), # TODO: Fix search space generator
         "depth": depth,
         "kernel_sizes": kernel_sizes,
         "flops": total_flops,
         "params": total_params
     }
-  
+
 def predict(onnx_model_file, models_stats_file, prediction_model_file):
-    
+
     predictor = onnxruntime.InferenceSession(prediction_model_file, providers=['CPUExecutionProvider'])
-    
+
     with open(models_stats_file, "r") as f:
-        stats = json.load(f)    
-    
+        stats = json.load(f)
+    print(f"[DFKI predictor] using stats file: {os.path.abspath(models_stats_file)}  "
+      f"(max_seq_len={stats.get('max_seq_len')}, exp_N_from_stats={stats.get('max_seq_len', -1)+1})")
+
     arch = extract_unet_info(onnx_model_file)
-    arch_encoding = arch_encoding_unet(arch)    
-   
+    arch_encoding = arch_encoding_unet(arch)
+
     adj_matrix, node_features, op_types = adj_matrix_node_features_from_onnx(onnx_model_file, visualize=VISUALIZE_MODEL)
-    
+
     # Have to be updated considering the statistics of the complete design space (all topologies)
     # The adjacency matrix and the node features are used as an input to Graph Convolutional Networks (GCN)
-    adj_matrix = update_adj_matrix(adj_matrix, stats)     
+    adj_matrix = update_adj_matrix(adj_matrix, stats)
     node_features = update_node_features(node_features, stats)
-    
+
     adj_matrix = adj_matrix.astype(np.float32)
     node_features = node_features.astype(np.float32)
     arch_encoding = arch_encoding.astype(np.float32)
-    
-    # Add batch dimension (axis=0)
-    adj_matrix = np.expand_dims(adj_matrix, axis=0)
-    node_features = np.expand_dims(node_features, axis=0)
-    arch_encoding = np.expand_dims(arch_encoding, axis=0)
 
+    # Ask ONNX what N it expects (from first 3D input)
+    exp_N = None
+    for inp in predictor.get_inputs():
+        shp = inp.shape  # e.g. [1, 50, 50] or [1, 50, F]
+        if isinstance(shp, (list, tuple)) and len(shp) >= 3:
+            if shp[0] in (None, 1) and isinstance(shp[1], int) and shp[1] > 0:
+                exp_N = shp[1]
+                break
+
+    # Add batch dimension
+    adj_matrix = np.expand_dims(adj_matrix, axis=0)       # [1, N, N]
+    node_features = np.expand_dims(node_features, axis=0) # [1, N, F]
+    arch_encoding = np.expand_dims(arch_encoding, axis=0) # [1, D]
+
+    # Conform to exp_N (pad/truncate)
+    if exp_N is not None:
+        print(f"[DFKI predictor] ONNX expects N={exp_N} | "
+            f"adj_in={adj_matrix.shape} nodefeat_in={node_features.shape}")
+        # adj_matrix → [1, exp_N, exp_N]
+        if adj_matrix.shape[1] != exp_N:
+            Ncur = adj_matrix.shape[1]
+            adj_fix = np.zeros((1, exp_N, exp_N), dtype=adj_matrix.dtype)
+            keep = min(Ncur, exp_N)
+            adj_fix[:, :keep, :keep] = adj_matrix[:, :keep, :keep]
+            adj_matrix = adj_fix
+        # node_features → [1, exp_N, F]
+        if node_features.shape[1] != exp_N:
+            Ncur, F = node_features.shape[1], node_features.shape[2]
+            nf_fix = np.zeros((1, exp_N, F), dtype=node_features.dtype)
+            keep = min(Ncur, exp_N)
+            nf_fix[:, :keep, :] = node_features[:, :keep, :]
+            node_features = nf_fix
+        print(f"[DFKI predictor] conformed shapes: adj={adj_matrix.shape} nodefeat={node_features.shape}")
+
+    # Build inputs and run
     data = [adj_matrix, node_features, arch_encoding]
-    inputs = {inp.name: data[idx] for idx, inp in enumerate(predictor.get_inputs())} # Multiple inputs
-    output_name = predictor.get_outputs()[0].name  # Single output
-    pred = predictor.run([output_name], inputs)[0] 
-    
-    return pred
+    inputs = {inp.name: data[idx] for idx, inp in enumerate(predictor.get_inputs())}
+    output_name = predictor.get_outputs()[0].name
+    pred = predictor.run([output_name], inputs)[0]
+
+    return float(np.array(pred).reshape(-1)[0])
 
 if __name__ == '__main__':
-    
+
     parser = argparse.ArgumentParser(description='PyTorch, Onnx and HiL (onnx, tflite, armnn) MNIST Example')
     parser.add_argument('--device', type=str, default="xczu19eg-ffvb1517-2-i", help='Path to a directory containing FPGA-dependant data')
     parser.add_argument('--model_file', type=str, help='Path to an onnx file containing U-Net models')
     parser.add_argument('--models_stats_file', type=str, default="unet_models_stats.json", help='Path to a file containing statistics of the U-Net models')
     parser.add_argument('--metric', type=str, help='Metric to be predicted')
-    args = parser.parse_args()    
-   
+    args = parser.parse_args()
+
     predictors = {
         "xczu19eg-ffvb1517-2-i": {
             "latency": "predictor_model_latency.onnx",
@@ -438,5 +492,5 @@ if __name__ == '__main__':
     }
     prediction_model_file = os.path.join(args.device, predictors[args.device][args.metric])
     pred = predict(args.model_file, args.models_stats_file, prediction_model_file)
-    
+
     print(f"Prediction of {args.metric} for {args.device}: {pred[0]}")

@@ -546,6 +546,21 @@ Item
             onText_changed:
             {
                 root.__types = text;
+
+                // --- NEW: same logic triggered if user changes CNNs/Transformers ---
+                if (text.toLowerCase() === "cnns" &&
+                    root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)") {
+
+                    goal_input.disabled = true;
+                    root.__goal = "";
+
+                    var cfg = "U_NET_MODELS, " +
+                            root.__hardware_required + ", " + text;
+                    console.log("[Frontend] Requesting U-Net model list with: " + cfg);
+                    root.ask_models(cfg);
+                } else {
+                    goal_input.disabled = false;
+                }
             }
             onFocusChanged: {
                 if(focus === true){
@@ -868,6 +883,26 @@ Item
             onText_changed:
             {
                 root.__hardware_required = text;
+
+                // --- NEW: detect CNN + FPGA combo ---
+                if (root.__types.toLowerCase() === "cnns" &&
+                    text === "FPGA (xczu19eg-ffvb1517-2-i)") {
+
+                    // Disable goal selection
+                    goal_input.disabled = true;
+
+                    // Clear goal if set
+                    root.__goal = "";
+
+                    // Ask backend for U-Net models directly
+                    // The backend already supports this string
+                    var cfg = "U_NET_MODELS, " + text + ", " + root.__types;
+                    console.log("[Frontend] Requesting U-Net model list with: " + cfg);
+                    root.ask_models(cfg);
+                } else {
+                    // Otherwise, re-enable the goal selection
+                    goal_input.disabled = false;
+                }
             }
             onModelChanged:
             {
