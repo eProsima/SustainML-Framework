@@ -855,7 +855,7 @@ Window {
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         var goal_only = String(results["Problem kind"])
         var defInstance = _screenInst[ScreenManager.Screens.Definition]
-        var fam = (defInstance && defInstance.__types) ? defInstance.__types : "transformers"
+        var fam = (defInstance && defInstance.__types) ? defInstance.__types : "Transformers"
         engine.request_model_from_goal(goal_only + ", " + fam)
         engine.request_model_from_goal(goal_only)
         main_window.refreshing = true

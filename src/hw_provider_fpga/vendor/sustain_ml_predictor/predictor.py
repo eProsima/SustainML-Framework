@@ -8,7 +8,6 @@ import onnxruntime
 from collections import defaultdict
 
 VISUALIZE_MODEL=False
-DEBUG_FLOPS = False
 
 def arch_encoding_unet(arch):
 
@@ -90,7 +89,6 @@ def count_params(node, initializer_map):
     return params
 
 def count_flops(node, value_map, initializer_map):
-    flops = 0  # robust default
 
     try:
         if node.op_type == "Conv":
@@ -140,12 +138,10 @@ def count_flops(node, value_map, initializer_map):
             flops = flops_concat(input_shapes)
 
     except Exception as e:
-        if DEBUG_FLOPS:
-            print(f"{node.op_type:<15} [Skipped] Error: {e}")
-        flops = 0
+        print(f"{node.op_type:<15} [Skipped] Error: {e}")
 
-    # Always return a float in MFLOPs
-    return float(flops) / 1e6 if isinstance(flops, (int, float, np.number)) else 0.0
+    flops = flops / 1e6
+    return flops
 
 def adj_matrix_node_features_from_onnx(onnx_model_path, visualize=False):
     """
@@ -166,7 +162,6 @@ def adj_matrix_node_features_from_onnx(onnx_model_path, visualize=False):
 
     # Load the ONNX model from file
     onnx_model = onnx.load(onnx_model_path)
-    onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
     # Check that the model is valid
     onnx.checker.check_model(onnx_model)
 
@@ -310,12 +305,6 @@ def extract_unet_info(onnx_model_path):
     model = onnx.load(onnx_model_path)
     graph = model.graph
 
-    # Map tensor name -> producer node
-    producer = {}
-    for n in graph.node:
-        for out_name in n.output:
-            producer[out_name] = n
-
     # Initialize info
     input_channels = None
     input_size = None
@@ -347,24 +336,14 @@ def extract_unet_info(onnx_model_path):
             if attr.name == "kernel_shape":
                 kernel_sizes_per_level[level].append(list(attr.ints))
 
+        # Extract initial_channels from first Conv
         if idx == 0:
             weight_name = node.input[1]
-
-            # Resolve through DequantizeLinear if needed
-            resolved_weight_name = weight_name
-            if weight_name not in [init.name for init in graph.initializer] and weight_name in producer:
-                pnode = producer[weight_name]
-                if pnode.op_type == "DequantizeLinear" and len(pnode.input) >= 1:
-                    resolved_weight_name = pnode.input[0]  # this should be the real initializer
-
-            weight_initializer = [init for init in graph.initializer if init.name == resolved_weight_name]
+            weight_initializer = [init for init in graph.initializer if init.name == weight_name]
             if weight_initializer:
                 weight_tensor = weight_initializer[0]
                 # For Conv weights: [Cout, Cin, Kh, Kw]
                 initial_channels = weight_tensor.dims[0]
-            else:
-                # Last-resort fallback so the code never crashes
-                initial_channels = 32
 
         # Move to next level after `convs_in_level` Conv layers
         if (idx + 1) % convs_in_level == 0:
@@ -403,7 +382,7 @@ def extract_unet_info(onnx_model_path):
     return {
         "input_channels": input_channels,
         "input_size": input_size,
-        "initial_channels": int((initial_channels or 32) / 2), # TODO: Fix search space generator
+        "initial_channels": int(initial_channels / 2), # TODO: Fix search space generator
         "depth": depth,
         "kernel_sizes": kernel_sizes,
         "flops": total_flops,
@@ -433,47 +412,18 @@ def predict(onnx_model_file, models_stats_file, prediction_model_file):
     node_features = node_features.astype(np.float32)
     arch_encoding = arch_encoding.astype(np.float32)
 
-    # Ask ONNX what N it expects (from first 3D input)
-    exp_N = None
-    for inp in predictor.get_inputs():
-        shp = inp.shape  # e.g. [1, 50, 50] or [1, 50, F]
-        if isinstance(shp, (list, tuple)) and len(shp) >= 3:
-            if shp[0] in (None, 1) and isinstance(shp[1], int) and shp[1] > 0:
-                exp_N = shp[1]
-                break
-
     # Add batch dimension
     adj_matrix = np.expand_dims(adj_matrix, axis=0)       # [1, N, N]
     node_features = np.expand_dims(node_features, axis=0) # [1, N, F]
     arch_encoding = np.expand_dims(arch_encoding, axis=0) # [1, D]
 
-    # Conform to exp_N (pad/truncate)
-    if exp_N is not None:
-        print(f"[DFKI predictor] ONNX expects N={exp_N} | "
-            f"adj_in={adj_matrix.shape} nodefeat_in={node_features.shape}")
-        # adj_matrix → [1, exp_N, exp_N]
-        if adj_matrix.shape[1] != exp_N:
-            Ncur = adj_matrix.shape[1]
-            adj_fix = np.zeros((1, exp_N, exp_N), dtype=adj_matrix.dtype)
-            keep = min(Ncur, exp_N)
-            adj_fix[:, :keep, :keep] = adj_matrix[:, :keep, :keep]
-            adj_matrix = adj_fix
-        # node_features → [1, exp_N, F]
-        if node_features.shape[1] != exp_N:
-            Ncur, F = node_features.shape[1], node_features.shape[2]
-            nf_fix = np.zeros((1, exp_N, F), dtype=node_features.dtype)
-            keep = min(Ncur, exp_N)
-            nf_fix[:, :keep, :] = node_features[:, :keep, :]
-            node_features = nf_fix
-        print(f"[DFKI predictor] conformed shapes: adj={adj_matrix.shape} nodefeat={node_features.shape}")
-
     # Build inputs and run
     data = [adj_matrix, node_features, arch_encoding]
-    inputs = {inp.name: data[idx] for idx, inp in enumerate(predictor.get_inputs())}
-    output_name = predictor.get_outputs()[0].name
+    inputs = {inp.name: data[idx] for idx, inp in enumerate(predictor.get_inputs())} # Multiple inputs
+    output_name = predictor.get_outputs()[0].name  # Single output
     pred = predictor.run([output_name], inputs)[0]
 
-    return float(np.array(pred).reshape(-1)[0])
+    return pred
 
 if __name__ == '__main__':
 

@@ -34,7 +34,7 @@ Item
     property int __maximum_samples: 1
     property bool __optimize_carbon_footprint_auto: false
     property string __goal: ""
-    property string __types: "transformers"
+    property string __types: "Transformers"
     property bool __optimize_carbon_footprint_manual: false
     property int __previous_iteration: 0
     property double __desired_carbon_footprint: 0.0
@@ -74,9 +74,9 @@ Item
     property bool results_available: false
 
     // External signals
-    signal go_home();
-    signal go_results();
-    signal go_dataset_path();
+    signal go_home()
+    signal go_results()
+    signal go_dataset_path()
     signal send_task(
         string problem_short_description,
         string modality,
@@ -105,16 +105,16 @@ Item
         int num_outputs,
         string model_selected,
         string type
-    );
+    )
 
-    signal refresh();
+    signal refresh()
     signal ask_metrics(
         string metric_req_type,
         string req_type_values
-    );
+    )
     signal ask_models(
         string goal_type
-    );
+    )
 
     Connections
     {
@@ -150,12 +150,12 @@ Item
             root.__goal = goal
             // root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
-            root.__previous_iteration = 0;
-            root.__previous_problem_id = 0;
+            root.__previous_iteration = 0
+            root.__previous_problem_id = 0
             if (is_reiteration)
             {
-                root.__previous_iteration = iteration_id;
-                root.__previous_problem_id = problem_id;
+                root.__previous_iteration = iteration_id
+                root.__previous_problem_id = problem_id
             }
         }
 
@@ -311,7 +311,7 @@ Item
             }
             onTextChanged:
             {
-                root.__problem_short_description = text;
+                root.__problem_short_description = text
             }
             onFocusChanged:
             {
@@ -359,7 +359,7 @@ Item
             }
             onTextChanged:
             {
-                root.__problem_definition = text;
+                root.__problem_definition = text
             }
             onFocusChanged:
             {
@@ -416,11 +416,11 @@ Item
             }
             onText_changed:
             {
-                if (text === "(empty)") text = "";
-                root.__modality = text;
+                if (text === "(empty)") text = ""
+                root.__modality = text
                 if (text !== "" && text !== "(empty)")
                 {
-                    root.ask_metrics("cover_tag", text);
+                    root.ask_metrics("cover_tag", text)
                 }
 
             }
@@ -428,6 +428,8 @@ Item
             {
                 if(focus === true)
                 {
+                    // Enabling selecting the same item in 2 consecutive runs
+                    modality_input.currentIndex = -1
                     modality_input.open()
                     modality_input.focus = true
                 }
@@ -485,12 +487,14 @@ Item
             }
             onText_changed:
             {
-                root.__metric = text;
+                root.__metric = text
             }
             onFocusChanged:
             {
                 if(focus === true)
                 {
+                    // Enabling selecting the same item in 2 consecutive runs
+                    metrics_input.currentIndex = -1
                     metrics_input.open()
                     metrics_input.focus = true
                 }
@@ -522,7 +526,7 @@ Item
             id: types_input
             displayText: root.__types
             placeholder_text: displayText !== "" ? "" : "Select type limiter"
-            model: ["transformers", "CNNs"]
+            model: ["Transformers", "CNNs"]
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
@@ -545,25 +549,27 @@ Item
             }
             onText_changed:
             {
-                root.__types = text;
+                root.__types = text
 
-                // --- NEW: same logic triggered if user changes CNNs/Transformers ---
+                // Same logic triggered if user changes CNNs/Transformers ---
                 if (text.toLowerCase() === "cnns" &&
                     root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)") {
 
-                    goal_input.disabled = true;
-                    root.__goal = "";
+                    goal_input.disabled = true
+                    root.__goal = ""
 
                     var cfg = "U_NET_MODELS, " +
-                            root.__hardware_required + ", " + text;
-                    console.log("[Frontend] Requesting U-Net model list with: " + cfg);
-                    root.ask_models(cfg);
+                            root.__hardware_required + ", " + text
+                    console.log("[Frontend] Requesting U-Net model list with: " + cfg)
+                    root.ask_models(cfg)
                 } else {
-                    goal_input.disabled = false;
+                    goal_input.disabled = false
                 }
             }
             onFocusChanged: {
                 if(focus === true){
+                    // Enabling selecting the same item in 2 consecutive runs
+                    types_input.currentIndex = -1
                     types_input.open()
                     types_input.focus = true
                 }
@@ -610,7 +616,7 @@ Item
             }
             onTextChanged:
             {
-                root.__inputs = text;
+                root.__inputs = text
             }
             onFocusChanged:
             {
@@ -658,7 +664,7 @@ Item
             }
             onTextChanged:
             {
-                root.__outputs = text;
+                root.__outputs = text
             }
             onFocusChanged:
             {
@@ -706,11 +712,11 @@ Item
             }
             onTextChanged:
             {
-                var num = parseInt(text);
+                var num = parseInt(text)
                 if (!isNaN(num)) {
-                    root.__minimum_samples = num;
+                    root.__minimum_samples = num
                 } else {
-                    text = "";
+                    text = ""
                 }
             }
             onFocusChanged:
@@ -759,11 +765,11 @@ Item
             }
             onTextChanged:
             {
-                var num = parseInt(text);
+                var num = parseInt(text)
                 if (!isNaN(num)) {
-                    root.__maximum_samples = num;
+                    root.__maximum_samples = num
                 } else {
-                    text = "";
+                    text = ""
                 }
             }
             onFocusChanged:
@@ -820,19 +826,21 @@ Item
             }
             onText_changed:
             {
-                if (text === "(empty)") text = "";
-                root.__goal = text;
+                if (text === "(empty)") text = ""
+                root.__goal = text
                 if (text !== "")
                 {
                     if(root.__types !== "")
 
-                        root.ask_models(text + ", " + root.__types);
+                        root.ask_models(text + ", " + root.__types)
                     else
-                        root.ask_models(text);
+                        root.ask_models(text)
                 }
             }
             onFocusChanged: {
                 if(focus === true){
+                    // Enabling selecting the same item in 2 consecutive runs
+                    goal_input.currentIndex = -1
                     goal_input.open()
                     goal_input.focus = true
                 }
@@ -863,7 +871,7 @@ Item
             id: required_hardware_input
             displayText: root.__hardware_required
             placeholder_text: displayText !== "" ? "" : "Select hardware"
-            model: root.__hardware_list
+            model: filteredHardwareList()
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
@@ -882,26 +890,26 @@ Item
             }
             onText_changed:
             {
-                root.__hardware_required = text;
+                root.__hardware_required = text
 
-                // --- NEW: detect CNN + FPGA combo ---
+                // Detect CNN + FPGA combo ---
                 if (root.__types.toLowerCase() === "cnns" &&
                     text === "FPGA (xczu19eg-ffvb1517-2-i)") {
 
                     // Disable goal selection
-                    goal_input.disabled = true;
+                    goal_input.disabled = true
 
                     // Clear goal if set
-                    root.__goal = "";
+                    root.__goal = ""
 
                     // Ask backend for U-Net models directly
                     // The backend already supports this string
-                    var cfg = "U_NET_MODELS, " + text + ", " + root.__types;
-                    console.log("[Frontend] Requesting U-Net model list with: " + cfg);
-                    root.ask_models(cfg);
+                    var cfg = "U_NET_MODELS, " + text + ", " + root.__types
+                    console.log("[Frontend] Requesting U-Net model list with: " + cfg)
+                    root.ask_models(cfg)
                 } else {
                     // Otherwise, re-enable the goal selection
-                    goal_input.disabled = false;
+                    goal_input.disabled = false
                 }
             }
             onModelChanged:
@@ -914,6 +922,8 @@ Item
             }
             onFocusChanged: {
                 if(focus === true){
+                    // Enabling selecting the same item in 2 consecutive runs
+                    required_hardware_input.currentIndex = -1
                     required_hardware_input.open()
                     required_hardware_input.focus = true
                 }
@@ -942,6 +952,11 @@ Item
             activeFocusOnTab: true
             focus: true
             id: model_select_input
+            // Disable model selection if the goal is not selected unless CNNs + FPGA combo
+            disabled: root.__reiterate ||
+                (root.__goal === "" &&
+                !(root.__types && root.__types.toLowerCase() === "cnns" &&
+                    root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)"))
             displayText: root.__model_selected
             placeholder_text: displayText !== "" ? "" : "Select the ml model"
             model: root.__model_list
@@ -963,14 +978,20 @@ Item
             }
             onText_changed:
             {
-                if (text === "(empty)") text = "";
+                if (text === "(empty)") text = ""
                 if (model_select_input.currentIndex == -1)
                 {
+                    // Model cleared → restore previous selection if needed
                     root.__model_selected = root.__model_selected_copy
-                    root.__model_selected_copy = "";
-                } else {
-                    root.__model_selected_copy = root.__model_selected;
-                    root.__model_selected = text;
+                    root.__model_selected_copy = ""
+                }
+                else
+                {
+                    // New explicit model selected
+                    root.__model_selected_copy = root.__model_selected
+                    root.__model_selected = text
+                    // When a specific model is chosen, only 1 output makes sense
+                    root.__num_outputs = ""
                 }
             }
             onModelChanged:
@@ -979,6 +1000,8 @@ Item
             }
             onFocusChanged: {
                 if(focus === true){
+                    // Enabling selecting the same item in 2 consecutive runs
+                    model_select_input.currentIndex = -1
                     model_select_input.open()
                     model_select_input.focus = true
                 }
@@ -1005,6 +1028,7 @@ Item
         SmlInput
         {
             id: num_outputs_input
+            disabled: root.__reiterate || root.__model_selected !== ""
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
             border_color: Settings.app_color_green_4
@@ -1024,11 +1048,11 @@ Item
             }
             onTextChanged:
             {
-                var num = parseInt(text);
+                var num = parseInt(text)
                 if (!isNaN(num)) {
-                    root.__num_outputs = num;
+                    root.__num_outputs = num
                 } else {
-                    text = "";
+                    text = ""
                 }
             }
             onFocusChanged: {
@@ -1078,7 +1102,7 @@ Item
             }
             onTextEdited:
             {
-                root.__dataset_metadata_description = text;
+                root.__dataset_metadata_description = text
             }
             onFocusChanged:
             {
@@ -1130,7 +1154,7 @@ Item
             }
             onTextEdited:
             {
-                root.__dataset_metadata_topic = text;
+                root.__dataset_metadata_topic = text
             }
             onFocusChanged:
             {
@@ -1282,7 +1306,7 @@ Item
             }
             onTextEdited:
             {
-                root.__dataset_metadata_profile = text;
+                root.__dataset_metadata_profile = text
             }
             onFocusChanged:
             {
@@ -1337,18 +1361,18 @@ Item
             {
                 if (text === "Manual")
                 {
-                    root.__optimize_carbon_footprint_auto = false;
-                    root.__optimize_carbon_footprint_manual = true;
+                    root.__optimize_carbon_footprint_auto = false
+                    root.__optimize_carbon_footprint_manual = true
                 }
                 else if (text === "Auto")
                 {
-                    root.__optimize_carbon_footprint_auto = true;
-                    root.__optimize_carbon_footprint_manual = false;
+                    root.__optimize_carbon_footprint_auto = true
+                    root.__optimize_carbon_footprint_manual = false
                 }
                 else
                 {
-                    root.__optimize_carbon_footprint_auto = false;
-                    root.__optimize_carbon_footprint_manual = false;
+                    root.__optimize_carbon_footprint_auto = false
+                    root.__optimize_carbon_footprint_manual = false
                 }
             }
             onFocusChanged: {
@@ -1399,7 +1423,7 @@ Item
             }
             onTextChanged:
             {
-                root.__desired_carbon_footprint = parseFloat(text);
+                root.__desired_carbon_footprint = parseFloat(text)
             }
             onFocusChanged:
             {
@@ -1447,11 +1471,11 @@ Item
             }
             onTextChanged:
             {
-                var num = parseInt(text);
+                var num = parseInt(text)
                 if (!isNaN(num)) {
-                    root.__max_memory_footprint = num;
+                    root.__max_memory_footprint = num
                 } else {
-                    text = "";
+                    text = ""
                 }
             }
             onFocusChanged:
@@ -1500,7 +1524,7 @@ Item
             }
             onTextChanged:
             {
-                root.__geo_location_continent = text;
+                root.__geo_location_continent = text
             }
             onFocusChanged:
             {
@@ -1548,7 +1572,7 @@ Item
             }
             onTextChanged:
             {
-                root.__geo_location_region = text;
+                root.__geo_location_region = text
             }
             onFocusChanged:
             {
@@ -1618,7 +1642,22 @@ Item
                 root.__previous_problem_id,
                 root.__num_outputs,
                 root.__model_selected,
-                root.__types);
+                root.__types)
+    }
+
+    // Remove FPGA from transformers hardware list and keep only FPGA for CNNs
+    function filteredHardwareList() {
+        if (root.__types && root.__types.toLowerCase() === "transformers") {
+            return (root.__hardware_list || []).filter(function(h) {
+                return h !== "FPGA (xczu19eg-ffvb1517-2-i)";
+            });
+        }
+        if (root.__types && root.__types.toLowerCase() === "cnns") {
+            return (root.__hardware_list || []).filter(function(h) {
+                return h === "FPGA (xczu19eg-ffvb1517-2-i)";
+            });
+        }
+        return root.__hardware_list || [];
     }
 
     // Refresh button
