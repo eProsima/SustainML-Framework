@@ -457,24 +457,35 @@ void Engine::request_model_from_goal(
     json_config["configuration"] = "model_from_goal, " + goal;
     json_config["node_id"] = 5;
 
-    config_request(json_config, [this](const QJsonObject& json_obj)
+    // std::cout << "[Engine] request_model_from_goal called with goal='" << goal.toStdString() << "'" << std::endl;
+
+    config_request(json_config, [this, goal](const QJsonObject& json_obj)
+    {
+        QJsonObject response_obj = json_obj["response"].toObject();
+        if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+        {
+            QJsonDocument config_doc = QJsonDocument::fromJson(
+                response_obj["configuration"].toString().toUtf8());
+            if (config_doc.isObject())
             {
-                QJsonObject response_obj = json_obj["response"].toObject();
-                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                QJsonObject config_obj = config_doc.object();
+                if (config_obj.contains("models") && config_obj["models"].isString())
                 {
-                    QJsonDocument config_doc = QJsonDocument::fromJson(
-                        response_obj["configuration"].toString().toUtf8());
-                    if (config_doc.isObject())
-                    {
-                        QJsonObject config_obj = config_doc.object();
-                        if (config_obj.contains("models") && config_obj["models"].isString())
-                        {
-                            QStringList models = config_obj["models"].toString().split(", ");
-                            emit models_available(models);
-                        }
-                    }
+                    QString models_str = config_obj["models"].toString();
+                    QStringList models = models_str.split(", ");
+
+                    // std::cout << "[Engine] models_available for goal='" << goal.toStdString() << "' count="  << models.size() << std::endl;
+
+                    emit models_available(models);
                 }
-            });
+                else
+                {
+                    std::cout << "[Engine] WARNING: no 'models' field for goal='"
+                              << goal.toStdString() << "'" << std::endl;
+                }
+            }
+        }
+    });
 }
 
 void Engine::request_results(

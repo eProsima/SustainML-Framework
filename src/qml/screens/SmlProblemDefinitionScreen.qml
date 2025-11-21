@@ -77,6 +77,7 @@ Item
     signal go_home()
     signal go_results()
     signal go_dataset_path()
+    signal go_unet_models()
     signal send_task(
         string problem_short_description,
         string modality,
@@ -249,6 +250,37 @@ Item
         }
         onClicked: root.go_dataset_path()
     }
+
+    // Go unet models button
+    SmlButton
+    {
+        id: unet_models_button
+        visible: !root.__reiterate
+        icon_name: Settings.start_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: "U-Net models"
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Go to U-Net models screen"
+        anchors
+        {
+            top: parent.top
+            topMargin: Settings.spacing_normal
+            left: dataset_path_button.right
+            leftMargin: Settings.spacing_normal
+        }
+        onClicked: {
+            var cfg = "U_NET_MODELS, FPGA (xczu19eg-ffvb1517-2-i), CNNs"
+            root.ask_models(cfg)
+            root.go_unet_models()
+        }
+    }
+
 
     SmlScrollView
     {
@@ -551,18 +583,20 @@ Item
             {
                 root.__types = text
 
-                // Same logic triggered if user changes CNNs/Transformers ---
-                if (text.toLowerCase() === "cnns" &&
-                    root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)") {
+                if (text.toLowerCase() === "cnns") {
+                    // Default hardware to FPGA when CNNs are selected
+                    root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
+                    required_hardware_input.currentIndex = -1    // use displayText
 
+                    // CNN + FPGA → U-NET fast path: disable goal & request models
                     goal_input.disabled = true
                     root.__goal = ""
 
                     var cfg = "U_NET_MODELS, " +
                             root.__hardware_required + ", " + text
-                    console.log("[Frontend] Requesting U-Net model list with: " + cfg)
                     root.ask_models(cfg)
                 } else {
+                    // For non-CNN types keep normal behaviour
                     goal_input.disabled = false
                 }
             }
@@ -892,7 +926,7 @@ Item
             {
                 root.__hardware_required = text
 
-                // Detect CNN + FPGA combo ---
+                // Detect CNN + FPGA combo
                 if (root.__types.toLowerCase() === "cnns" &&
                     text === "FPGA (xczu19eg-ffvb1517-2-i)") {
 
@@ -905,7 +939,6 @@ Item
                     // Ask backend for U-Net models directly
                     // The backend already supports this string
                     var cfg = "U_NET_MODELS, " + text + ", " + root.__types
-                    console.log("[Frontend] Requesting U-Net model list with: " + cfg)
                     root.ask_models(cfg)
                 } else {
                     // Otherwise, re-enable the goal selection
@@ -917,7 +950,11 @@ Item
                 if(!root.__reiterate)
                 {
                     required_hardware_input.currentIndex = -1
-                    root.__hardware_required = "PIM-AI-1chip"
+                    if (root.__types && root.__types.toLowerCase() === "cnns") {
+                        root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
+                    } else {
+                        root.__hardware_required = "PIM-AI-1chip"
+        }
                 }
             }
             onFocusChanged: {

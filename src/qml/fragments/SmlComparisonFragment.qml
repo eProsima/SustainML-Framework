@@ -36,7 +36,7 @@ Rectangle
             if (m && m.length > 1)
                 return m[1]
         }
-        return "" 
+        return ""
     }
 
     Connections {
@@ -102,7 +102,7 @@ Rectangle
                 for (var i = 0; i < root.values_list.length; i++) {
                     var value = values_list[i];
                     switch (value.toString()) {
-                        case "Latency [ms]":
+                        case "Latency":
                             valuesArray.push(data.HW_RESOURCES.latency);
                             break;
                         case "Memory Footprint [MB]":

@@ -2,6 +2,7 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls 1.4
+import QtQuick.Controls 2.5 as Controls2
 import QtQuick.Layouts 1.15
 
 // Project imports
@@ -44,6 +45,13 @@ Window {
     property bool initializing: true
 
     property var _screenInst: ({})
+    // Holds info loaded from unet_models_info.jsonl, keyed by "unet_model_000"
+    property var unetInfoMap: ({})
+
+    // List model specifically for the CNN / U-Net screen
+    ListModel {
+        id: unetModelList
+    }
 
     // Main view properties
     width:  Settings.app_width
@@ -147,7 +155,7 @@ Window {
 
         function onModels_available(list_models)
         {
-            main_window.model_list = ["(empty)"].concat(list_models)
+            main_window.model_list = list_models || []
             main_window.refreshing = false
         }
 
@@ -155,6 +163,65 @@ Window {
         {
             main_window.tasking = false
         }
+    }
+
+    // Load JSONL file with per-model info
+    function loadUnetInfo() {
+        var xhr = new XMLHttpRequest()
+        xhr.open(
+            "GET",
+            "file:///home/zesk/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp2/hw_provider_fpga/vendor/sustain_ml_predictor/xczu19eg-ffvb1517-2-i/unet_models_info.jsonl"
+        )
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                var txt = xhr.responseText || ""
+                var lines = txt.split("\n")
+                var map = {}
+
+                for (var i = 0; i < lines.length; ++i) {
+                    var line = lines[i].trim()
+                    if (!line)
+                        continue
+                    try {
+                        var obj = JSON.parse(line)
+                        var file = obj.model_file || ""
+                        if (!file.endsWith(".onnx"))
+                            continue
+                        var name = file.substring(0, file.length - 5)   // "unet_model_000"
+                        map[name] = obj
+                    } catch (e) {
+                        console.log("[UnetInfo] JSON parse error on line", i, e)
+                    }
+                }
+
+                unetInfoMap = map
+                console.log("[UnetInfo] Loaded entries:", Object.keys(unetInfoMap).length)
+            }
+        }
+
+        xhr.send()
+    }
+
+    // Build human-readable description for each model
+    function getUnetDescription(modelName) {
+        if (!modelName || !unetInfoMap || !unetInfoMap[modelName])
+            return ""
+
+        var info = unetInfoMap[modelName]
+
+        var ks = info.kernel_sizes ? info.kernel_sizes.join("–") : "n/a"
+        var size = info.input_size || "?"
+        var ch   = info.input_channels || "?"
+        var depth = info.depth || "?"
+        var initCh = info.initial_channels || "?"
+        var flops = info.Mflops !== undefined ? info.Mflops.toFixed(1) : "?"
+        var params = info.Mparams !== undefined ? info.Mparams.toFixed(3) : "?"
+
+        return "Input " + size + "×" + size + " with " + ch + " channels; " +
+            "depth " + depth + ", initial " + initCh + " feature channels; " +
+            "kernel sizes [" + ks + "]; " +
+            flops + " MFLOPs, " + params + " M parameters."
     }
 
     // Background
@@ -299,6 +366,7 @@ Window {
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
+                onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
                 onSend_task:
                 {
                     engine.launch_task(
@@ -414,6 +482,7 @@ Window {
 
                         onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
+                        onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
                         onSend_task:
                         {
                             engine.launch_task(
@@ -607,7 +676,8 @@ Window {
                 }
             }
         }
-        // New empty screen 2 TO BE USED
+
+        // U-Net / CNN models screen
         Component
         {
             id: new_screen_2_todo_rename
@@ -615,15 +685,183 @@ Window {
             Rectangle
             {
                 color: "transparent"
-                SmlText
-                {
-                    text_value: "this is a new screen #2"
-                    text_kind: SmlText.TextKind.Body
+                Component.onCompleted: {
+                    loadUnetInfo()
+                }
 
-                    anchors.centerIn: parent
+                // HOME BUTTON – copied style from SmlLoadDatasetScreen
+                SmlButton
+                {
+                    id: unet_go_home_button
+                    icon_name: Settings.home_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Home"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Home screen"
+                    anchors
+                    {
+                        top: parent.top
+                        topMargin: Settings.spacing_normal
+                        left: parent.left
+                        leftMargin: Settings.spacing_normal
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                }
+
+                // BACK ARROW – same widget & icon as in SmlLoadDatasetScreen
+                SmlButton
+                {
+                    id: unet_go_back_button
+                    icon_name: Settings.back_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: ""
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Problem Definition screen"
+                    anchors
+                    {
+                        top: unet_go_home_button.top
+                        left: unet_go_home_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                }
+
+                // MAIN CONTENT – two columns with shared vertical scroll
+                Flickable {
+                    id: unet_flick
+                    anchors {
+                        top: unet_go_back_button.bottom
+                        topMargin: Settings.spacing_big * 2
+                        left: parent.left
+                        leftMargin: Settings.spacing_big
+                        right: parent.right
+                        rightMargin: Settings.spacing_big
+                        bottom: parent.bottom
+                        bottomMargin: Settings.spacing_big * 2
+                    }
+
+                    clip: true
+                    contentWidth: width
+                    contentHeight: tableRect.implicitHeight    // <-- scroll area = table height
+
+                    // Rounded "table" around both columns
+                    Rectangle {
+                        id: tableRect
+
+                        // Make the table slightly inset from the Flickable borders
+                        width: parent.width - 2 * Settings.spacing_big
+                        x: Settings.spacing_big
+                        y: 0
+
+                        radius: 18                         // rounded corners
+                        color: "white"                    // white inside
+                        border.color: Settings.app_color_green_4
+                        border.width: 2
+
+                        // Height driven by the column content + padding
+                        implicitHeight: modelsColumn.implicitHeight + 2 * Settings.spacing_big
+
+                        // SINGLE COLUMN WITH HEADER + ONE REPEATER
+                        Column {
+                            id: modelsColumn
+                            width: parent.width
+                            spacing: Settings.spacing_small
+
+                            anchors {
+                                left: parent.left
+                                right: parent.right
+                                top: parent.top
+                                leftMargin: 65        // your existing shift to the right
+                                rightMargin: 65
+                                topMargin: Settings.spacing_big
+                                // bottomMargin is included in implicitHeight via + 2 * spacing_big above
+                            }
+
+                            // Header row: titles
+                            Row {
+                                width: parent.width
+                                spacing: Settings.spacing_big
+
+                                // Left header: CNN models
+                                SmlText {
+                                    text_kind: SmlText.TextKind.Header_3
+                                    text_value: "CNN models"
+                                    color: Settings.app_color_green_4
+                                    width: parent.width * 0.2
+                                }
+
+                                // Right header: Description
+                                SmlText {
+                                    text_kind: SmlText.TextKind.Header_3
+                                    text_value: "Description"
+                                    color: Settings.app_color_green_1
+                                    width: parent.width * 0.75
+                                }
+                            }
+
+                            // One row PER MODEL
+                            Repeater {
+                                model: main_window.model_list
+
+                                delegate: Row {
+                                    width: parent.width
+                                    spacing: Settings.spacing_big
+
+                                    // LEFT: model name
+                                    Text {
+                                        text: modelData
+                                        font.pixelSize: 13
+                                        color: Settings.app_color_green_4
+                                        elide: Text.ElideRight
+                                        width: parent.width * 0.2
+                                    }
+
+                                    // RIGHT: description (wraps to multiple lines)
+                                    Text {
+                                        text: getUnetDescription(modelData)
+                                        font.pixelSize: 13
+                                        color: Settings.app_color_green_1
+                                        wrapMode: Text.WordWrap
+                                        width: parent.width * 0.75
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // GREEN VERTICAL SCROLLBAR ON THE RIGHT – unchanged
+                    Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                        policy: Controls2.ScrollBar.AlwaysOn
+                        width: 8
+                        anchors {
+                            right: parent.right
+                            top: parent.top
+                            bottom: parent.bottom
+                        }
+                        contentItem: Rectangle {
+                            radius: 4
+                            color: Settings.app_color_green_4   // green handle
+                        }
+                        background: Rectangle {
+                            color: "transparent"
+                        }
+                    }
                 }
             }
         }
+
         // New empty screen 3 TO BE USED
         Component
         {
@@ -747,6 +985,14 @@ Window {
                 case ScreenManager.Screens.Home:
                     screen_to_be_loaded = home_screen
                     break
+            }
+
+            // Force recreation of U-Net screen so Component.onCompleted runs
+            if (screen === ScreenManager.Screens.NewScreen2TODOrename) {
+                if (_screenInst[screen]) {
+                    _screenInst[screen].destroy();
+                }
+                _screenInst[screen] = null;
             }
 
             var inst = _screenInst[screen]
