@@ -44,7 +44,7 @@ Item
     property string __geo_location_region: ""
     property string __extra_data: ""
     property int __previous_problem_id: 0
-    property int __num_outputs: 10
+    property int __num_outputs: 1
     property string __model_selected: ""
     property string __model_selected_copy: __model_selected
 
@@ -1013,22 +1013,19 @@ Item
                 topMargin: -Settings.spacing_small * 0.25
                 left: model_select_header.left
             }
-            onText_changed:
-            {
-                if (text === "(empty)") text = ""
-                if (model_select_input.currentIndex == -1)
-                {
-                    // Model cleared → restore previous selection if needed
-                    root.__model_selected = root.__model_selected_copy
+            onText_changed: {
+                if (text === "(empty)" || text === "") {
+                    // No model selected
+                    root.__model_selected = ""
                     root.__model_selected_copy = ""
-                }
-                else
-                {
-                    // New explicit model selected
-                    root.__model_selected_copy = root.__model_selected
+                    // Keep __num_outputs as-is; user can type whatever they want
+                } else {
+                    // A specific model has been chosen
                     root.__model_selected = text
-                    // When a specific model is chosen, only 1 output makes sense
-                    root.__num_outputs = ""
+                    root.__model_selected_copy = text
+                    // Force num_outputs to 1 and show it in the box
+                    root.__num_outputs = 1
+                    num_outputs_input.text = "1"
                 }
             }
             onModelChanged:

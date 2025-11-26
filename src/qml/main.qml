@@ -614,12 +614,12 @@ Window {
                         defInstance.__previous_iteration = 0;
                         defInstance.__desired_carbon_footprint = 0.0;
                         defInstance.__max_memory_footprint = 0;
-                        defInstance.__hardware_required = "PIM-AI-1chip";
+                        // defInstance.__hardware_required = "PIM-AI-1chip";
                         defInstance.__geo_location_continent = "";
                         defInstance.__geo_location_region = "";
                         defInstance.__extra_data = "";
                         defInstance.__previous_problem_id = 0;
-                        defInstance.__num_outputs = 10;
+                        defInstance.__num_outputs = 1;
                         defInstance.__model_selected = "";
                         defInstance.__model_selected_copy = "";
                     }
