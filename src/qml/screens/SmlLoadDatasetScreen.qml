@@ -18,6 +18,8 @@ Item
 {
     id:root
 
+    property alias dataset_path_text: dataset_path_input.text
+
     // Public signals
     signal go_home();
     signal go_back();

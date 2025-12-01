@@ -108,6 +108,7 @@ Item
         string type
     )
 
+    signal clear_all_clicked()
     signal refresh()
     signal ask_metrics(
         string metric_req_type,
@@ -1637,7 +1638,7 @@ Item
             bottom: parent.bottom
             bottomMargin: root.__margin - Settings.spacing_small
             horizontalCenter: parent.horizontalCenter
-            horizontalCenterOffset: -root.__margin
+            horizontalCenterOffset: - (submit_button.width + 2 * Settings.spacing_small) / 2
         }
         onClicked:
         {
@@ -1645,6 +1646,79 @@ Item
             root.results_available = true
             root.prepare_task()
         }
+    }
+
+    // Clear all button (next to Submit)
+    SmlButton
+    {
+        id: clear_all_button
+        icon_name: Settings.submit_icon_name
+        text_kind: SmlText.TextKind.Header_3
+        text_value: "Clear all"
+        rounded: true
+        color: Settings.app_color_light
+        color_pressed: Settings.app_color_green_1
+        nightmode_color: Settings.app_color_dark
+        nightmode_color_pressed: Settings.app_color_green_3
+        tooltip_text: "Clear all fields and dataset metadata"
+        width: submit_button.width
+        anchors
+        {
+            bottom: parent.bottom
+            bottomMargin: root.__margin - Settings.spacing_small
+            left: submit_button.right
+            leftMargin: Settings.spacing_small
+            horizontalCenter: parent.horizontalCenter
+            horizontalCenterOffset: (submit_button.width + 2 * Settings.spacing_small) / 2
+        }
+        onClicked: root.clear_all()
+    }
+
+    function clear_all()
+    {
+        // Reset internal state
+        root.__problem_short_description = ""
+        root.__modality = ""
+        root.__metric = ""
+        root.__problem_definition = ""
+        root.__inputs = ""
+        root.__outputs = ""
+        root.__minimum_samples = 1
+        root.__maximum_samples = 1
+        root.__optimize_carbon_footprint_auto = false
+        root.__goal = ""
+        root.__optimize_carbon_footprint_manual = false
+        root.__previous_iteration = 0
+        root.__desired_carbon_footprint = 0.0
+        root.__max_memory_footprint = 0
+        root.__hardware_required = "PIM-AI-1chip"
+        root.__geo_location_continent = ""
+        root.__geo_location_region = ""
+        root.__extra_data = ""
+        root.__previous_problem_id = 0
+        root.__num_outputs = 1
+        root.__model_selected = ""
+        root.__model_selected_copy = ""
+
+        // Reset visible widgets explicitly
+        problem_short_description_input.text = ""
+        problem_definition_input.text = ""
+        inputs_input.text = ""
+        outputs_input.text = ""
+
+        minimum_samples_input.text = ""
+        maximum_samples_input.text = ""
+        num_outputs_input.text = "1"
+
+        // Reset combobox selections
+        modality_input.currentIndex = -1
+        metrics_input.currentIndex = -1
+        goal_input.currentIndex = -1
+        required_hardware_input.currentIndex = -1
+        model_select_input.currentIndex = -1
+
+        // Notify main.qml that we cleared everything
+        root.clear_all_clicked()
     }
 
     function prepare_task()

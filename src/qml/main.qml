@@ -367,6 +367,22 @@ Window {
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
+
+                onClear_all_clicked: {
+                    // Clear dataset metadata stored in main_window
+                    main_window.dataset_description = ""
+                    main_window.dataset_topic = ""
+                    main_window.dataset_profile = ""
+                    main_window.dataset_keywords = ""
+                    main_window.dataset_applications = ""
+
+                    // If dataset upload screen already exists, clear its path field too
+                    var ds = _screenInst[ScreenManager.Screens.DatasetPath]
+                    if (ds) {
+                        ds.dataset_path_text = ""
+                    }
+                }
+
                 onSend_task:
                 {
                     engine.launch_task(
@@ -739,8 +755,9 @@ Window {
                 }
 
                 // MAIN CONTENT – two columns with shared vertical scroll
-                Flickable {
-                    id: unet_flick
+                Rectangle {
+                    id: unet_content
+                    color: "transparent"
                     anchors {
                         top: unet_go_back_button.bottom
                         topMargin: Settings.spacing_big * 2
@@ -752,110 +769,100 @@ Window {
                         bottomMargin: Settings.spacing_big * 2
                     }
 
-                    clip: true
-                    contentWidth: width
-                    contentHeight: tableRect.implicitHeight    // <-- scroll area = table height
-
-                    // Rounded "table" around both columns
+                    // White card with green border – always visible, does not scroll
                     Rectangle {
-                        id: tableRect
-
-                        // Make the table slightly inset from the Flickable borders
-                        width: parent.width - 2 * Settings.spacing_big
-                        x: Settings.spacing_big
-                        y: 0
-
-                        radius: 18                         // rounded corners
-                        color: "white"                    // white inside
+                        id: tableFrame
+                        anchors.fill: parent
+                        anchors.margins: Settings.spacing_big
+                        radius: 18
+                        color: "white"
                         border.color: Settings.app_color_green_4
                         border.width: 2
+                        clip: true   // Keep content clipped inside the card
 
-                        // Height driven by the column content + padding
-                        implicitHeight: modelsColumn.implicitHeight + 2 * Settings.spacing_big
+                        // Flickable *inside* the card – only content scrolls
+                        Flickable {
+                            id: unetList
+                            anchors.fill: parent
+                            anchors.margins: Settings.spacing_big
+                            clip: true
 
-                        // SINGLE COLUMN WITH HEADER + ONE REPEATER
-                        Column {
-                            id: modelsColumn
-                            width: parent.width
-                            spacing: Settings.spacing_small
+                            contentWidth: width
+                            contentHeight: modelsColumn.implicitHeight + Settings.spacing_big
 
-                            anchors {
-                                left: parent.left
-                                right: parent.right
-                                top: parent.top
-                                leftMargin: 65        // your existing shift to the right
-                                rightMargin: 65
-                                topMargin: Settings.spacing_big
-                                // bottomMargin is included in implicitHeight via + 2 * spacing_big above
-                            }
-
-                            // Header row: titles
-                            Row {
+                            Column {
+                                id: modelsColumn
                                 width: parent.width
-                                spacing: Settings.spacing_big
+                                spacing: Settings.spacing_small
 
-                                // Left header: CNN models
-                                SmlText {
-                                    text_kind: SmlText.TextKind.Header_3
-                                    text_value: "CNN models"
-                                    color: Settings.app_color_green_4
-                                    width: parent.width * 0.2
-                                }
-
-                                // Right header: Description
-                                SmlText {
-                                    text_kind: SmlText.TextKind.Header_3
-                                    text_value: "Description"
-                                    color: Settings.app_color_green_1
-                                    width: parent.width * 0.75
-                                }
-                            }
-
-                            // One row PER MODEL
-                            Repeater {
-                                model: main_window.model_list
-
-                                delegate: Row {
+                                // Header row: model name + description
+                                Row {
                                     width: parent.width
                                     spacing: Settings.spacing_big
 
-                                    // LEFT: model name
-                                    Text {
-                                        text: modelData
-                                        font.pixelSize: 13
+                                    // Left header: model name
+                                    SmlText {
+                                        text_kind: SmlText.TextKind.Header_3
+                                        text_value: "U-Net model"
                                         color: Settings.app_color_green_4
-                                        elide: Text.ElideRight
                                         width: parent.width * 0.2
                                     }
 
-                                    // RIGHT: description (wraps to multiple lines)
-                                    Text {
-                                        text: getUnetDescription(modelData)
-                                        font.pixelSize: 13
+                                    // Right header: description
+                                    SmlText {
+                                        text_kind: SmlText.TextKind.Header_3
+                                        text_value: "Description"
                                         color: Settings.app_color_green_1
-                                        wrapMode: Text.WordWrap
                                         width: parent.width * 0.75
                                     }
                                 }
-                            }
-                        }
-                    }
 
-                    // GREEN VERTICAL SCROLLBAR ON THE RIGHT – unchanged
-                    Controls2.ScrollBar.vertical: Controls2.ScrollBar {
-                        policy: Controls2.ScrollBar.AlwaysOn
-                        width: 8
-                        anchors {
-                            right: parent.right
-                            top: parent.top
-                            bottom: parent.bottom
-                        }
-                        contentItem: Rectangle {
-                            radius: 4
-                            color: Settings.app_color_green_4   // green handle
-                        }
-                        background: Rectangle {
-                            color: "transparent"
+                                // One row per model
+                                Repeater {
+                                    model: main_window.model_list
+
+                                    delegate: Row {
+                                        width: parent.width
+                                        spacing: Settings.spacing_big
+
+                                        // LEFT COLUMN: model name
+                                        Text {
+                                            text: modelData
+                                            font.pixelSize: 13
+                                            color: Settings.app_color_green_4
+                                            elide: Text.ElideRight
+                                            width: parent.width * 0.2
+                                        }
+
+                                        // RIGHT COLUMN: description
+                                        Text {
+                                            text: getUnetDescription(modelData)
+                                            font.pixelSize: 13
+                                            color: Settings.app_color_green_1
+                                            wrapMode: Text.WordWrap
+                                            width: parent.width * 0.75
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Scrollbar inside the white card, on the right edge
+                            Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                                policy: Controls2.ScrollBar.AlwaysOn
+                                width: 8
+                                anchors {
+                                    right: parent.right
+                                    top: parent.top
+                                    bottom: parent.bottom
+                                }
+                                contentItem: Rectangle {
+                                    radius: 4
+                                    color: Settings.app_color_green_4   // Green handle
+                                }
+                                background: Rectangle {
+                                    color: "transparent"
+                                }
+                            }
                         }
                     }
                 }
