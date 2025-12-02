@@ -212,7 +212,7 @@ Rectangle {
                             "Problem kind" : "Problem",
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
-                            "Latency" : "Latency [ms]",
+                            "Latency" : "Latency",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [gCO2e]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",

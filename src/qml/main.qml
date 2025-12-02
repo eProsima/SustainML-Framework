@@ -45,13 +45,7 @@ Window {
     property bool initializing: true
 
     property var _screenInst: ({})
-    // Holds info loaded from unet_models_info.jsonl, keyed by "unet_model_000"
     property var unetInfoMap: ({})
-
-    // List model specifically for the CNN / U-Net screen
-    ListModel {
-        id: unetModelList
-    }
 
     // Main view properties
     width:  Settings.app_width
@@ -696,7 +690,7 @@ Window {
         // U-Net / CNN models screen
         Component
         {
-            id: new_screen_2_todo_rename
+            id: uNet_screen
 
             Rectangle
             {
@@ -872,7 +866,7 @@ Window {
         // New empty screen 3 TO BE USED
         Component
         {
-            id: new_screen_3_todo_rename
+            id: huggingFace_screen
 
             Rectangle
             {
@@ -980,10 +974,10 @@ Window {
                     screen_to_be_loaded = reiterate_screen
                     break
                 case ScreenManager.Screens.NewScreen2TODOrename:
-                    screen_to_be_loaded = new_screen_2_todo_rename
+                    screen_to_be_loaded = uNet_screen
                     break
                 case ScreenManager.Screens.NewScreen3TODOrename:
-                    screen_to_be_loaded = new_screen_3_todo_rename
+                    screen_to_be_loaded = huggingFace_screen
                     break
                 case ScreenManager.Screens.NewScreen4TODOrename:
                     screen_to_be_loaded = new_screen_4_todo_rename
