@@ -97,7 +97,6 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
-                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
@@ -126,7 +125,6 @@ Rectangle
                 if(row >= 0)
                 {
                     table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
-                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
@@ -156,7 +154,6 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __hw_description_column), "display", hw_description)
                     table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
-                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
@@ -186,7 +183,6 @@ Rectangle
                 {
                     table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
                     table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
-                    general_table.height = root.__data_height * table_model.rowCount;
                 }
                 else
                 {
@@ -403,7 +399,7 @@ Rectangle
                 anchors.left: headerRect.left
                 width: headerRect.width
                 height: root.height - headerRect.height
-                contentHeight: general_table.height + 20
+                contentHeight: general_table.contentHeight + 20
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
                 scrollbar_background_color: Settings.app_color_light
                 scrollbar_background_nightmodel_color: Settings.app_color_dark
@@ -412,7 +408,7 @@ Rectangle
                 Rectangle {
                     id: tableRect
                     width: headerRect.width
-                    height: root.__data_height * table_model.rowCount
+                    height: general_table.contentHeight
                     color: "transparent"
                     onWidthChanged: {
                         general_header_table.forceLayout(),
@@ -470,9 +466,10 @@ Rectangle
                             implicitHeight: root.__data_height
                             implicitWidth: width
 
+                            // Default renderer for all columns EXCEPT ML Model (column 2)
                             SmlText {
                                 id: value
-                                visible: column !== 0 && column !== 1
+                                visible: column !== __suggested_model_column
                                 width: parent.width
                                 anchors.centerIn: parent
                                 text_kind: SmlText.TextKind.Body
@@ -480,7 +477,69 @@ Rectangle
                                 padding: __cell_padding
                                 force_size: true
                                 forced_size: 14
-                                wrapMode: TextEdit.Wrap
+                                wrapMode: Text.WrapAnywhere
+                            }
+
+                            // ML Model (column 2): max 2 lines + ellipsis
+                            Item {
+                                id: mlModelCell
+                                visible: column === __suggested_model_column
+                                anchors.fill: parent
+                                clip: true
+
+                                MouseArea {
+                                    id: mlHover
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    acceptedButtons: Qt.NoButton
+                                }
+
+                                // Custom styled tooltip
+                                ToolTip {
+                                    id: modelTip
+                                    visible: mlHover.containsMouse
+                                    delay: 250
+                                    text: model.display
+                                    y: -5
+
+                                    background: Rectangle {
+                                        radius: 8
+                                        color: "#B0000000" // Opacity
+                                        border.color: "#40FFFFFF"
+                                        border.width: 1
+                                    }
+
+                                    contentItem: Text {
+                                        text: modelTip.text
+                                        color: "white"
+                                        wrapMode: Text.WrapAnywhere
+                                        width: 320
+                                        font.pixelSize: 12
+                                        padding: 10
+                                    }
+                                }
+
+                                Text {
+                                    anchors.fill: parent
+                                    text: model.display
+
+                                    wrapMode: Text.WrapAnywhere
+                                    maximumLineCount: 2
+                                    elide: Text.ElideRight
+                                    clip: true
+
+                                    horizontalAlignment: Text.AlignLeft
+                                    verticalAlignment: Text.AlignVCenter
+
+                                    leftPadding: __cell_padding
+                                    rightPadding: __cell_padding + 10
+                                    topPadding: 4
+                                    bottomPadding: 4
+
+                                    font.family: SustainMLFont.body_font
+                                    font.pixelSize: 14
+                                    color: ScreenManager.body_font_color
+                                }
                             }
 
                             // Go reiterate button

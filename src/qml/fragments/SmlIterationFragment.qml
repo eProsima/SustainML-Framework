@@ -353,7 +353,7 @@ Rectangle {
                 anchors.left: headerRect.left
                 width: headerRect.width
                 height: root.height - headerRect.height
-                contentHeight: general_table.height + 20
+                contentHeight: general_table.contentHeight + 20
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
                 scrollbar_background_color: Settings.app_color_light
                 scrollbar_background_nightmodel_color: Settings.app_color_dark
@@ -362,7 +362,7 @@ Rectangle {
                 Rectangle {
                     id: tableRect
                     width: headerRect.width
-                    height: __data_height * table_model.rows.length
+                    height: general_table.contentHeight
                     color: "transparent"
                     onWidthChanged: {
                         general_header_table.forceLayout(),
@@ -419,13 +419,14 @@ Rectangle {
 
                         delegate: Rectangle {
                             color: "transparent"
-                            height: root.__data_height
-                            implicitHeight: root.__data_height
+                            height: general_table.rowHeightProvider(row)
+                            implicitHeight: general_table.rowHeightProvider(row)
                             implicitWidth: width
                             property string iterationValue: model.display
 
                             SmlText {
                                 id: value
+                                visible: column !== 2
                                 width: parent.width
                                 anchors.centerIn: parent
                                 text_kind: SmlText.TextKind.Body
@@ -433,7 +434,37 @@ Rectangle {
                                 padding: __cell_padding
                                 force_size: true
                                 forced_size: 14
-                                wrapMode: TextEdit.Wrap
+                                wrapMode: Text.WordWrap
+                            }
+
+                            // Column 2 ("Suggested model"): max 2 lines + ellipsis
+                            Item {
+                                id: mlModelCell
+                                visible: column === 2
+                                anchors.fill: parent
+                                clip: true
+
+                                Text {
+                                    anchors.fill: parent
+                                    text: model.display
+
+                                    wrapMode: Text.WrapAnywhere      // Breaks also on _ / etc.
+                                    maximumLineCount: 2
+                                    elide: Text.ElideRight
+                                    clip: true
+
+                                    horizontalAlignment: Text.AlignLeft
+                                    verticalAlignment: Text.AlignVCenter
+
+                                    leftPadding: __cell_padding
+                                    rightPadding: __cell_padding + 10
+                                    topPadding: 4
+                                    bottomPadding: 4
+
+                                    font.family: SustainMLFont.body_font
+                                    font.pixelSize: 14
+                                    color: ScreenManager.body_font_color
+                                }
                             }
 
                             // Bottom horizontal border (dark tone)
