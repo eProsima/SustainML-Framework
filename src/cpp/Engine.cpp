@@ -69,6 +69,95 @@ Engine::~Engine()
     node_status_timer_->deleteLater();
 }
 
+void Engine::request_hf_models(QString description, int limit)
+{
+    // Build config request
+    QJsonObject json_config;
+    json_config["configuration"] = "hf_search, " + description + ", " + QString::number(limit);
+
+    // IMPORTANT: this must match the node that implements hf_search in your backend.
+    // You routed hf_search to ML_MODEL_PROVIDER; in your UI "model_from_goal" uses node_id=5 (ML provider),
+    // so keep node_id=5 here as well.
+    json_config["node_id"] = 5;
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+    {
+        QJsonObject response_obj = json_obj["response"].toObject();
+
+        if (response_obj.contains("success") && !response_obj["success"].toBool())
+        {
+            emit hf_models_error("hf_search: backend reported failure (success=false)");
+            return;
+        }
+
+        if (!response_obj.contains("configuration") || !response_obj["configuration"].isString())
+        {
+            emit hf_models_error("hf_search: missing configuration in response");
+            return;
+        }
+
+        QString cfg = response_obj["configuration"].toString();
+        if (cfg.trimmed().isEmpty())
+        {
+            emit hf_models_error("hf_search: empty configuration (backend error)");
+            return;
+        }
+
+
+        // The backend sends a JSON string inside "configuration"
+        QJsonDocument config_doc = QJsonDocument::fromJson(
+            response_obj["configuration"].toString().toUtf8());
+
+        if (!config_doc.isObject())
+        {
+            emit hf_models_error("hf_search: configuration is not a JSON object");
+            return;
+        }
+
+        QJsonObject config_obj = config_doc.object();
+
+        // error propagation from backend
+        if (config_obj.contains("error") && config_obj["error"].isString())
+        {
+            emit hf_models_error("hf_search: " + config_obj["error"].toString());
+            return;
+        }
+
+        // Support BOTH possible payloads:
+        // 1) { "models": [ {...}, {...} ] }
+        // 2) { "models": "a, b, c" }   (string list)
+        if (config_obj.contains("models") && config_obj["models"].isArray())
+        {
+            QVariantList out;
+            QJsonArray arr = config_obj["models"].toArray();
+            for (const QJsonValue& v : arr)
+            {
+                // Each element can be an object (recommended) or a string
+                out.push_back(v.toVariant());
+            }
+            emit hf_models_available(out);
+            return;
+        }
+
+        if (config_obj.contains("models") && config_obj["models"].isString())
+        {
+            // Convert comma-separated list to list of { id: "..." } objects
+            QStringList ids = config_obj["models"].toString().split(", ", Qt::SkipEmptyParts);
+            QVariantList out;
+            for (const QString& id : ids)
+            {
+                QVariantMap m;
+                m["id"] = id;
+                out.push_back(m);
+            }
+            emit hf_models_available(out);
+            return;
+        }
+
+        emit hf_models_error("hf_search: no 'models' field (array or string) in configuration");
+    });
+}
+
 void Engine::launch_task(
         QString problem_short_description,
         QString modality,

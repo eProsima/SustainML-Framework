@@ -47,6 +47,9 @@ Window {
     property var _screenInst: ({})
     property var unetInfoMap: ({})
 
+    property var hf_models_list: []
+    property string hf_query_text: ""
+
     // Main view properties
     width:  Settings.app_width
     height: Settings.app_height
@@ -157,6 +160,29 @@ Window {
         {
             main_window.tasking = false
         }
+
+        function onHf_models_available(models)
+        {
+            console.log("[HF] onHf_models_available typeof=", typeof models,
+                        "isArray=", (models && models.length !== undefined),
+                        "len=", (models && models.length !== undefined) ? models.length : -1)
+
+            if (models && models.length > 0) {
+                console.log("[HF] first element=", JSON.stringify(models[0]))
+            }
+
+            main_window.hf_models_list = models || []
+            main_window.refreshing = false
+
+            console.log("[HF] hf_models_list set, len now=", main_window.hf_models_list.length)
+        }
+
+        function onHf_models_error(message)
+        {
+            main_window.refreshing = false
+            console.log("[HF] onHf_models_error message=", message, "query=", main_window.hf_query_text)
+        }
+
     }
 
     // Load JSONL file with per-model info
@@ -361,6 +387,7 @@ Window {
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
+                onGo_hf_models: main_window.load_screen(ScreenManager.Screens.NewScreen3TODOrename)
 
                 onClear_all_clicked: {
                     // Clear dataset metadata stored in main_window
@@ -377,8 +404,7 @@ Window {
                     }
                 }
 
-                onSend_task:
-                {
+                onSend_task: {
                     engine.launch_task(
                             problem_short_description,
                             modality,
@@ -409,24 +435,34 @@ Window {
                             type)
                 }
 
-                onRefresh:
-                {
+                onRefresh: {
                     main_window.refreshing = true
                     engine.request_modalities()
                     // engine.request_goals()
                     engine.request_hardwares()
                 }
-                onAsk_metrics:
-                {
+
+                onAsk_metrics: {
                     main_window.refreshing = true
                     engine.request_metrics(
                         metric_req_type,
                         req_type_values)
                 }
-                onAsk_models:
-                {
+
+                onAsk_models: {
                     main_window.refreshing = true
                     engine.request_model_from_goal(goal_type)
+                }
+
+                onAsk_hf_models: {
+                    console.log("[HF] main.qml onAsk_hf_models description=", description,
+                                "len=", description ? description.length : -1)
+
+                    main_window.refreshing = true
+                    main_window.hf_query_text = description
+
+                    console.log("[HF] calling engine.request_hf_models(description, 10)")
+                    engine.request_hf_models(description, 10)
                 }
             }
         }
@@ -471,7 +507,6 @@ Window {
                 SplitView {
                     anchors.fill: parent
                     orientation: Qt.Horizontal
-
                     SmlProblemDefinitionScreen {
                         id: definition_screen_component
                         Layout.minimumWidth: parent.width * 0.70
@@ -814,7 +849,6 @@ Window {
                                 // One row per model
                                 Repeater {
                                     model: main_window.model_list
-
                                     delegate: Row {
                                         width: parent.width
                                         spacing: Settings.spacing_big
@@ -862,8 +896,6 @@ Window {
                 }
             }
         }
-
-        // New empty screen 3 TO BE USED
         Component
         {
             id: huggingFace_screen
@@ -871,15 +903,215 @@ Window {
             Rectangle
             {
                 color: "transparent"
-                SmlText
-                {
-                    text_value: "this is a new screen #3"
-                    text_kind: SmlText.TextKind.Body
 
-                    anchors.centerIn: parent
+                // Home
+                SmlButton
+                {
+                    id: hf_go_home_button
+                    icon_name: Settings.home_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Home"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Home screen"
+                    anchors
+                    {
+                        top: parent.top
+                        topMargin: Settings.spacing_normal
+                        left: parent.left
+                        leftMargin: Settings.spacing_normal
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                }
+
+                Component.onCompleted: {
+                    console.log("[HF_SCREEN] opened. query=", main_window.hf_query_text,
+                                "hf_models_list len=", main_window.hf_models_list.length)
+                }
+
+                Connections {
+                    target: main_window
+                    function onHf_models_listChanged() {
+                        console.log("[HF_SCREEN] hf_models_listChanged, len=", main_window.hf_models_list.length)
+                        if (main_window.hf_models_list.length > 0)
+                            console.log("[HF_SCREEN] first=", JSON.stringify(main_window.hf_models_list[0]))
+                    }
+                }
+
+                // Back
+                SmlButton
+                {
+                    id: hf_go_back_button
+                    icon_name: Settings.back_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: ""
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Back to Problem Definition"
+                    anchors
+                    {
+                        top: hf_go_home_button.top
+                        left: hf_go_home_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                }
+
+                Rectangle
+                {
+                    anchors
+                    {
+                        top: hf_go_back_button.bottom
+                        topMargin: Settings.spacing_big * 2
+                        left: parent.left
+                        leftMargin: Settings.spacing_big
+                        right: parent.right
+                        rightMargin: Settings.spacing_big
+                        bottom: parent.bottom
+                        bottomMargin: Settings.spacing_big * 2
+                    }
+                    radius: 18
+                    color: "white"
+                    border.color: Settings.app_color_green_4
+                    border.width: 2
+                    clip: true
+
+                    Column
+                    {
+                        anchors.fill: parent
+                        anchors.margins: Settings.spacing_big
+                        spacing: Settings.spacing_small
+
+                        SmlText
+                        {
+                            text_kind: SmlText.TextKind.Header_2
+                            text_value: "Hugging Face suggestions (top 10)"
+                            color: Settings.app_color_green_4
+                        }
+
+                        SmlText
+                        {
+                            text_kind: SmlText.TextKind.Body
+                            text_value: main_window.hf_query_text !== "" ? ("Query: " + main_window.hf_query_text) : ""
+                            color: Settings.app_color_green_1
+                        }
+
+                        Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
+
+                        Flickable
+                        {
+                            id: hfList
+                            clip: true
+                            width: parent.width
+                            height: parent.height - 120
+                            contentWidth: width
+                            contentHeight: hfColumn.implicitHeight
+
+                            Column
+                            {
+                                id: hfColumn
+                                width: parent.width
+                                spacing: Settings.spacing_small
+
+                                Repeater
+                                {
+                                    model: main_window.hf_models_list
+
+                                    delegate: Rectangle
+                                    {
+                                        width: parent.width
+                                        radius: 10
+                                        border.color: Settings.app_color_green_4
+                                        border.width: 1
+                                        color: "transparent"
+                                        height: 54
+
+                                        property string mid: {
+                                            if (typeof modelData === "string")
+                                                return modelData
+
+                                            // QVariantMap-safe access (important!)
+                                            if (modelData && modelData["model_id"] !== undefined)
+                                                return modelData["model_id"]
+
+                                            if (modelData && modelData["id"] !== undefined)
+                                                return modelData["id"]
+
+                                            if (modelData && modelData["modelId"] !== undefined)
+                                                return modelData["modelId"]
+
+                                            return ""
+                                        }
+
+                                        MouseArea
+                                        {
+                                            anchors.fill: parent
+                                            onClicked:
+                                            {
+                                                // Set selected model back in the Definition screen instance
+                                                var def = main_window._screenInst[ScreenManager.Screens.Definition]
+                                                if (def) {
+                                                    def.__model_selected = parent.mid
+                                                    def.__model_selected_copy = parent.mid
+                                                    def.__num_outputs = 1
+                                                }
+                                                main_window.load_screen(ScreenManager.Screens.Definition)
+                                            }
+                                        }
+
+                                        Row
+                                        {
+                                            anchors.fill: parent
+                                            anchors.margins: Settings.spacing_small
+                                            spacing: Settings.spacing_big
+
+                                            Text
+                                            {
+                                                text: parent.parent.mid
+                                                font.pixelSize: 14
+                                                color: Settings.app_color_green_4
+                                                elide: Text.ElideRight
+                                                width: parent.width * 0.75
+                                            }
+
+                                            // Optional extra columns if backend sends them
+                                            Text
+                                            {
+                                                text: (typeof modelData === "object" && modelData.score !== undefined) ? ("score " + modelData.score) : ""
+                                                font.pixelSize: 12
+                                                color: Settings.app_color_green_1
+                                                horizontalAlignment: Text.AlignRight
+                                                width: parent.width * 0.20
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                                policy: Controls2.ScrollBar.AlwaysOn
+                                width: 8
+                                anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+                                contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
+                                background: Rectangle { color: "transparent" }
+                            }
+                        }
+                    }
                 }
             }
         }
+
         // New empty screen 4 TO BE USED
         Component
         {
@@ -1014,6 +1246,13 @@ Window {
             // update current status variables
             ScreenManager.current_screen = screen
 
+            console.log("[NAV] load_screen=", screen, "current=", ScreenManager.current_screen)
+            if (screen === ScreenManager.Screens.NewScreen3TODOrename) {
+                console.log("[NAV] going to HF screen. query=", main_window.hf_query_text,
+                            "hf_models_list len=", main_window.hf_models_list.length)
+            }
+
+
             // Run the animations and perform screen change
             stack_view.replace({item: inst, replace: true, destroyOnPop: false})
             background_x_animation.start()
@@ -1098,7 +1337,7 @@ Window {
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
         reiterateModel.set(5, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
-        engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
+        engine.request_orchestrator(parseInt(problem_id), 1, false)
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         var goal_only = String(results["Problem kind"])
         var defInstance = _screenInst[ScreenManager.Screens.Definition]

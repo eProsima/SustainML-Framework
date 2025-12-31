@@ -63,6 +63,8 @@ public:
      */
     QObject* enable();
 
+    Q_INVOKABLE void request_hf_models(QString description, int limit = 10);
+
 public slots:
 
     /**
@@ -516,6 +518,9 @@ signals:
      */
     void notSupportProblem(
             const QString& message);
+
+    void hf_models_available(QVariantList models);
+    void hf_models_error(QString message);
 
 protected:
 
