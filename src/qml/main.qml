@@ -507,6 +507,7 @@ Window {
                 SplitView {
                     anchors.fill: parent
                     orientation: Qt.Horizontal
+
                     SmlProblemDefinitionScreen {
                         id: definition_screen_component
                         Layout.minimumWidth: parent.width * 0.70
@@ -995,7 +996,7 @@ Window {
                         SmlText
                         {
                             text_kind: SmlText.TextKind.Header_2
-                            text_value: "Hugging Face suggestions (top 10)"
+                            text_value: "Hugging Face suggestions"
                             color: Settings.app_color_green_4
                         }
 
@@ -1337,7 +1338,7 @@ Window {
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
         reiterateModel.set(5, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
-        engine.request_orchestrator(parseInt(problem_id), 1, false)
+        engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         var goal_only = String(results["Problem kind"])
         var defInstance = _screenInst[ScreenManager.Screens.Definition]

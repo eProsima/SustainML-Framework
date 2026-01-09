@@ -142,7 +142,7 @@ void Engine::request_hf_models(QString description, int limit)
         if (config_obj.contains("models") && config_obj["models"].isString())
         {
             // Convert comma-separated list to list of { id: "..." } objects
-            QStringList ids = config_obj["models"].toString().split(", ", Qt::SkipEmptyParts);
+            QStringList ids = config_obj["models"].toString().split(",", Qt::SkipEmptyParts);
             QVariantList out;
             for (const QString& id : ids)
             {

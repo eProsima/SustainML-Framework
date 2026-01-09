@@ -1637,7 +1637,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Find 10 best Hugging Face models for this description"
+        tooltip_text: "Find best Hugging Face models for this description"
 
         anchors
         {
