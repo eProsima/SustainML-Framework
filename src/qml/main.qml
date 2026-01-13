@@ -4,6 +4,7 @@ import QtQuick.Window 2.15
 import QtQuick.Controls 1.4
 import QtQuick.Controls 2.5 as Controls2
 import QtQuick.Layouts 1.15
+import QtQml 2.15
 
 // Project imports
 import eProsima.SustainML.Settings 1.0
@@ -17,7 +18,7 @@ import "screens"
 Window {
     id: main_window
 
-    // properties
+    // Properties
     property bool in_use: true
     property string log: "LOG"
     property string app_requirements_node_last_status: "INACTIVE"
@@ -49,6 +50,33 @@ Window {
 
     property var hf_models_list: []
     property string hf_query_text: ""
+    property var hf_tooltip_cache: ({})
+    property bool hoverArmed: false
+    property string lastRequested: ""
+    property var hf_live_popup: ({ open: false, mid: "", text: "" })
+
+    Timer {
+        id: hfHoverDebounce
+        interval: 250
+        repeat: false
+        onTriggered: {
+            if (!main_window.hoverArmed) return
+
+            var id = main_window.lastRequested
+            if (!id) return
+
+            var cached = main_window.hf_tooltip_cache[id]
+
+            // Only request if not cached and not pending
+            if (cached === undefined) {
+                var newCache = Object.assign({}, main_window.hf_tooltip_cache)
+                newCache[id] = "__PENDING__"
+                main_window.hf_tooltip_cache = newCache
+
+                engine.request_hf_model_tooltip(id)
+            }
+        }
+    }
 
     // Main view properties
     width:  Settings.app_width
@@ -163,18 +191,8 @@ Window {
 
         function onHf_models_available(models)
         {
-            console.log("[HF] onHf_models_available typeof=", typeof models,
-                        "isArray=", (models && models.length !== undefined),
-                        "len=", (models && models.length !== undefined) ? models.length : -1)
-
-            if (models && models.length > 0) {
-                console.log("[HF] first element=", JSON.stringify(models[0]))
-            }
-
             main_window.hf_models_list = models || []
             main_window.refreshing = false
-
-            console.log("[HF] hf_models_list set, len now=", main_window.hf_models_list.length)
         }
 
         function onHf_models_error(message)
@@ -183,6 +201,46 @@ Window {
             console.log("[HF] onHf_models_error message=", message, "query=", main_window.hf_query_text)
         }
 
+        function onHf_model_tooltip_available(model_id, tooltip) {
+            var base = ""
+            // Find base tooltip from hf_models_list entry for that model_id
+            for (var i = 0; i < main_window.hf_models_list.length; ++i) {
+                var m = main_window.hf_models_list[i]
+                var id = (typeof m === "object" && m) ? (m["model_id"] || m["id"] || m["modelId"]) : m
+                if (id === model_id) {
+                    if (typeof m === "object" && m["tooltip"])
+                        base = m["tooltip"]
+                    break
+                }
+            }
+
+            var combined = base
+            if (tooltip && tooltip !== model_id) {
+                if (combined !== "")
+                    combined += "\n\n"
+                combined += tooltip
+            }
+
+            var cache = Object.assign({}, main_window.hf_tooltip_cache)
+            cache[model_id] = combined !== "" ? combined : tooltip
+            main_window.hf_tooltip_cache = cache
+
+            // Notify HF screen
+            main_window.hf_live_popup = {
+                open: true,
+                mid: model_id,
+                text: cache[model_id]
+            }
+        }
+    }
+
+    function clear_hf_models() {
+        main_window.hf_models_list = []
+        main_window.hf_query_text = ""
+        main_window.hf_tooltip_cache = ({})
+        main_window.hf_live_popup = ({ open: false, mid: "", text: "" })
+        main_window.lastRequested = ""
+        main_window.hoverArmed = false
     }
 
     // Load JSONL file with per-model info
@@ -455,13 +513,11 @@ Window {
                 }
 
                 onAsk_hf_models: {
-                    console.log("[HF] main.qml onAsk_hf_models description=", description,
-                                "len=", description ? description.length : -1)
-
+                    // Clear previous results immediately so the HF screen starts empty
+                    main_window.hf_models_list = []
+                    main_window.hf_tooltip_cache = ({})
                     main_window.refreshing = true
                     main_window.hf_query_text = description
-
-                    console.log("[HF] calling engine.request_hf_models(description, 10)")
                     engine.request_hf_models(description, 10)
                 }
             }
@@ -727,7 +783,6 @@ Window {
         Component
         {
             id: uNet_screen
-
             Rectangle
             {
                 color: "transparent"
@@ -735,7 +790,7 @@ Window {
                     loadUnetInfo()
                 }
 
-                // HOME BUTTON – copied style from SmlLoadDatasetScreen
+                // HOME BUTTON
                 SmlButton
                 {
                     id: unet_go_home_button
@@ -760,7 +815,7 @@ Window {
                     onClicked: main_window.load_screen(ScreenManager.Screens.Home)
                 }
 
-                // BACK ARROW – same widget & icon as in SmlLoadDatasetScreen
+                // BACK ARROW
                 SmlButton
                 {
                     id: unet_go_back_button
@@ -799,7 +854,7 @@ Window {
                         bottomMargin: Settings.spacing_big * 2
                     }
 
-                    // White card with green border – always visible, does not scroll
+                    // White card with green border
                     Rectangle {
                         id: tableFrame
                         anchors.fill: parent
@@ -900,10 +955,80 @@ Window {
         Component
         {
             id: huggingFace_screen
-
             Rectangle
             {
                 color: "transparent"
+                // HF tooltip popup
+                property var hfHoveredItem: null
+                property string hfHoveredId: ""
+                property string hfHoveredText: ""
+                property string hoveredMid: ""
+
+                Controls2.Popup {
+                    id: hfPopup
+                    modal: false
+                    focus: false
+                    closePolicy: Controls2.Popup.NoAutoClose
+                    padding: 10
+
+                    width: Math.min(hfList.width * 0.55, 560)
+
+                    // Auto height based on content
+                    height: hfPopupText.paintedHeight + padding * 2
+
+                    background: Rectangle {
+                        radius: 8
+                        color: "white"
+                        border.color: Settings.app_color_green_4
+                        border.width: 1
+                    }
+
+                    contentItem: Text {
+                        id: hfPopupText
+                        text: hfHoveredText
+                        wrapMode: Text.WordWrap
+                        width: hfPopup.width - hfPopup.padding * 2
+                        color: Settings.app_color_green_1
+                    }
+                }
+
+                function hideHfPopup() {
+                    hfPopup.close()
+                    hfHoveredItem = null
+                    hfHoveredId = ""
+                    hfHoveredText = ""
+                }
+
+                function showHfPopup(rowItem, text) {
+                    if (!rowItem) return
+                    if (!text) { hideHfPopup(); return }
+
+                    hfHoveredItem = rowItem
+                    hfHoveredText = text
+
+                    var p = rowItem.mapToItem(main_window.contentItem, 0, 0)
+
+                    var leftShift = 0
+                    var margin = 8
+
+                    var aboveY = p.y - hfPopup.height - margin
+                    var belowY = p.y + rowItem.height + margin
+
+                    var yChosen = belowY
+                    if (belowY + hfPopup.height > main_window.height && aboveY >= 0)
+                        yChosen = aboveY
+                    else if (aboveY < 0 && belowY + hfPopup.height > main_window.height)
+                        yChosen = Math.max(0, main_window.height - hfPopup.height - margin)
+
+                    var xWanted = p.x + leftShift
+                    var xClamped = Math.max(margin, Math.min(xWanted, main_window.width - hfPopup.width - margin))
+
+                    hfPopup.x = xClamped
+                    hfPopup.y = yChosen
+
+                    if (!hfPopup.opened)
+                        hfPopup.open()
+                }
 
                 // Home
                 SmlButton
@@ -927,20 +1052,22 @@ Window {
                         left: parent.left
                         leftMargin: Settings.spacing_normal
                     }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
-                }
-
-                Component.onCompleted: {
-                    console.log("[HF_SCREEN] opened. query=", main_window.hf_query_text,
-                                "hf_models_list len=", main_window.hf_models_list.length)
+                    onClicked: {
+                        main_window.clear_hf_models()
+                        main_window.load_screen(ScreenManager.Screens.Home)
+                    }
                 }
 
                 Connections {
                     target: main_window
-                    function onHf_models_listChanged() {
-                        console.log("[HF_SCREEN] hf_models_listChanged, len=", main_window.hf_models_list.length)
-                        if (main_window.hf_models_list.length > 0)
-                            console.log("[HF_SCREEN] first=", JSON.stringify(main_window.hf_models_list[0]))
+                    function onHf_live_popupChanged() {
+                        var u = main_window.hf_live_popup
+                        if (!u || !u.open) return
+
+                        // Only show if we are still hovering the same model
+                        if (hoveredMid !== u.mid) return
+
+                        showHfPopup(hfHoveredItem, u.text)
                     }
                 }
 
@@ -965,7 +1092,10 @@ Window {
                         left: hf_go_home_button.right
                         leftMargin: Settings.spacing_small
                     }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                    onClicked: {
+                        main_window.clear_hf_models()
+                        main_window.load_screen(ScreenManager.Screens.Definition)
+                    }
                 }
 
                 Rectangle
@@ -1009,101 +1139,128 @@ Window {
 
                         Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
 
-                        Flickable
-                        {
-                            id: hfList
-                            clip: true
+                        Row {
+                            id: hfListRow
                             width: parent.width
                             height: parent.height - 120
-                            contentWidth: width
-                            contentHeight: hfColumn.implicitHeight
+                            spacing: 10   // Space between list and scrollbar
 
-                            Column
-                            {
-                                id: hfColumn
-                                width: parent.width
-                                spacing: Settings.spacing_small
+                            Flickable {
+                                id: hfList
+                                clip: true
+                                width: hfListRow.width - hfScroll.width - hfListRow.spacing
+                                height: hfListRow.height
 
-                                Repeater
-                                {
-                                    model: main_window.hf_models_list
+                                contentWidth: width
+                                contentHeight: hfColumn.implicitHeight
+                                interactive: true
+                                boundsBehavior: Flickable.StopAtBounds
 
-                                    delegate: Rectangle
-                                    {
-                                        width: parent.width
-                                        radius: 10
-                                        border.color: Settings.app_color_green_4
-                                        border.width: 1
-                                        color: "transparent"
-                                        height: 54
+                                Column {
+                                    id: hfColumn
+                                    width: parent.width
+                                    spacing: Settings.spacing_small
 
-                                        property string mid: {
-                                            if (typeof modelData === "string")
-                                                return modelData
+                                    Repeater {
+                                        model: main_window.hf_models_list
 
-                                            // QVariantMap-safe access (important!)
-                                            if (modelData && modelData["model_id"] !== undefined)
-                                                return modelData["model_id"]
+                                        delegate: Rectangle {
+                                            width: hfList.width
+                                            radius: 10
+                                            border.color: Settings.app_color_green_4
+                                            border.width: 1
+                                            color: "transparent"
+                                            height: 54
 
-                                            if (modelData && modelData["id"] !== undefined)
-                                                return modelData["id"]
+                                            property string mid: {
+                                                if (typeof modelData === "string")
+                                                    return modelData
+                                                if (modelData && modelData["model_id"] !== undefined)
+                                                    return modelData["model_id"]
+                                                if (modelData && modelData["id"] !== undefined)
+                                                    return modelData["id"]
+                                                if (modelData && modelData["modelId"] !== undefined)
+                                                    return modelData["modelId"]
+                                                return ""
+                                            }
 
-                                            if (modelData && modelData["modelId"] !== undefined)
-                                                return modelData["modelId"]
+                                            HoverHandler {
+                                                id: hover
+                                                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
 
-                                            return ""
-                                        }
+                                                onHoveredChanged: {
+                                                    if (!hovered) {
+                                                        main_window.hoverArmed = false
+                                                        hfHoverDebounce.stop()
+                                                        hoveredMid = ""
+                                                        hideHfPopup()
+                                                        return
+                                                    }
 
-                                        MouseArea
-                                        {
-                                            anchors.fill: parent
-                                            onClicked:
-                                            {
-                                                // Set selected model back in the Definition screen instance
-                                                var def = main_window._screenInst[ScreenManager.Screens.Definition]
-                                                if (def) {
-                                                    def.__model_selected = parent.mid
-                                                    def.__model_selected_copy = parent.mid
-                                                    def.__num_outputs = 1
+                                                    if (!mid) return
+
+                                                    // Store what we're hovering NOW so config callback can show popup later
+                                                    hoveredMid = mid
+                                                    hfHoveredItem = parent
+
+                                                    main_window.lastRequested = mid
+                                                    main_window.hoverArmed = true
+
+                                                    var t = main_window.hf_tooltip_cache[mid]
+
+                                                    // If we already have final text -> show immediately
+                                                    if (t !== undefined && t !== "__PENDING__") {
+                                                        showHfPopup(hfHoveredItem, t)
+                                                        return
+                                                    }
+
+                                                    // Not cached yet -> request; popup will open when data arrives
+                                                    hfHoverDebounce.restart()
                                                 }
-                                                main_window.load_screen(ScreenManager.Screens.Definition)
-                                            }
-                                        }
-
-                                        Row
-                                        {
-                                            anchors.fill: parent
-                                            anchors.margins: Settings.spacing_small
-                                            spacing: Settings.spacing_big
-
-                                            Text
-                                            {
-                                                text: parent.parent.mid
-                                                font.pixelSize: 14
-                                                color: Settings.app_color_green_4
-                                                elide: Text.ElideRight
-                                                width: parent.width * 0.75
                                             }
 
-                                            // Optional extra columns if backend sends them
-                                            Text
-                                            {
-                                                text: (typeof modelData === "object" && modelData.score !== undefined) ? ("score " + modelData.score) : ""
-                                                font.pixelSize: 12
-                                                color: Settings.app_color_green_1
-                                                horizontalAlignment: Text.AlignRight
-                                                width: parent.width * 0.20
-                                                elide: Text.ElideRight
+                                            TapHandler {
+                                                onTapped: {
+                                                    if (!mid) return
+                                                    Qt.openUrlExternally("https://huggingface.co/" + mid)
+                                                }
+                                            }
+
+                                            Row {
+                                                anchors.fill: parent
+                                                anchors.margins: Settings.spacing_small
+                                                spacing: Settings.spacing_big
+
+                                                Text {
+                                                    text: parent.parent.mid
+                                                    font.pixelSize: 14
+                                                    color: Settings.app_color_green_4
+                                                    elide: Text.ElideRight
+                                                    width: hfList.width * 0.75
+                                                }
+
+                                                Text {
+                                                    text: (typeof modelData === "object" && modelData.score !== undefined) ? ("score " + modelData.score) : ""
+                                                    font.pixelSize: 12
+                                                    color: Settings.app_color_green_1
+                                                    horizontalAlignment: Text.AlignRight
+                                                    width: hfList.width * 0.20
+                                                    elide: Text.ElideRight
+                                                }
                                             }
                                         }
                                     }
                                 }
+
+                                Controls2.ScrollBar.vertical: hfScroll
                             }
 
-                            Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                            Controls2.ScrollBar {
+                                id: hfScroll
                                 policy: Controls2.ScrollBar.AlwaysOn
                                 width: 8
-                                anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+                                height: hfListRow.height
+
                                 contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
                                 background: Rectangle { color: "transparent" }
                             }
@@ -1246,13 +1403,6 @@ Window {
 
             // update current status variables
             ScreenManager.current_screen = screen
-
-            console.log("[NAV] load_screen=", screen, "current=", ScreenManager.current_screen)
-            if (screen === ScreenManager.Screens.NewScreen3TODOrename) {
-                console.log("[NAV] going to HF screen. query=", main_window.hf_query_text,
-                            "hf_models_list len=", main_window.hf_models_list.length)
-            }
-
 
             // Run the animations and perform screen change
             stack_view.replace({item: inst, replace: true, destroyOnPop: false})
