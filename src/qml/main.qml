@@ -53,7 +53,10 @@ Window {
     property var hf_tooltip_cache: ({})
     property bool hoverArmed: false
     property string lastRequested: ""
-    property var hf_live_popup: ({ open: false, mid: "", text: "" })
+
+    property string hf_selected_goal: ""
+    property var hf_hover_anchor: ({ x: 0, y: 0, h: 0 })
+    property bool hf_tip_locked: false   // Set true while leaving HF screen
 
     Timer {
         id: hfHoverDebounce
@@ -225,22 +228,79 @@ Window {
             cache[model_id] = combined !== "" ? combined : tooltip
             main_window.hf_tooltip_cache = cache
 
-            // Notify HF screen
-            main_window.hf_live_popup = {
-                open: true,
-                mid: model_id,
-                text: cache[model_id]
+            // Only show tooltip if still on HF screen and still hovering the same model
+            if (ScreenManager.current_screen === ScreenManager.Screens.HFsearch &&
+                main_window.lastRequested === model_id &&
+                !main_window.hf_tip_locked) {
+
+                hfTip.showNearAnchor(cache[model_id])
             }
         }
+    }
+
+    Rectangle {
+        id: hfTip
+        visible: false
+        z: 99999
+        radius: 8
+        color: "white"
+        border.color: Settings.app_color_green_4
+        border.width: 1
+        clip: true
+
+        width: Math.min(main_window.width * 0.55, 560)
+        height: Math.min(300, hfTipText.paintedHeight + 20)
+
+        Text {
+            id: hfTipText
+            anchors.fill: parent
+            anchors.margins: 10
+            wrapMode: Text.WordWrap
+            color: Settings.app_color_green_1
+            text: ""
+        }
+
+        function hide() {
+            visible = false
+            hfTipText.text = ""
+        }
+
+        function showNearAnchor(txt) {
+            if (main_window.hf_tip_locked) return
+            hfTipText.text = txt || ""
+            if (!hfTipText.text) { hide(); return }
+
+            var a = main_window.hf_hover_anchor
+            var margin = 8
+
+            // Prefer below, if not feasible then above
+            var yBelow = a.y + a.h + margin
+            var yAbove = a.y - hfTip.height - margin
+            var y = yBelow
+            if (yBelow + hfTip.height > main_window.height && yAbove >= 0) y = yAbove
+
+            var x = a.x
+            x = Math.max(margin, Math.min(x, main_window.width - hfTip.width - margin))
+            y = Math.max(margin, Math.min(y, main_window.height - hfTip.height - margin))
+
+            hfTip.x = x
+            hfTip.y = y
+            hfTip.visible = true
+        }
+    }
+
+    function stop_hf_tooltip() {
+        hfTip.hide()
+        hoverArmed = false
+        hfHoverDebounce.stop()
+        lastRequested = ""
     }
 
     function clear_hf_models() {
         main_window.hf_models_list = []
         main_window.hf_query_text = ""
         main_window.hf_tooltip_cache = ({})
-        main_window.hf_live_popup = ({ open: false, mid: "", text: "" })
-        main_window.lastRequested = ""
-        main_window.hoverArmed = false
+        stop_hf_tooltip()
     }
 
     // Load JSONL file with per-model info
@@ -274,7 +334,6 @@ Window {
                 }
 
                 unetInfoMap = map
-                console.log("[UnetInfo] Loaded entries:", Object.keys(unetInfoMap).length)
             }
         }
 
@@ -302,12 +361,84 @@ Window {
             flops + " MFLOPs, " + params + " M parameters."
     }
 
+    function open_hf_analyze(modelObj) {
+        if (!modelObj) return
+
+        main_window.hf_tip_locked = true
+        stop_hf_tooltip()
+
+        // Extract HF id
+        var id = ""
+        if (typeof modelObj === "string") id = modelObj
+        else id = modelObj["model_id"] || modelObj["id"] || modelObj["modelId"] || ""
+
+        if (!id) return
+
+        // Save selected goal/task from the HF card (no backend import needed)
+        if (typeof modelObj === "object" && modelObj) {
+            main_window.hf_selected_goal =
+                modelObj["pipeline_tag"] || modelObj["task"] || modelObj["tag"] || ""
+        } else {
+            main_window.hf_selected_goal = ""
+        }
+
+        // Grab current values from Definition screen instance
+        var def = _screenInst[ScreenManager.Screens.Definition]
+        if (!def) {
+            console.log("[HF][Analyze] No Definition screen instance found")
+            return
+        }
+
+        main_window.tasking = true
+
+        var extra = def.__extra_data || ""
+        var extraObj = {}
+        try { extraObj = extra ? JSON.parse(extra) : {} } catch(e) { extraObj = {} }
+        extraObj["model_restrains"] = [id]
+        var extraJson = JSON.stringify(extraObj)
+
+        engine.launch_task(
+            def.__problem_short_description,
+            def.__modality,
+            def.__metric,
+            def.__problem_definition,
+            def.__inputs,
+            def.__outputs,
+            def.__dataset_metadata_description,
+            def.__dataset_metadata_topic,
+            def.__dataset_metadata_profile,
+            def.__dataset_metadata_keywords,
+            def.__dataset_metadata_applications,
+            def.__minimum_samples,
+            def.__maximum_samples,
+            def.__optimize_carbon_footprint_auto,
+            main_window.hf_selected_goal,
+            def.__optimize_carbon_footprint_manual,
+            def.__previous_iteration,
+            def.__desired_carbon_footprint,
+            def.__max_memory_footprint,
+            def.__hardware_required,
+            def.__geo_location_continent,
+            def.__geo_location_region,
+            extraJson,
+            def.__previous_problem_id,
+            def.__num_outputs,
+            id,
+            def.__type
+        )
+
+        def.results_available = true
+
+        // Go to Results like normal flow
+        main_window.load_screen(ScreenManager.Screens.Results)
+    }
+
     // Background
     Rectangle
     {
         color: ScreenManager.background_color
 
-        // set background size two times the app size
+        // Set background size two times the app size
         width:  2 * Settings.app_width
         height: 2 * Settings.app_height
 
@@ -321,7 +452,7 @@ Window {
             id: background
             source: ScreenManager.background_shape
 
-            // set image size two times the app size
+            // Set image size two times the app size
             width:  2 * Settings.app_width
             height: 2 * Settings.app_height
 
@@ -342,7 +473,7 @@ Window {
             id: background_2
             source: ScreenManager.background_2_shape
 
-            // set image size two times the app size
+            // Set image size two times the app size
             width:  2 * Settings.app_width
             height: 2 * Settings.app_height
 
@@ -444,8 +575,8 @@ Window {
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
-                onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
-                onGo_hf_models: main_window.load_screen(ScreenManager.Screens.NewScreen3TODOrename)
+                onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
+                onGo_hf_models: main_window.load_screen(ScreenManager.Screens.HFsearch)
 
                 onClear_all_clicked: {
                     // Clear dataset metadata stored in main_window
@@ -544,8 +675,7 @@ Window {
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_back: main_window.load_screen(ScreenManager.Screens.Definition)
-                onSend_dataset_path_task:
-                {
+                onSend_dataset_path_task: {
                     main_window.tasking = true
                 }
             }
@@ -584,9 +714,8 @@ Window {
 
                         onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
-                        onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
-                        onSend_task:
-                        {
+                        onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
+                        onSend_task: {
                             engine.launch_task(
                                 problem_short_description,
                                 modality,
@@ -622,8 +751,7 @@ Window {
                             // engine.request_goals()
                             engine.request_hardwares()
                         }
-                        onAsk_metrics:
-                        {
+                        onAsk_metrics: {
                             main_window.refreshing = true
                             engine.request_metrics(
                                 metric_req_type,
@@ -697,8 +825,7 @@ Window {
                 current_problem_id: 1
                 tasking: main_window.tasking
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
-                onGo_back_empty_input:
-                {
+                onGo_back_empty_input: {
                     var defInstance = _screenInst[ScreenManager.Screens.Definition];
                     if (defInstance !== undefined) {
                         defInstance.__problem_short_description = "";
@@ -727,13 +854,11 @@ Window {
                     }
                     main_window.load_screen(ScreenManager.Screens.Definition)
                 }
-                onGo_back_previous_input:
-                {
+                onGo_back_previous_input: {
                     engine.request_orchestrator(parseInt(main_window.current_problem_id), 1, false)
                     main_window.load_screen(ScreenManager.Screens.Definition)
                 }
-                onResults_screen_loaded:
-                {
+                onResults_screen_loaded: {
                     results_screen_component.current_problem_id = main_window.current_problem_id
                     engine.request_current_data(true)
                 }
@@ -805,8 +930,7 @@ Window {
                     nightmode_color_pressed: Settings.app_color_green_3
                     nightmode_color_text: Settings.app_color_green_1
                     tooltip_text: "Go to Home screen"
-                    anchors
-                    {
+                    anchors {
                         top: parent.top
                         topMargin: Settings.spacing_normal
                         left: parent.left
@@ -830,8 +954,7 @@ Window {
                     nightmode_color_pressed: Settings.app_color_green_3
                     nightmode_color_text: Settings.app_color_green_1
                     tooltip_text: "Go to Problem Definition screen"
-                    anchors
-                    {
+                    anchors {
                         top: unet_go_home_button.top
                         left: unet_go_home_button.right
                         leftMargin: Settings.spacing_small
@@ -865,7 +988,7 @@ Window {
                         border.width: 2
                         clip: true   // Keep content clipped inside the card
 
-                        // Flickable *inside* the card – only content scrolls
+                        // Flickable inside the card – only content scrolls
                         Flickable {
                             id: unetList
                             anchors.fill: parent
@@ -958,77 +1081,6 @@ Window {
             Rectangle
             {
                 color: "transparent"
-                // HF tooltip popup
-                property var hfHoveredItem: null
-                property string hfHoveredId: ""
-                property string hfHoveredText: ""
-                property string hoveredMid: ""
-
-                Controls2.Popup {
-                    id: hfPopup
-                    modal: false
-                    focus: false
-                    closePolicy: Controls2.Popup.NoAutoClose
-                    padding: 10
-
-                    width: Math.min(hfList.width * 0.55, 560)
-
-                    // Auto height based on content
-                    height: hfPopupText.paintedHeight + padding * 2
-
-                    background: Rectangle {
-                        radius: 8
-                        color: "white"
-                        border.color: Settings.app_color_green_4
-                        border.width: 1
-                    }
-
-                    contentItem: Text {
-                        id: hfPopupText
-                        text: hfHoveredText
-                        wrapMode: Text.WordWrap
-                        width: hfPopup.width - hfPopup.padding * 2
-                        color: Settings.app_color_green_1
-                    }
-                }
-
-                function hideHfPopup() {
-                    hfPopup.close()
-                    hfHoveredItem = null
-                    hfHoveredId = ""
-                    hfHoveredText = ""
-                }
-
-                function showHfPopup(rowItem, text) {
-                    if (!rowItem) return
-                    if (!text) { hideHfPopup(); return }
-
-                    hfHoveredItem = rowItem
-                    hfHoveredText = text
-
-                    var p = rowItem.mapToItem(main_window.contentItem, 0, 0)
-
-                    var leftShift = 0
-                    var margin = 8
-
-                    var aboveY = p.y - hfPopup.height - margin
-                    var belowY = p.y + rowItem.height + margin
-
-                    var yChosen = belowY
-                    if (belowY + hfPopup.height > main_window.height && aboveY >= 0)
-                        yChosen = aboveY
-                    else if (aboveY < 0 && belowY + hfPopup.height > main_window.height)
-                        yChosen = Math.max(0, main_window.height - hfPopup.height - margin)
-
-                    var xWanted = p.x + leftShift
-                    var xClamped = Math.max(margin, Math.min(xWanted, main_window.width - hfPopup.width - margin))
-
-                    hfPopup.x = xClamped
-                    hfPopup.y = yChosen
-
-                    if (!hfPopup.opened)
-                        hfPopup.open()
-                }
 
                 // Home
                 SmlButton
@@ -1045,8 +1097,7 @@ Window {
                     nightmode_color_pressed: Settings.app_color_green_3
                     nightmode_color_text: Settings.app_color_green_1
                     tooltip_text: "Go to Home screen"
-                    anchors
-                    {
+                    anchors {
                         top: parent.top
                         topMargin: Settings.spacing_normal
                         left: parent.left
@@ -1055,19 +1106,6 @@ Window {
                     onClicked: {
                         main_window.clear_hf_models()
                         main_window.load_screen(ScreenManager.Screens.Home)
-                    }
-                }
-
-                Connections {
-                    target: main_window
-                    function onHf_live_popupChanged() {
-                        var u = main_window.hf_live_popup
-                        if (!u || !u.open) return
-
-                        // Only show if we are still hovering the same model
-                        if (hoveredMid !== u.mid) return
-
-                        showHfPopup(hfHoveredItem, u.text)
                     }
                 }
 
@@ -1086,8 +1124,7 @@ Window {
                     nightmode_color_pressed: Settings.app_color_green_3
                     nightmode_color_text: Settings.app_color_green_1
                     tooltip_text: "Back to Problem Definition"
-                    anchors
-                    {
+                    anchors {
                         top: hf_go_home_button.top
                         left: hf_go_home_button.right
                         leftMargin: Settings.spacing_small
@@ -1100,8 +1137,7 @@ Window {
 
                 Rectangle
                 {
-                    anchors
-                    {
+                    anchors {
                         top: hf_go_back_button.bottom
                         topMargin: Settings.spacing_big * 2
                         left: parent.left
@@ -1189,32 +1225,30 @@ Window {
                                                 acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
 
                                                 onHoveredChanged: {
-                                                    if (!hovered) {
-                                                        main_window.hoverArmed = false
-                                                        hfHoverDebounce.stop()
-                                                        hoveredMid = ""
-                                                        hideHfPopup()
-                                                        return
-                                                    }
 
                                                     if (!mid) return
 
-                                                    // Store what we're hovering NOW so config callback can show popup later
-                                                    hoveredMid = mid
-                                                    hfHoveredItem = parent
+                                                    if (!hovered) {
+                                                        // Hide tooltip when leaving this model card
+                                                        if (!main_window.hf_tip_locked) {
+                                                            stop_hf_tooltip()
+                                                        }
+                                                        return
+                                                    }
+
+                                                    // Store anchor position in MAIN WINDOW so backend callback can use it
+                                                    var p = parent.mapToItem(main_window.contentItem, 0, 0)
+                                                    main_window.hf_hover_anchor = ({ x: p.x, y: p.y, h: parent.height })
 
                                                     main_window.lastRequested = mid
                                                     main_window.hoverArmed = true
 
                                                     var t = main_window.hf_tooltip_cache[mid]
-
-                                                    // If we already have final text -> show immediately
-                                                    if (t !== undefined && t !== "__PENDING__") {
-                                                        showHfPopup(hfHoveredItem, t)
+                                                    if (t !== undefined && t !== "__PENDING__" && t !== "") {
+                                                        hfTip.showNearAnchor(t)
                                                         return
                                                     }
 
-                                                    // Not cached yet -> request; popup will open when data arrives
                                                     hfHoverDebounce.restart()
                                                 }
                                             }
@@ -1226,26 +1260,52 @@ Window {
                                                 }
                                             }
 
-                                            Row {
+                                            RowLayout {
                                                 anchors.fill: parent
                                                 anchors.margins: Settings.spacing_small
                                                 spacing: Settings.spacing_big
 
+                                                // LEFT: model name
                                                 Text {
                                                     text: parent.parent.mid
                                                     font.pixelSize: 14
                                                     color: Settings.app_color_green_4
                                                     elide: Text.ElideRight
-                                                    width: hfList.width * 0.75
+                                                    Layout.fillWidth: true          // Takes remaining space
+                                                    Layout.alignment: Qt.AlignVCenter
                                                 }
 
+                                                // RIGHT: score
                                                 Text {
-                                                    text: (typeof modelData === "object" && modelData.score !== undefined) ? ("score " + modelData.score) : ""
+                                                    text: (typeof modelData === "object" && modelData.score !== undefined) ? ("score " + Number(modelData.score).toFixed(6)) : ""
                                                     font.pixelSize: 12
                                                     color: Settings.app_color_green_1
                                                     horizontalAlignment: Text.AlignRight
-                                                    width: hfList.width * 0.20
-                                                    elide: Text.ElideRight
+                                                    Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                                    Layout.preferredWidth: 180
+                                                }
+
+                                                // FAR RIGHT: Analyze button
+                                                Controls2.Button {
+                                                    text: "⚡ Analyze"
+                                                    Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                                    Layout.preferredWidth: 90
+                                                    height: 32
+
+                                                    contentItem: Text {
+                                                        text: parent.text
+                                                        font.pixelSize: 15
+                                                        color: Settings.app_color_light
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        verticalAlignment: Text.AlignVCenter
+                                                    }
+
+                                                    background: Rectangle {
+                                                        radius: 8
+                                                        color: Settings.app_color_green_4
+                                                    }
+
+                                                    onClicked: main_window.open_hf_analyze(modelData)
                                                 }
                                             }
                                         }
@@ -1339,11 +1399,17 @@ Window {
     // Screen loader plus background animation trigger
     function load_screen(screen)
     {
-        var screen_to_be_loaded  = ScreenManager.current_screen // current screen as default
+        var screen_to_be_loaded  = ScreenManager.current_screen // Current screen as default
 
         // Check if actual change is required
         if (ScreenManager.current_screen !== screen)
         {
+            // Always hide tooltip before starting a transition
+            stop_hf_tooltip()
+
+            // Allow tooltip only on HF screen
+            main_window.hf_tip_locked = (screen !== ScreenManager.Screens.HFsearch)
+
             // Select actual screen identifier
             switch (screen)
             {
@@ -1363,10 +1429,10 @@ Window {
                 case ScreenManager.Screens.Reiterate:
                     screen_to_be_loaded = reiterate_screen
                     break
-                case ScreenManager.Screens.NewScreen2TODOrename:
+                case ScreenManager.Screens.UNet:
                     screen_to_be_loaded = uNet_screen
                     break
-                case ScreenManager.Screens.NewScreen3TODOrename:
+                case ScreenManager.Screens.HFsearch:
                     screen_to_be_loaded = huggingFace_screen
                     break
                 case ScreenManager.Screens.NewScreen4TODOrename:
@@ -1379,7 +1445,7 @@ Window {
             }
 
             // Force recreation of U-Net screen so Component.onCompleted runs
-            if (screen === ScreenManager.Screens.NewScreen2TODOrename) {
+            if (screen === ScreenManager.Screens.UNet) {
                 if (_screenInst[screen]) {
                     _screenInst[screen].destroy();
                 }
@@ -1401,7 +1467,7 @@ Window {
             background_2_x_animation.to = position_to_be_moved[2]
             background_2_y_animation.to = position_to_be_moved[3]
 
-            // update current status variables
+            // Update current status variables
             ScreenManager.current_screen = screen
 
             // Run the animations and perform screen change
@@ -1450,13 +1516,13 @@ Window {
                 movement[2] = Settings.background_2_x_initial
                 movement[3] = Settings.background_2_y_initial
                 break
-            case ScreenManager.Screens.NewScreen2TODOrename:
+            case ScreenManager.Screens.UNet:
                 movement[0] = Settings.app_width * 5
                 movement[1] = Settings.app_height * 5
                 movement[2] = Settings.background_2_x_initial
                 movement[3] = Settings.background_2_y_final
                 break
-            case ScreenManager.Screens.NewScreen3TODOrename:
+            case ScreenManager.Screens.HFsearch:
                 movement[0] = Settings.app_width * 5
                 movement[1] = Settings.app_height * 5
                 movement[2] = Settings.background_2_x_final
