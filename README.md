@@ -8,7 +8,7 @@
         <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
         <a href="https://sustainml.readthedocs.io/en/latest">Docs</a>
         <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-        <a href="https://sustainml.eu/index.php/news">News</a>
+        <a href="https://sustainml.eu/showroom/news">News</a>
         <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
         <a href="https://twitter.com/EProsima">Twitter</a>
         <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
@@ -19,11 +19,11 @@
 <br><br>
 
 <div class="badges" align="center">
-    <a href="https://opensource.org/licenses/Apache-2.0"><img alt="License Robotics" src="https://img.shields.io/github/license/eProsima/SustainML.svg"/></a>
-    <a href="https://github.com/eProsima/SustainML/releases"><img alt="Releases" src="https://img.shields.io/github/v/release/eProsima/SustainML?sort=semver"/></a>
-    <a href="https://github.com/eProsima/SustainML/issues"><img alt="Issues" src="https://img.shields.io/github/issues/eProsima/SustainML.svg"/></a>
-    <a href="https://github.com/eProsima/SustainML/network/memberss"><img alt="Forks" src="https://img.shields.io/github/forks/eProsima/SustainML.svg"/></a>
-    <a href="https://github.com/eProsima/SustainML/stargazerss"><img alt="Stars" src="https://img.shields.io/github/stars/eProsima/SustainML.svg"/></a>
+    <a href="https://www.gnu.org/licenses/gpl-3.0.html#license-text"><img alt="License Robotics" src="https://img.shields.io/badge/license-GPL--3.0-90EE90"/></a>
+    <a href="https://github.com/eProsima/SustainML-Framework/releases"><img alt="Releases" src="https://img.shields.io/github/v/release/eProsima/SustainML-Framework?sort=semver"/></a>
+    <a href="https://github.com/eProsima/SustainML-Framework/issues"><img alt="Issues" src="https://img.shields.io/github/issues/eProsima/SustainML-Framework.svg"/></a>
+    <a href="https://github.com/eProsima/SustainML-Framework/network/members"><img alt="Forks" src="https://img.shields.io/github/forks/eProsima/SustainML-Framework.svg"/></a>
+    <a href="https://github.com/eProsima/SustainML-Framework/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/eProsima/SustainML-Framework.svg"/></a>
     <a href="https://SustainML.readthedocs.io/en/latest/"><img alt="Documentation Status" src="https://readthedocs.org/projects/sustainml/badge/?version=latest&style=flat"/></a>
 </div>
 
@@ -43,27 +43,29 @@ AI developers from all experience levels can make use of the framework through i
 
 ### Framework Architecture
 
-The *SustainML Framework* is composed of different Software Modules, each one related to specific task, which are specialized in solving the different parts of the machine learning problem architecture definition, starting from the user’s problem description.
-Each of the modules conforms a Node.
-These steps are basically:
+The *SustainML Framework* is composed of different Software Modules, each one related to a specific task, which are specialized in solving the different parts of the machine learning problem architecture definition, starting from the user’s problem description.
+Each of these modules forms a Node.
+The main processing steps are:
 
 1. Encode the problem and constraints defined by the user
 2. Suggest a machine learning model
 3. Propose an optimized hardware for running the suggested model
 4. Warn about the estimated carbon footprint that would take training the model in the hardware
 
-All the Nodes shall import its corresponding Python library, so that each Node can be abstracted from the DDS communications.
+All the Nodes shall import their corresponding Python library, so that each Node can be abstracted from the DDS communications.
 
 ---
 
 ## Installation manual
 
 The following sections describe the steps to install the SustainML Framework in Ubuntu.
+Optional but recommended: Use a Python virtual environment to avoid conflicts with system packages.
 
 1. **Installing the dependencies**
 
     These packages provide the tools required to install SustainML and its dependencies from command line.
-    Install them using the package manager of the appropriate Linux distribution.
+
+    * Install them using the package manager of the appropriate Linux distribution.
     On Ubuntu use the command:
 
     ```bash
@@ -71,9 +73,18 @@ The following sections describe the steps to install the SustainML Framework in 
         curl wget git cmake g++ build-essential python3 python3-pip python3-venv libpython3-dev swig \
         libssl-dev libasio-dev libtinyxml2-dev libp11-dev libengine-pkcs11-openssl softhsm2 \
         qtdeclarative5-dev libqt5charts5-dev qml-module-qtcharts qtquickcontrols2-5-dev libqt5svg5 \
-        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels qml-module-qtquick-dialogs && \
-    pip3 install -U \
-        colcon-common-extensions vcstool && \
+        qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qt-labs-qmlmodels qml-module-qtquick-dialogs
+    ```
+
+    * Install required Python tooling
+
+    ```bash
+    pip3 install -U colcon-common-extensions vcstool
+    ```
+
+    * Install Ollama and pull the default models
+
+    ```bash
     curl -fsSL https://ollama.com/install.sh | sh && ollama pull llama3 && ollama pull mistral-small
     ```
 
@@ -104,24 +115,40 @@ The following sections describe the steps to install the SustainML Framework in 
 
 3. **Downloading sources**
 
-    Create a SustainML directory and download the repositories file that will be used to install SustainML Framework and its dependencies.
+    * Create the workspace and fetch the SustainML repositories
 
     ```bash
-    mkdir -p ~/SustainML/SustainML_ws/src && cd ~/SustainML/SustainML_ws && \
+    mkdir -p ~/SustainML/SustainML_ws/src && \
+    cd ~/SustainML/SustainML_ws && \
+
     wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sustainml.repos && \
-    vcs import src < sustainml.repos && \
+    vcs import src < sustainml.repos
+    ```
+    * Initialize submodules and install Python dependencies
+
+    ```bash
     cd ~/SustainML/SustainML_ws/src/sustainml_lib && \
     git submodule update --init --recursive && \
+
     pip3 install gdown && \
     pip3 install -r ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/requirements.txt
+    ```
+
+    * Download required data and initialize the Neo4j database
+
+    ```bash
     cd ~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && \
+
     gdown --id 1TQvt1bSXares-I9l7Wki0Jge3oubRkOJ -O rag/models_index.ann && \
+
     sudo neo4j-admin database load system \
         --from-path=~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
         --overwrite-destination=true && \
+
     sudo neo4j-admin database load neo4j \
         --from-path=~/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1/rag/neo4j_backup \
         --overwrite-destination=true && \
+
     sudo chown -R neo4j:neo4j /var/lib/neo4j/data
     ```
 
@@ -140,13 +167,23 @@ The following sections describe the steps to install the SustainML Framework in 
 
     The SustainML Framework requires all of its modules to be running for full deployment.
 
-    Before starting, set the HF_TOKEN environment variable on your host to your personal Hugging Face access token:
+    Before starting, set the HF_TOKEN environment variable on your host to your personal Hugging Face access token. It is required for accessing Hugging Face models.
+
+    ```bash
+    export HF_TOKEN=<your_huggingface_token>
+    ```
+
+    Additionally, by setting the environment variable ``SUSTAINML_DOMAIN_ID`` the domain for inter-node communication can be changed. It is a form of DDS domain isolation when running multiple instances or avoiding conflicts.
+
+    ```bash
+    export SUSTAINML_DOMAIN_ID=<domain_id>
+    ```
+
+    Start the SustainML Framework by launching all required framework nodes.
 
     ```bash
     sustainml-framework
     ```
-
-    Additionally, by setting the environment variable ``SUSTAINML_DOMAIN_ID`` the domain for inter-node communication can be changed.
 
 ### Running SustainML Framework using Docker
 
