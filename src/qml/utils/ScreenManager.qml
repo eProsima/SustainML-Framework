@@ -17,7 +17,7 @@ Item
         Reiterate,
         UNet,
         HFsearch,
-        NewScreen4TODOrename
+        Compare
     }
 
     // Variables that user might change during the app execution

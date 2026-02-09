@@ -38,7 +38,6 @@
 #include <sustainml_cpp/core/Constants.hpp>
 #include <sustainml_cpp/types/types.hpp>
 
-
 #include <sustainml/REST_requester.hpp>
 
 class Engine : public QQmlApplicationEngine
@@ -76,6 +75,18 @@ public:
      * @param model_id Hugging Face model id, e.g. "author/model-name"
      */
     Q_INVOKABLE void request_hf_model_tooltip(QString model_id);
+
+    /**
+     * @brief Fetch Hugging Face detailed info objects for a list of model ids
+     * @param model_ids List of HF model ids
+     */
+    Q_INVOKABLE void request_hf_models_info(const QVariantList& model_ids);
+
+    /**
+     * @brief Ask backend to build a comparison report from the /hf_models_info payload
+     * @param models List of model info objects returned by request_hf_models_info()
+     */
+    Q_INVOKABLE void request_hf_models_compare(const QVariantList& models);
 
 public slots:
 
@@ -531,10 +542,48 @@ signals:
     void notSupportProblem(
             const QString& message);
 
+    /**
+     * @brief Emitted when HF search results are available
+     * @param models List of model entries (objects or strings depending on backend payload)
+     */
     void hf_models_available(QVariantList models);
+
+    /**
+     * @brief Emitted when HF search fails or returns an invalid payload
+     * @param message Error description
+     */
     void hf_models_error(QString message);
 
+    /**
+     * @brief Emitted when extra tooltip text for a single HF model is available
+     * @param model_id HF model id
+     * @param tooltip Tooltip text (may be empty if unavailable/gated)
+     */
     void hf_model_tooltip_available(QString model_id, QString tooltip);
+
+    /**
+     * @brief Emitted when /hf_models_info returns successfully
+     * @param models Full model objects as returned by backend
+     */
+    void hf_models_info_available(const QVariantList& models);
+
+    /**
+     * @brief Emitted when /hf_models_info fails
+     * @param message Error description
+     */
+    void hf_models_info_error(const QString& message);
+
+    /**
+     * @brief Emitted when /hf_models_compare returns a comparison report
+     * @param report Report object (summary + cards + table)
+     */
+    void hf_models_compare_available(const QVariantMap& report);
+
+    /**
+     * @brief Emitted when /hf_models_compare fails
+     * @param message Error description
+     */
+    void hf_models_compare_error(const QString& message);
 
 protected:
 

@@ -49,7 +49,9 @@ public:
         REQUEST_RESULTS,
         REQUEST_NODE_STATUS,
         REQUEST_CONFIG,
-        CANCEL_REQUEST
+        CANCEL_REQUEST,
+        REQUEST_HF_MODELS_INFO,
+        REQUEST_HF_MODELS_COMPARE
     };
 
     //! Object performs a REST request and registers the functor for the response management

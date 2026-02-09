@@ -217,6 +217,100 @@ void Engine::request_hf_model_tooltip(QString model_id)
     });
 }
 
+void Engine::request_hf_models_info(const QVariantList& model_ids)
+{
+    if (model_ids.isEmpty())
+    {
+        emit hf_models_info_error("hf_models_info: empty selection");
+        return;
+    }
+
+    QJsonArray arr;
+    for (const auto& v : model_ids)
+        arr.append(QJsonValue::fromVariant(v));
+
+    QJsonObject json;
+    json["model_ids"] = arr;
+
+    auto* requester = new REST_requester(
+        [this](const REST_requester*, const QJsonObject& json_obj)
+        {
+            if (json_obj.contains("error"))
+            {
+                emit hf_models_info_error("hf_models_info: " + json_obj["error"].toString());
+                return;
+            }
+
+            const auto v = json_obj.value("models");
+            if (!v.isArray())
+            {
+                emit hf_models_info_error("hf_models_info: response missing 'models' array");
+                return;
+            }
+
+            QVariantList out;
+            const auto a = v.toArray();
+            out.reserve(a.size());
+            for (const auto& it : a)
+                out.push_back(it.toVariant());
+
+            emit hf_models_info_available(out);
+        },
+        REST_requester::RequestType::REQUEST_HF_MODELS_INFO,
+        json);
+
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    requesters_.push_back(requester);
+}
+
+void Engine::request_hf_models_compare(const QVariantList& models)
+{
+    if (models.isEmpty())
+    {
+        emit hf_models_compare_error("hf_models_compare: empty models list");
+        return;
+    }
+
+    QJsonArray arr;
+    for (const auto& v : models)
+        arr.append(QJsonValue::fromVariant(v));
+
+    // /hf_models_compare returns an object (comparison_summary, model_cards, comparison_table)
+    QJsonObject json;
+    json["models"] = arr;
+
+    auto* requester = new REST_requester(
+        [this](const REST_requester*, const QJsonObject& json_obj)
+        {
+            if (json_obj.contains("error"))
+            {
+                emit hf_models_compare_error("hf_models_compare: " + json_obj["error"].toString());
+                return;
+            }
+
+            QJsonObject out_obj;
+
+            if (json_obj.contains("comparison_summary") || json_obj.contains("model_cards") || json_obj.contains("comparison_table"))
+                out_obj = json_obj;
+            else if (const auto r = json_obj.value("response"); r.isObject())
+                out_obj = r.toObject();
+            else if (const auto r = json_obj.value("result"); r.isObject())
+                out_obj = r.toObject();
+            else
+            {
+                emit hf_models_compare_error("hf_models_compare: unexpected JSON response (missing expected fields)");
+                return;
+            }
+
+            emit hf_models_compare_available(out_obj.toVariantMap());
+        },
+        REST_requester::RequestType::REQUEST_HF_MODELS_COMPARE,
+        json);
+
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    requesters_.push_back(requester);
+}
+
 void Engine::launch_task(
         QString problem_short_description,
         QString modality,

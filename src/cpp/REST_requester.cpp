@@ -22,11 +22,12 @@
 
 #include <sustainml/REST_requester.hpp>
 
-#include <condition_variable>
 #include <functional>
-#include <iostream>
 
 #include <QJsonDocument>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QDebug>
 
 REST_requester::REST_requester(
         std::function<void(const REST_requester* requester, const QJsonObject& json_obj)> callback,
@@ -81,6 +82,12 @@ QString REST_requester::request_type_to_url(
             break;
         case RequestType::CANCEL_REQUEST:
             url += "/cancel";
+            break;
+        case RequestType::REQUEST_HF_MODELS_INFO:
+            url += "/hf_models_info";
+            break;
+        case RequestType::REQUEST_HF_MODELS_COMPARE:
+            url += "/hf_models_compare";
             break;
     }
     return url;
