@@ -198,23 +198,22 @@ void Engine::launch_dataset_path_task(
     json_config["node_id"] = 4;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
-    {
-        QJsonObject response_obj = json_obj["response"].toObject();
-        if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-        {
-            QJsonDocument config_doc = QJsonDocument::fromJson(
-                response_obj["configuration"].toString().toUtf8());
-            if (config_doc.isObject())
             {
-                QJsonObject config_obj = config_doc.object();
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
 
-                emit dataset_metadata_available(config_obj.toVariantMap());
+                        emit dataset_metadata_available(config_obj.toVariantMap());
 
-            }
-        }
-    });
+                    }
+                }
+            });
 }
-
 
 void Engine::request_current_data(
         const bool& retrieve_all)
@@ -229,13 +228,15 @@ void Engine::request_current_data(
     for (int i = iterator_start; i < received_task_ids.size(); i++)
     {
         // Request results for all nodes, for the given task ids
-        std::cout << "Requesting current data for " << Utils::task_string(received_task_ids.at(i)).toStdString() << std::endl;
+        std::cout << "Requesting current data for " << Utils::task_string(received_task_ids.at(i)).toStdString()
+                  << std::endl;
         request_results(received_task_ids.at(i), sustainml::NodeID::MAX);
     }
 }
 
 QJsonObject Engine::request_specific_results(
-    const int problem_id, const int iteration_id)
+        const int problem_id,
+        const int iteration_id)
 {
     // Node results requests
     QJsonObject task_json;
@@ -247,7 +248,6 @@ QJsonObject Engine::request_specific_results(
     node_json_data["task_id"] = task_json;
     return specific_node_results_request(node_json_data);
 }
-
 
 void Engine::request_status()
 {
@@ -361,8 +361,8 @@ void Engine::request_hardwares()
 }
 
 void Engine::request_metrics(
-    QString metric_req_type,
-    QString req_type_values)
+        QString metric_req_type,
+        QString req_type_values)
 {
     QJsonObject json_config;
     json_config["configuration"] = "metrics, " + metric_req_type + ": " + req_type_values;
@@ -389,7 +389,7 @@ void Engine::request_metrics(
 }
 
 void Engine::request_model_info(
-    QString mode_name)
+        QString mode_name)
 {
     QJsonObject json_config;
     json_config["configuration"] = "model_info, " + mode_name;
@@ -424,7 +424,7 @@ void Engine::request_model_info(
 }
 
 void Engine::request_problem_from_modality(
-    QString modality)
+        QString modality)
 {
     QJsonObject json_config;
     json_config["configuration"] = "problem_from_modality, " + modality;
@@ -451,7 +451,7 @@ void Engine::request_problem_from_modality(
 }
 
 void Engine::request_model_from_goal(
-    QString goal)
+        QString goal)
 {
     QJsonObject json_config;
     json_config["configuration"] = "model_from_goal, " + goal;
@@ -460,32 +460,32 @@ void Engine::request_model_from_goal(
     // std::cout << "[Engine] request_model_from_goal called with goal='" << goal.toStdString() << "'" << std::endl;
 
     config_request(json_config, [this, goal](const QJsonObject& json_obj)
-    {
-        QJsonObject response_obj = json_obj["response"].toObject();
-        if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-        {
-            QJsonDocument config_doc = QJsonDocument::fromJson(
-                response_obj["configuration"].toString().toUtf8());
-            if (config_doc.isObject())
             {
-                QJsonObject config_obj = config_doc.object();
-                if (config_obj.contains("models") && config_obj["models"].isString())
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
                 {
-                    QString models_str = config_obj["models"].toString();
-                    QStringList models = models_str.split(", ");
+                    QJsonDocument config_doc = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8());
+                    if (config_doc.isObject())
+                    {
+                        QJsonObject config_obj = config_doc.object();
+                        if (config_obj.contains("models") && config_obj["models"].isString())
+                        {
+                            QString models_str = config_obj["models"].toString();
+                            QStringList models = models_str.split(", ");
 
-                    // std::cout << "[Engine] models_available for goal='" << goal.toStdString() << "' count="  << models.size() << std::endl;
+                            // std::cout << "[Engine] models_available for goal='" << goal.toStdString() << "' count="  << models.size() << std::endl;
 
-                    emit models_available(models);
+                            emit models_available(models);
+                        }
+                        else
+                        {
+                            std::cout << "[Engine] WARNING: no 'models' field for goal='"
+                                      << goal.toStdString() << "'" << std::endl;
+                        }
+                    }
                 }
-                else
-                {
-                    std::cout << "[Engine] WARNING: no 'models' field for goal='"
-                              << goal.toStdString() << "'" << std::endl;
-                }
-            }
-        }
-    });
+            });
 }
 
 void Engine::request_results(
@@ -620,9 +620,9 @@ void Engine::print_results(
 }
 
 void Engine::request_orchestrator(
-    int problem_id,
-    int iteration_id,
-    bool reiteration)
+        int problem_id,
+        int iteration_id,
+        bool reiteration)
 {
     last_reiteration_flag_ = reiteration;
 
@@ -637,7 +637,7 @@ void Engine::request_orchestrator(
 }
 
 void Engine::send_reiteration_inputs(
-    const QJsonObject& json_obj)
+        const QJsonObject& json_obj)
 {
     QJsonObject node_json = json_obj[Utils::node_name(sustainml::NodeID::ID_ORCHESTRATOR)].toObject();
     types::TaskId task_id = Utils::task_id(node_json);
@@ -762,10 +762,12 @@ void Engine::node_results_response(
             QJsonObject node_json = json_obj[Utils::node_name(id)].toObject();
             {
                 QJsonObject extra_data = node_json["extra_data"].toObject();
-                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 && !cancel_requested_.load())
+                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 &&
+                        !cancel_requested_.load())
                 {
                     types::TaskId task_id = Utils::task_id(node_json);
-                    std::cout << "Requesting reiteration for " << Utils::task_string(task_id).toStdString() << std::endl;
+                    std::cout << "Requesting reiteration for " << Utils::task_string(task_id).toStdString()
+                              << std::endl;
                     task_id = types::TaskId(task_id.problem_id(), task_id.iteration_id() + 1);
                     received_task_ids.push_back(task_id);
                     emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
@@ -792,7 +794,7 @@ void Engine::node_results_response(
 }
 
 QJsonObject Engine::specific_node_results_request(
-    const QJsonObject& json_obj)
+        const QJsonObject& json_obj)
 {
     QEventLoop loop;
     QJsonObject response_json;
@@ -835,7 +837,7 @@ QJsonObject Engine::specific_node_results_request(
 }
 
 void Engine::orchestrator_request(
-    const QJsonObject& json_obj)
+        const QJsonObject& json_obj)
 {
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::orchestrator_response, this, std::placeholders::_1, std::placeholders::_2),
@@ -849,8 +851,8 @@ void Engine::orchestrator_request(
 }
 
 void Engine::orchestrator_response(
-    const REST_requester* requester,
-    const QJsonObject& json_obj)
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
 {
     if (!json_obj.empty())
     {
@@ -938,7 +940,8 @@ void Engine::node_status_response(
             if (status_value.toStdString() == "IDLE")
             {
                 check_initialization++;
-                if(hw_idle){
+                if (hw_idle)
+                {
                     emit refreshing_on();
                     request_hardwares();
                     hw_idle = false;
@@ -965,7 +968,8 @@ void Engine::node_status_response(
             if (status_value.toStdString() == "IDLE")
             {
                 check_initialization++;
-                if(ml_model_meta_idle){
+                if (ml_model_meta_idle)
+                {
                     emit refreshing_on();
                     request_modalities();
                     ml_model_meta_idle = false;
@@ -1018,8 +1022,8 @@ void Engine::config_response(
 {
     if (!json_obj.empty())
     {
-        std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
-                std::endl;
+        std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString()
+                  << std::endl;
         QJsonObject response_obj = json_obj["response"].toObject();
         int node_id = response_obj["node_id"].toInt();
         if (config_callbacks_[node_id])
@@ -1065,8 +1069,8 @@ void Engine::response_for_cancel(
 {
     if (!json_obj.empty())
     {
-        std::cout << "Cancel response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
-                std::endl;
+        std::cout << "Cancel response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString()
+                  << std::endl;
         if (json_obj.contains("status"))
         {
             QString status = json_obj["status"].toString();
@@ -1080,7 +1084,8 @@ void Engine::response_for_cancel(
             }
             else
             {
-                std::cout << "Unexpected cancel response: " << QJsonDocument(json_obj).toJson().toStdString() << std::endl;
+                std::cout << "Unexpected cancel response: " << QJsonDocument(json_obj).toJson().toStdString()
+                          << std::endl;
             }
         }
         else if (json_obj.contains("error"))

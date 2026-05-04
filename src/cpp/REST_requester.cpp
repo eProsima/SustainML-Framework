@@ -47,7 +47,8 @@ REST_requester::~REST_requester()
     manager_->deleteLater();
 }
 
-void REST_requester::manage_response(QNetworkReply* reply_)
+void REST_requester::manage_response(
+        QNetworkReply* reply_)
 {
     // Parse the JSON response
     QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
