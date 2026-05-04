@@ -2,6 +2,7 @@
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls 1.4
+import QtQuick.Controls 2.5 as Controls2
 import QtQuick.Layouts 1.15
 
 // Project imports
@@ -44,6 +45,7 @@ Window {
     property bool initializing: true
 
     property var _screenInst: ({})
+    property var unetInfoMap: ({})
 
     // Main view properties
     width:  Settings.app_width
@@ -147,7 +149,7 @@ Window {
 
         function onModels_available(list_models)
         {
-            main_window.model_list = ["(empty)"].concat(list_models)
+            main_window.model_list = list_models || []
             main_window.refreshing = false
         }
 
@@ -155,6 +157,65 @@ Window {
         {
             main_window.tasking = false
         }
+    }
+
+    // Load JSONL file with per-model info
+    function loadUnetInfo() {
+        var xhr = new XMLHttpRequest()
+        xhr.open(
+            "GET",
+            "file:///home/zesk/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp2/hw_provider_fpga/vendor/sustain_ml_predictor/xczu19eg-ffvb1517-2-i/unet_models_info.jsonl"
+        )
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                var txt = xhr.responseText || ""
+                var lines = txt.split("\n")
+                var map = {}
+
+                for (var i = 0; i < lines.length; ++i) {
+                    var line = lines[i].trim()
+                    if (!line)
+                        continue
+                    try {
+                        var obj = JSON.parse(line)
+                        var file = obj.model_file || ""
+                        if (!file.endsWith(".onnx"))
+                            continue
+                        var name = file.substring(0, file.length - 5)   // "unet_model_000"
+                        map[name] = obj
+                    } catch (e) {
+                        console.log("[UnetInfo] JSON parse error on line", i, e)
+                    }
+                }
+
+                unetInfoMap = map
+                console.log("[UnetInfo] Loaded entries:", Object.keys(unetInfoMap).length)
+            }
+        }
+
+        xhr.send()
+    }
+
+    // Build human-readable description for each model
+    function getUnetDescription(modelName) {
+        if (!modelName || !unetInfoMap || !unetInfoMap[modelName])
+            return ""
+
+        var info = unetInfoMap[modelName]
+
+        var ks = info.kernel_sizes ? info.kernel_sizes.join("–") : "n/a"
+        var size = info.input_size || "?"
+        var ch   = info.input_channels || "?"
+        var depth = info.depth || "?"
+        var initCh = info.initial_channels || "?"
+        var flops = info.Mflops !== undefined ? info.Mflops.toFixed(1) : "?"
+        var params = info.Mparams !== undefined ? info.Mparams.toFixed(3) : "?"
+
+        return "Input " + size + "×" + size + " with " + ch + " channels; " +
+            "depth " + depth + ", initial " + initCh + " feature channels; " +
+            "kernel sizes [" + ks + "]; " +
+            flops + " MFLOPs, " + params + " M parameters."
     }
 
     // Background
@@ -299,6 +360,23 @@ Window {
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
+                onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
+
+                onClear_all_clicked: {
+                    // Clear dataset metadata stored in main_window
+                    main_window.dataset_description = ""
+                    main_window.dataset_topic = ""
+                    main_window.dataset_profile = ""
+                    main_window.dataset_keywords = ""
+                    main_window.dataset_applications = ""
+
+                    // If dataset upload screen already exists, clear its path field too
+                    var ds = _screenInst[ScreenManager.Screens.DatasetPath]
+                    if (ds) {
+                        ds.dataset_path_text = ""
+                    }
+                }
+
                 onSend_task:
                 {
                     engine.launch_task(
@@ -414,6 +492,7 @@ Window {
 
                         onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
+                        onGo_unet_models: main_window.load_screen(ScreenManager.Screens.NewScreen2TODOrename)
                         onSend_task:
                         {
                             engine.launch_task(
@@ -540,17 +619,17 @@ Window {
                         defInstance.__maximum_samples = 1;
                         defInstance.__optimize_carbon_footprint_auto = false;
                         defInstance.__goal = "";
-                        defInstance.__types = "transformers";
+                        defInstance.__types = defInstance.__types;
                         defInstance.__optimize_carbon_footprint_manual = false;
                         defInstance.__previous_iteration = 0;
                         defInstance.__desired_carbon_footprint = 0.0;
                         defInstance.__max_memory_footprint = 0;
-                        defInstance.__hardware_required = "PIM-AI-1chip";
+                        // defInstance.__hardware_required = "PIM-AI-1chip";
                         defInstance.__geo_location_continent = "";
                         defInstance.__geo_location_region = "";
                         defInstance.__extra_data = "";
                         defInstance.__previous_problem_id = 0;
-                        defInstance.__num_outputs = 10;
+                        defInstance.__num_outputs = 1;
                         defInstance.__model_selected = "";
                         defInstance.__model_selected_copy = "";
                     }
@@ -607,27 +686,187 @@ Window {
                 }
             }
         }
-        // New empty screen 2 TO BE USED
+
+        // U-Net / CNN models screen
         Component
         {
-            id: new_screen_2_todo_rename
+            id: uNet_screen
 
             Rectangle
             {
                 color: "transparent"
-                SmlText
-                {
-                    text_value: "this is a new screen #2"
-                    text_kind: SmlText.TextKind.Body
+                Component.onCompleted: {
+                    loadUnetInfo()
+                }
 
-                    anchors.centerIn: parent
+                // HOME BUTTON – copied style from SmlLoadDatasetScreen
+                SmlButton
+                {
+                    id: unet_go_home_button
+                    icon_name: Settings.home_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Home"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Home screen"
+                    anchors
+                    {
+                        top: parent.top
+                        topMargin: Settings.spacing_normal
+                        left: parent.left
+                        leftMargin: Settings.spacing_normal
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                }
+
+                // BACK ARROW – same widget & icon as in SmlLoadDatasetScreen
+                SmlButton
+                {
+                    id: unet_go_back_button
+                    icon_name: Settings.back_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: ""
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Problem Definition screen"
+                    anchors
+                    {
+                        top: unet_go_home_button.top
+                        left: unet_go_home_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                }
+
+                // MAIN CONTENT – two columns with shared vertical scroll
+                Rectangle {
+                    id: unet_content
+                    color: "transparent"
+                    anchors {
+                        top: unet_go_back_button.bottom
+                        topMargin: Settings.spacing_big * 2
+                        left: parent.left
+                        leftMargin: Settings.spacing_big
+                        right: parent.right
+                        rightMargin: Settings.spacing_big
+                        bottom: parent.bottom
+                        bottomMargin: Settings.spacing_big * 2
+                    }
+
+                    // White card with green border – always visible, does not scroll
+                    Rectangle {
+                        id: tableFrame
+                        anchors.fill: parent
+                        anchors.margins: Settings.spacing_big
+                        radius: 18
+                        color: "white"
+                        border.color: Settings.app_color_green_4
+                        border.width: 2
+                        clip: true   // Keep content clipped inside the card
+
+                        // Flickable *inside* the card – only content scrolls
+                        Flickable {
+                            id: unetList
+                            anchors.fill: parent
+                            anchors.margins: Settings.spacing_big
+                            clip: true
+
+                            contentWidth: width
+                            contentHeight: modelsColumn.implicitHeight + Settings.spacing_big
+
+                            Column {
+                                id: modelsColumn
+                                width: parent.width
+                                spacing: Settings.spacing_small
+
+                                // Header row: model name + description
+                                Row {
+                                    width: parent.width
+                                    spacing: Settings.spacing_big
+
+                                    // Left header: model name
+                                    SmlText {
+                                        text_kind: SmlText.TextKind.Header_3
+                                        text_value: "U-Net model"
+                                        color: Settings.app_color_green_4
+                                        width: parent.width * 0.2
+                                    }
+
+                                    // Right header: description
+                                    SmlText {
+                                        text_kind: SmlText.TextKind.Header_3
+                                        text_value: "Description"
+                                        color: Settings.app_color_green_1
+                                        width: parent.width * 0.75
+                                    }
+                                }
+
+                                // One row per model
+                                Repeater {
+                                    model: main_window.model_list
+
+                                    delegate: Row {
+                                        width: parent.width
+                                        spacing: Settings.spacing_big
+
+                                        // LEFT COLUMN: model name
+                                        Text {
+                                            text: modelData
+                                            font.pixelSize: 13
+                                            color: Settings.app_color_green_4
+                                            elide: Text.ElideRight
+                                            width: parent.width * 0.2
+                                        }
+
+                                        // RIGHT COLUMN: description
+                                        Text {
+                                            text: getUnetDescription(modelData)
+                                            font.pixelSize: 13
+                                            color: Settings.app_color_green_1
+                                            wrapMode: Text.WordWrap
+                                            width: parent.width * 0.75
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Scrollbar inside the white card, on the right edge
+                            Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                                policy: Controls2.ScrollBar.AlwaysOn
+                                width: 8
+                                anchors {
+                                    right: parent.right
+                                    top: parent.top
+                                    bottom: parent.bottom
+                                }
+                                contentItem: Rectangle {
+                                    radius: 4
+                                    color: Settings.app_color_green_4   // Green handle
+                                }
+                                background: Rectangle {
+                                    color: "transparent"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+
         // New empty screen 3 TO BE USED
         Component
         {
-            id: new_screen_3_todo_rename
+            id: huggingFace_screen
 
             Rectangle
             {
@@ -735,10 +974,10 @@ Window {
                     screen_to_be_loaded = reiterate_screen
                     break
                 case ScreenManager.Screens.NewScreen2TODOrename:
-                    screen_to_be_loaded = new_screen_2_todo_rename
+                    screen_to_be_loaded = uNet_screen
                     break
                 case ScreenManager.Screens.NewScreen3TODOrename:
-                    screen_to_be_loaded = new_screen_3_todo_rename
+                    screen_to_be_loaded = huggingFace_screen
                     break
                 case ScreenManager.Screens.NewScreen4TODOrename:
                     screen_to_be_loaded = new_screen_4_todo_rename
@@ -747,6 +986,14 @@ Window {
                 case ScreenManager.Screens.Home:
                     screen_to_be_loaded = home_screen
                     break
+            }
+
+            // Force recreation of U-Net screen so Component.onCompleted runs
+            if (screen === ScreenManager.Screens.NewScreen2TODOrename) {
+                if (_screenInst[screen]) {
+                    _screenInst[screen].destroy();
+                }
+                _screenInst[screen] = null;
             }
 
             var inst = _screenInst[screen]
@@ -854,6 +1101,9 @@ Window {
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         var goal_only = String(results["Problem kind"])
+        var defInstance = _screenInst[ScreenManager.Screens.Definition]
+        var fam = (defInstance && defInstance.__types) ? defInstance.__types : "Transformers"
+        engine.request_model_from_goal(goal_only + ", " + fam)
         engine.request_model_from_goal(goal_only)
         main_window.refreshing = true
         load_screen(ScreenManager.Screens.Reiterate)
