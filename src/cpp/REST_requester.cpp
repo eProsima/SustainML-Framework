@@ -47,8 +47,7 @@ REST_requester::~REST_requester()
     manager_->deleteLater();
 }
 
-void REST_requester::manage_response(
-        QNetworkReply* reply_)
+void REST_requester::manage_response(QNetworkReply* reply_)
 {
     // Parse the JSON response
     QJsonDocument json_doc = QJsonDocument::fromJson(reply_->readAll());
@@ -78,6 +77,9 @@ QString REST_requester::request_type_to_url(
             break;
         case RequestType::REQUEST_CONFIG:
             url += "/config_request";
+            break;
+        case RequestType::CANCEL_REQUEST:
+            url += "/cancel";
             break;
     }
     return url;

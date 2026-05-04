@@ -102,6 +102,7 @@ void Engine::launch_task(
     QJsonArray outs;
     Utils::split_string(inputs.toStdString(), ins, ' ');
     Utils::split_string(outputs.toStdString(), outs, ' ');
+    cancel_requested_.store(false);
 
     uint32_t min = 1;
     uint32_t max = sizeof(uint32_t) - 1;
@@ -208,7 +209,7 @@ void Engine::launch_dataset_path_task(
                 QJsonObject config_obj = config_doc.object();
 
                 emit dataset_metadata_available(config_obj.toVariantMap());
-                
+
             }
         }
     });
@@ -228,6 +229,7 @@ void Engine::request_current_data(
     for (int i = iterator_start; i < received_task_ids.size(); i++)
     {
         // Request results for all nodes, for the given task ids
+        std::cout << "Requesting current data for " << Utils::task_string(received_task_ids.at(i)).toStdString() << std::endl;
         request_results(received_task_ids.at(i), sustainml::NodeID::MAX);
     }
 }
@@ -245,6 +247,7 @@ QJsonObject Engine::request_specific_results(
     node_json_data["task_id"] = task_json;
     return specific_node_results_request(node_json_data);
 }
+
 
 void Engine::request_status()
 {
@@ -698,6 +701,7 @@ void Engine::user_input_response(
             received_task_ids.push_back(task_id);
             emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
         }
+        std::cout << "User input response received for " << Utils::task_string(task_id).toStdString() << std::endl;
         // Request results for all nodes, last task id
         request_results(task_id, sustainml::NodeID::MAX);
         emit update_log(QString("User input send for ") + Utils::task_string(task_id));
@@ -747,9 +751,10 @@ void Engine::node_results_response(
             QJsonObject node_json = json_obj[Utils::node_name(id)].toObject();
             {
                 QJsonObject extra_data = node_json["extra_data"].toObject();
-                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1)
+                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 && !cancel_requested_.load())
                 {
                     types::TaskId task_id = Utils::task_id(node_json);
+                    std::cout << "Requesting reiteration for " << Utils::task_string(task_id).toStdString() << std::endl;
                     task_id = types::TaskId(task_id.problem_id(), task_id.iteration_id() + 1);
                     received_task_ids.push_back(task_id);
                     emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
@@ -1022,6 +1027,66 @@ void Engine::config_response(
             requesters_.erase(it);
             (ptr)->disconnect();
             (ptr)->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::request_for_cancel()
+{
+    cancel_requested_.store(true);
+    QJsonObject json_obj;
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::response_for_cancel, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::CANCEL_REQUEST,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::response_for_cancel(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    if (!json_obj.empty())
+    {
+        std::cout << "Cancel response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString() <<
+                std::endl;
+        if (json_obj.contains("status"))
+        {
+            QString status = json_obj["status"].toString();
+            if (status == "cancelled")
+            {
+                std::cout << "Task cancelled successfully" << std::endl;
+            }
+            else if (status == "not_found")
+            {
+                std::cout << "Cancellation failed: Task not found" << std::endl;
+            }
+            else
+            {
+                std::cout << "Unexpected cancel response: " << QJsonDocument(json_obj).toJson().toStdString() << std::endl;
+            }
+        }
+        else if (json_obj.contains("error"))
+        {
+            std::cout << "Cancel error: " << json_obj["error"].toString().toStdString() << std::endl;
+        }
+    }
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
             break;
         }
     }
