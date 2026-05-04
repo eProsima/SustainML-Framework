@@ -77,8 +77,8 @@ RUN wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sus
     fi
 
 # Initialize the sustainml library submodules
-RUN cd /sustainml/src/sustainml_lib && git submodule update --init --recursive && cd /sustainml 
-RUN cd /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && gdown --id 1gTXqQtP9JS92gAtPzhKgZpdIHSV_Lcnp -O rag/models_index.ann
+RUN cd /sustainml/src/sustainml_lib && git submodule update --init --recursive && cd /sustainml
+RUN cd /sustainml/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp1 && gdown --id 1TQvt1bSXares-I9l7Wki0Jge3oubRkOJ -O rag/models_index.ann
 
 # Install the submodules dependencies
 RUN pip3 install --break-system-packages -r /sustainml/src/sustainml_lib/sustainml_modules/requirements.txt
