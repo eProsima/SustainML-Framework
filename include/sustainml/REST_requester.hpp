@@ -63,9 +63,11 @@ public:
 
 private slots:
 
-    void manage_response(QNetworkReply* reply);
+    void manage_response(
+            QNetworkReply* reply);
 
 private:
+
     //! Convert request type to url route using server url
     QString request_type_to_url(
             RequestType type);

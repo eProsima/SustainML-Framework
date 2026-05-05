@@ -44,6 +44,7 @@ class Engine : public QQmlApplicationEngine
     Q_OBJECT
 
 private:
+
     bool last_reiteration_flag_{ false };
     std::atomic_bool cancel_requested_{false};
 
@@ -96,40 +97,40 @@ public slots:
      *
      */
     void launch_task(
-        QString problem_short_description,
-        QString modality,
-        QString metric,
-        QString problem_definition,
-        QString inputs,
-        QString outputs,
-        QString dataset_metadata_description,
-        QString dataset_metadata_topic,
-        QString dataset_metadata_profile,
-        QString dataset_metadata_keywords,
-        QString dataset_metadata_applications,
-        int minimum_samples,
-        int maximum_samples,
-        bool optimize_carbon_footprint_auto,
-        QString goal,
-        bool optimize_carbon_footprint_manual,
-        int previous_iteration,
-        double desired_carbon_footprint,
-        int max_memory_footprint,
-        QString hardware_required,
-        QString geo_location_continent,
-        QString geo_location_region,
-        QString /*extra_data_*/,
-        int previous_problem_id,
-        int num_outputs,
-        QString model_selected,
-        QString type);
+            QString problem_short_description,
+            QString modality,
+            QString metric,
+            QString problem_definition,
+            QString inputs,
+            QString outputs,
+            QString dataset_metadata_description,
+            QString dataset_metadata_topic,
+            QString dataset_metadata_profile,
+            QString dataset_metadata_keywords,
+            QString dataset_metadata_applications,
+            int minimum_samples,
+            int maximum_samples,
+            bool optimize_carbon_footprint_auto,
+            QString goal,
+            bool optimize_carbon_footprint_manual,
+            int previous_iteration,
+            double desired_carbon_footprint,
+            int max_memory_footprint,
+            QString hardware_required,
+            QString geo_location_continent,
+            QString geo_location_region,
+            QString /*extra_data_*/,
+            int previous_problem_id,
+            int num_outputs,
+            QString model_selected,
+            QString type);
 
     /**
      * @brief public method to launch a task with dataset path
      * @param dataset_path path to the dataset for extracting metadata
      */
     void launch_dataset_path_task(
-        QString dataset_path);
+            QString dataset_path);
     /**
      * @brief public method to request all nodes data
      * @param retrieve_all retrieve all data or only last problem received
@@ -141,7 +142,8 @@ public slots:
      * @param task_id task identifier pointer
      */
     QJsonObject request_specific_results(
-        const int problem_id, const int iteration_id);
+            const int problem_id,
+            const int iteration_id);
 
     /**
      * @brief public method to request status periodically
@@ -176,8 +178,8 @@ public slots:
      * @param req_type_values provide ins, out modalities or problem type. Each separated by comma
      */
     void request_metrics(
-        QString metric_req_type,
-        QString req_type_values);
+            QString metric_req_type,
+            QString req_type_values);
 
     /**
      * @brief public method to request model details
@@ -185,7 +187,7 @@ public slots:
      * @param mode_name indicate model name that details are requested
      */
     void request_model_info(
-        QString mode_name);
+            QString mode_name);
 
     /**
      * @brief public method to request problem types from modality
@@ -201,7 +203,7 @@ public slots:
      * @param modality indicate goal to request models types
      */
     void request_model_from_goal(
-        QString modality);
+            QString modality);
 
     /**
      * @brief private method to request user_inputs from the given previous task.
@@ -211,9 +213,9 @@ public slots:
      * @param reiteration flag indicating if the task is a reiteration
      */
     void request_orchestrator(
-        int problem_id,
-        int iteration_id,
-        bool reiteration = false);
+            int problem_id,
+            int iteration_id,
+            bool reiteration = false);
 
     //! Send cancellation request to nodes
     void request_for_cancel();
@@ -416,33 +418,33 @@ signals:
      * @param is_reiteration flag indicating if the task is a reiteration
      */
     void reiterate_user_inputs(
-        const int& problem_id,
-        const int& iteration_id,
-        const QString& modality,
-        const QString& metric,
-        const QString& problem_short_description,
-        const QString& problem_definition,
-        const QString& inputs_str,
-        const QString& outputs_str,
-        const QString& dataset_metadata_description,
-        const QString& dataset_metadata_topic,
-        const QString& dataset_metadata_profile,
-        const QString& dataset_metadata_keywords,
-        const QString& dataset_metadata_applications,
-        int minimum_samples,
-        int maximum_samples,
-        bool optimize_carbon_footprint_manual,
-        int previous_iteration,
-        bool optimize_carbon_footprint_auto,
-        double desired_carbon_footprint,
-        const QString& geo_location_continent,
-        const QString& geo_location_region,
-        const QString& goal,
-        const QString& hardware_required,
-        const int& max_memory_footprint,
-        const int& num_outputs,
-        const QString& type,
-        bool is_reiteration);
+            const int& problem_id,
+            const int& iteration_id,
+            const QString& modality,
+            const QString& metric,
+            const QString& problem_short_description,
+            const QString& problem_definition,
+            const QString& inputs_str,
+            const QString& outputs_str,
+            const QString& dataset_metadata_description,
+            const QString& dataset_metadata_topic,
+            const QString& dataset_metadata_profile,
+            const QString& dataset_metadata_keywords,
+            const QString& dataset_metadata_applications,
+            int minimum_samples,
+            int maximum_samples,
+            bool optimize_carbon_footprint_manual,
+            int previous_iteration,
+            bool optimize_carbon_footprint_auto,
+            double desired_carbon_footprint,
+            const QString& geo_location_continent,
+            const QString& geo_location_region,
+            const QString& goal,
+            const QString& hardware_required,
+            const int& max_memory_footprint,
+            const int& num_outputs,
+            const QString& type,
+            bool is_reiteration);
 
     /**
      * @brief Update qml tasking bool signal as task end
@@ -474,14 +476,14 @@ signals:
      * @param dataset_metadata map with dataset metadata
      */
     void dataset_metadata_available(
-        const QVariantMap& dataset_metadata);
+            const QVariantMap& dataset_metadata);
     /**
      * @brief Goals received signal to display in the GUI
      *
      * @param goals list of possible goals
      */
     void goals_available(
-        const QStringList& goals);
+            const QStringList& goals);
 
     /**
      * @brief Hardwares received signal to display in the GUI
@@ -497,7 +499,7 @@ signals:
      * @param metrics list of possible metrics
      */
     void metrics_available(
-        const QStringList& metrics);
+            const QStringList& metrics);
 
     /**
      * @brief Models received signal to display in the GUI
@@ -505,7 +507,7 @@ signals:
      * @param metrics list of possible models
      */
     void models_available(
-        const QStringList& metrics);
+            const QStringList& metrics);
 
     /**
      * @brief Signal to display the error message
@@ -513,7 +515,7 @@ signals:
      * @param message error message to display
      */
     void notSupportProblem(
-        const QString& message);
+            const QString& message);
 
 protected:
 
@@ -548,7 +550,7 @@ private:
      * @param json_obj JSON object with the node status
      */
     void send_reiteration_inputs(
-        const QJsonObject& json_obj);
+            const QJsonObject& json_obj);
 
     std::vector<types::TaskId> received_task_ids;
     std::vector<REST_requester*> requesters_;
@@ -576,16 +578,16 @@ private:
 
     //! Request all results to the Framework from specific task
     QJsonObject specific_node_results_request(
-        const QJsonObject& json_obj);
+            const QJsonObject& json_obj);
 
     //! Previous user_inputs request to the Framework
     void orchestrator_request(
-        const QJsonObject& json_obj);
+            const QJsonObject& json_obj);
 
     //! Previous user_inputs results to the GUI
     void orchestrator_response(
-        const REST_requester* requester,
-        const QJsonObject& json_obj);
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
 
     //! Request node status to the Framework
     void node_status_request(

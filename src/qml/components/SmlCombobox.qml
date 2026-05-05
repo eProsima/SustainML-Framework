@@ -109,8 +109,15 @@ ComboBox {
         width: parent.width
         leftPadding: Settings.spacing_normal
         rightPadding: sustainml_custom_combobox.indicator.width + sustainml_custom_combobox.spacing
-        topPadding: Settings.spacing_normal
+        topPadding: Settings.spacing_small
+        bottomPadding: Settings.spacing_small
+
         horizontalAlignment: Text.AlignLeft
+        verticalAlignment: Text.AlignVCenter
+
+        wrapMode: Text.WrapAnywhere
+        maximumLineCount: 2
+        elide: Text.ElideRight
         force_elide: true
     }
 
@@ -131,7 +138,12 @@ ComboBox {
 
                 verticalAlignment: Text.AlignVCenter
                 horizontalAlignment: Text.AlignLeft
-                width: parent.width
+                rightPadding: Settings.spacing_normal + 5
+                width: parent.width - 5
+
+                wrapMode: Text.WrapAnywhere
+                maximumLineCount: 2
+                elide: Text.ElideRight
                 force_elide: true
                 forced_color: ScreenManager.night_mode
                                 ? sustainml_custom_combobox.border_nightmode_editting_color
@@ -169,6 +181,9 @@ ComboBox {
             clip: true
             implicitHeight: contentHeight
             model: sustainml_custom_combobox.popup.visible ? sustainml_custom_combobox.delegateModel : null
+
+            // Adds a little extra space so the last item isn't clipped by rounded border/padding
+            bottomMargin: 5
 
             ScrollBar.vertical: ScrollBar {
                 interactive: true
