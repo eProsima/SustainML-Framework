@@ -419,7 +419,7 @@ SmlDialog
     placeholder_text_color: Settings.app_color_blue
     text_color: Settings.app_color_blue
 
-    // Opcional: limpiar estado al cerrar
+    // Optional: clear the state when leaving
     onClosed: {
         errorMessage = ""
         __showNextError()

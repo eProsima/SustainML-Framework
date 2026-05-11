@@ -1652,8 +1652,10 @@ Item
             if (!q || q.trim().length === 0)
                 q = root.__problem_short_description
 
-            root.ask_hf_models(q)
             root.go_hf_models()
+            Qt.callLater(function() {
+                root.ask_hf_models(q)
+            })
         }
     }
 

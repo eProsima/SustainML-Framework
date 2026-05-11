@@ -58,6 +58,14 @@ Window {
     property var hf_hover_anchor: ({ x: 0, y: 0, h: 0 })
     property bool hf_tip_locked: false   // Set true while leaving HF screen
 
+    // HF compare selection state
+    property var hf_selected_ids: []               // Array of model_id strings
+    property int maxCompareModels: 5               // Maximum number of models to compare
+    property var hf_compare_obj: null
+    property var hf_compare_last_request_ids: []   // Frozen ids for the last compare request
+    property var hf_compare_history: []            // Saved comparisons
+    property int hf_compare_history_max: 10        // Maximum number of saved comparisons
+
     Timer {
         id: hfHoverDebounce
         interval: 250
@@ -194,7 +202,13 @@ Window {
 
         function onHf_models_available(models)
         {
-            main_window.hf_models_list = models || []
+            // Force a fresh JS array so Repeater definitely rebuilds
+            var arr = []
+            if (models) {
+                for (var i = 0; i < models.length; ++i)
+                    arr.push(models[i])
+            }
+            main_window.hf_models_list = arr
             main_window.refreshing = false
         }
 
@@ -235,6 +249,22 @@ Window {
 
                 hfTip.showNearAnchor(cache[model_id])
             }
+        }
+
+        function onHf_models_info_available(models) {
+            console.log("[HF][INFO] received", models.length, "models")
+            engine.request_hf_models_compare(models)
+        }
+
+        function onHf_models_compare_available(reportObj) {
+            main_window.hf_compare_obj = reportObj || ({})
+
+            // Save using frozen ids
+            main_window.hf_save_compare(main_window.hf_compare_last_request_ids, main_window.hf_compare_obj)
+        }
+
+        function onHf_models_compare_error(message) {
+            main_window.hf_compare_obj = ({})             // Clear stale content
         }
     }
 
@@ -300,6 +330,7 @@ Window {
         main_window.hf_models_list = []
         main_window.hf_query_text = ""
         main_window.hf_tooltip_cache = ({})
+        main_window.hf_selected_ids = []
         stop_hf_tooltip()
     }
 
@@ -431,6 +462,57 @@ Window {
 
         // Go to Results like normal flow
         main_window.load_screen(ScreenManager.Screens.Results)
+    }
+
+    function hf_is_selected(id) {
+        if (!id) return false
+        for (var i = 0; i < hf_selected_ids.length; ++i)
+            if (hf_selected_ids[i] === id) return true
+        return false
+    }
+
+    function hf_set_selected(id, on) {
+
+        var arr = hf_selected_ids.slice(0)
+        var idx = -1
+        for (var i = 0; i < arr.length; ++i) {
+            if (arr[i] === id) { idx = i; break }
+        }
+
+        if (on) {
+            if (idx === -1) arr.push(id)
+        } else {
+            if (idx !== -1) arr.splice(idx, 1)
+        }
+
+        hf_selected_ids = arr
+    }
+
+    function hf_save_compare(ids, obj) {
+        if (!obj || !ids || ids.length < 2) return
+
+        var entry = {
+            ts: Date.now(),
+            ids: ids.slice(0),
+            obj: obj
+        }
+
+        var arr = hf_compare_history.slice(0)
+        arr.unshift(entry)
+
+        if (arr.length > hf_compare_history_max)
+            arr = arr.slice(0, hf_compare_history_max)
+
+        hf_compare_history = arr
+        console.log("[HF][HISTORY] saved. count=", hf_compare_history.length)
+    }
+
+    function hf_load_saved_compare(index) {
+        if (index < 0 || index >= hf_compare_history.length) return
+        var e = hf_compare_history[index]
+        hf_selected_ids = e.ids.slice(0)
+        hf_compare_obj = e.obj
+        console.log("[HF][HISTORY] loaded index=", index, "models=", hf_selected_ids.length)
     }
 
     // Background
@@ -1135,6 +1217,45 @@ Window {
                     }
                 }
 
+                // Compare (top bar)
+                SmlButton {
+                    id: hf_go_compare_button
+                    z: 100000
+
+                    anchors {
+                        top: hf_go_home_button.top
+                        left: hf_go_back_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+
+                    icon_name: ""
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Compare"
+                    rounded: true
+
+                    disabled: main_window.hf_selected_ids.length < 2 || main_window.hf_selected_ids.length > maxCompareModels
+
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+
+                    onClicked: {
+                        console.log("[HF][INFO] selection:", main_window.hf_selected_ids)
+
+                        // Freeze ids (so they don't get lost/changed later)
+                        main_window.hf_compare_last_request_ids = main_window.hf_selected_ids.slice(0)
+
+                        // Clear current view
+                        main_window.hf_compare_obj = ({})
+
+                        engine.request_hf_models_info(main_window.hf_compare_last_request_ids)
+                        main_window.load_screen(ScreenManager.Screens.Compare)
+                    }
+                }
+
                 Rectangle
                 {
                     anchors {
@@ -1172,8 +1293,6 @@ Window {
                             text_value: main_window.hf_query_text !== "" ? ("Query: " + main_window.hf_query_text) : ""
                             color: Settings.app_color_green_1
                         }
-
-                        Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
 
                         Row {
                             id: hfListRow
@@ -1220,6 +1339,16 @@ Window {
                                                 return ""
                                             }
 
+                                            // Click anywhere on the card to open Hugging Face
+                                            // (checkbox has its own MouseArea that absorbs clicks)
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                onClicked: {
+                                                    if (!mid) return
+                                                    Qt.openUrlExternally("https://huggingface.co/" + mid)
+                                                }
+                                            }
+
                                             HoverHandler {
                                                 id: hover
                                                 acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -1253,26 +1382,65 @@ Window {
                                                 }
                                             }
 
-                                            TapHandler {
-                                                onTapped: {
-                                                    if (!mid) return
-                                                    Qt.openUrlExternally("https://huggingface.co/" + mid)
-                                                }
-                                            }
-
                                             RowLayout {
                                                 anchors.fill: parent
                                                 anchors.margins: Settings.spacing_small
                                                 spacing: Settings.spacing_big
 
-                                                // LEFT: model name
-                                                Text {
-                                                    text: parent.parent.mid
-                                                    font.pixelSize: 14
-                                                    color: Settings.app_color_green_4
-                                                    elide: Text.ElideRight
-                                                    Layout.fillWidth: true          // Takes remaining space
+                                                RowLayout {
+                                                    Layout.fillWidth: true
                                                     Layout.alignment: Qt.AlignVCenter
+                                                    spacing: 10
+
+                                                    Item {
+                                                        width: 26
+                                                        height: 26
+                                                        Layout.alignment: Qt.AlignVCenter
+
+                                                        Controls2.CheckBox {
+                                                            id: hfSelectBox
+                                                            anchors.centerIn: parent
+
+                                                            // Avoid re-entrancy when we revert checked state
+                                                            property bool _blocking: false
+
+                                                            checked: main_window.hf_is_selected(mid)
+                                                            enabled: checked || main_window.hf_selected_ids.length < maxCompareModels
+
+                                                            onCheckedChanged: {
+                                                                if (_blocking) return
+
+                                                                // If user tries to CHECK while at max, revert immediately
+                                                                if (checked && !main_window.hf_is_selected(mid)
+                                                                        && main_window.hf_selected_ids.length >= maxCompareModels) {
+                                                                    _blocking = true
+                                                                    hfSelectBox.checked = false
+                                                                    _blocking = false
+                                                                    return
+                                                                }
+
+                                                                console.log("[HF][CheckBox] mid=", mid, "checked=", checked)
+                                                                main_window.hf_set_selected(mid, checked)
+                                                            }
+                                                        }
+
+                                                        MouseArea {
+                                                            anchors.fill: parent
+                                                            onClicked: function(mouse) {
+                                                                mouse.accepted = true
+                                                                hfSelectBox.checked = !hfSelectBox.checked
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Text {
+                                                        text: parent.parent.parent.mid
+                                                        font.pixelSize: 14
+                                                        color: Settings.app_color_green_4
+                                                        elide: Text.ElideRight
+                                                        Layout.fillWidth: true
+                                                        Layout.alignment: Qt.AlignVCenter
+                                                    }
                                                 }
 
                                                 // RIGHT: score
@@ -1330,20 +1498,385 @@ Window {
             }
         }
 
-        // New empty screen 4 TO BE USED
+        // HF COMPARE SCREEN
         Component
         {
-            id: new_screen_4_todo_rename
+            id: compare_screen
 
             Rectangle
             {
                 color: "transparent"
-                SmlText
-                {
-                    text_value: "this is a new screen #4"
-                    text_kind: SmlText.TextKind.Body
 
-                    anchors.centerIn: parent
+                function softHyphenate(s, step) {
+                    s = (s === undefined || s === null) ? "" : String(s)
+                    // Insert soft hyphen into long runs without spaces
+                    var out = ""
+                    var run = ""
+                    for (var i = 0; i < s.length; ++i) {
+                        var ch = s[i]
+                        if (ch === " " || ch === "\n" || ch === "\t") {
+                            out += breakRun(run, step) + ch
+                            run = ""
+                        } else {
+                            run += ch
+                        }
+                    }
+                    out += breakRun(run, step)
+                    return out
+                }
+
+                function breakRun(run, step) {
+                    if (!run || run.length <= step) return run
+                    var res = ""
+                    for (var i = 0; i < run.length; i += step) {
+                        if (i > 0) res += "\u00AD"   // Soft hyphen
+                        res += run.slice(i, i + step)
+                    }
+                    return res
+                }
+
+                // HOME BUTTON
+                SmlButton {
+                    id: homeBtn
+                    icon_name: Settings.home_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Home"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Home screen"
+                    anchors {
+                        top: parent.top
+                        topMargin: Settings.spacing_normal
+                        left: parent.left
+                        leftMargin: Settings.spacing_normal
+                    }
+                    onClicked: {
+                        main_window.clear_hf_models()
+                        main_window.load_screen(ScreenManager.Screens.Home)
+                    }
+                }
+
+                // BACK BUTTON (to HF list)
+                SmlButton {
+                    icon_name: Settings.back_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: ""
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Back to Hugging Face list"
+                    anchors {
+                        top: parent.top
+                        topMargin: Settings.spacing_normal
+                        left: homeBtn.right
+                        leftMargin: Settings.spacing_small
+                    }
+
+                    onClicked: {
+                        main_window.load_screen(ScreenManager.Screens.HFsearch)
+                    }
+                }
+
+                Rectangle {
+                    anchors {
+                        top: parent.top
+                        topMargin: Settings.spacing_big * 2 + 40
+                        left: parent.left
+                        leftMargin: Settings.spacing_big
+                        right: parent.right
+                        rightMargin: Settings.spacing_big
+                        bottom: parent.bottom
+                        bottomMargin: Settings.spacing_big * 2
+                    }
+                    radius: 18
+                    color: "white"
+                    border.color: Settings.app_color_green_4
+                    border.width: 2
+                    clip: true
+
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: Settings.spacing_big
+                        spacing: Settings.spacing_small
+
+                        SmlText {
+                            id: titleText
+                            text_kind: SmlText.TextKind.Header_2
+                            text_value: "Hugging Face model comparison"
+                            color: Settings.app_color_green_4
+                        }
+
+                        // CONTENT (vertical scroll only)
+                        Flickable {
+                            id: cmpScroll
+                            width: parent.width
+                            height: parent.height - titleText.implicitHeight - 10
+                            clip: true
+
+                            // Reserve room for the scrollbar so it doesn't overlap table lines
+                            property int sbSpace: 12
+
+                            contentWidth: width - sbSpace
+                            contentHeight: cmpContent.implicitHeight
+
+
+                            boundsBehavior: Flickable.StopAtBounds
+
+                            Column {
+                                id: cmpContent
+                                width: cmpScroll.width - cmpScroll.sbSpace
+                                spacing: 18
+
+                                Text {
+                                    text: "Saved comparisons"
+                                    font.pixelSize: 19
+                                    font.bold: true
+                                    color: Settings.app_color_green_4
+                                    visible: main_window.hf_compare_history.length > 0
+                                }
+
+                                Repeater {
+                                    model: main_window.hf_compare_history
+
+                                    delegate: Rectangle {
+                                        width: parent.width
+                                        height: 34
+                                        radius: 8
+                                        border.color: Settings.app_color_green_4
+                                        border.width: 1
+                                        color: "transparent"
+
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 10
+                                            width: parent.width - 20
+                                            elide: Text.ElideRight
+                                            font.pixelSize: 15
+                                            color: Settings.app_color_green_1
+                                            text: (modelData.ids ? (modelData.ids.length + " models: " + modelData.ids.join(", ")) : "")
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: main_window.hf_load_saved_compare(index)
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: parent.width
+                                    height: 1
+                                    color: Settings.app_color_green_4
+                                    visible: main_window.hf_compare_history.length > 0
+                                }
+
+                                // Comparison table
+                                Text {
+                                    text: "Comparison table"
+                                    font.pixelSize: 19
+                                    font.bold: true
+                                    color: Settings.app_color_green_4
+                                }
+
+                                // Header row (5 columns)
+                                Row {
+                                    width: parent.width
+                                    spacing: 10
+
+                                    Text {
+                                        width: parent.width * 0.34
+                                        text: "MODEL"
+                                        font.pixelSize: 17
+                                        wrapMode: Text.WordWrap
+                                        color: Settings.app_color_green_4
+                                    }
+                                    Text {
+                                        width: parent.width * 0.14
+                                        text: "LICENSE"
+                                        font.pixelSize: 17
+                                        wrapMode: Text.WordWrap
+                                        color: Settings.app_color_green_4
+                                    }
+                                    Text {
+                                        width: parent.width * 0.14
+                                        text: "MODEL FAMILY"
+                                        font.pixelSize: 17
+                                        wrapMode: Text.WordWrap
+                                        color: Settings.app_color_green_4
+                                    }
+                                    Text {
+                                        width: parent.width * 0.14
+                                        text: "ARCHITECTURE"
+                                        font.pixelSize: 17
+                                        wrapMode: Text.WordWrap
+                                        color: Settings.app_color_green_4
+                                    }
+                                    Text {
+                                        width: parent.width * 0.2
+                                        text: "LANGUAGES"
+                                        font.pixelSize: 17
+                                        wrapMode: Text.WordWrap
+                                        color: Settings.app_color_green_4
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
+
+                                Repeater {
+                                    model: (main_window.hf_compare_obj && main_window.hf_compare_obj.comparison_table)
+                                        ? main_window.hf_compare_obj.comparison_table : []
+
+                                    delegate: Row {
+                                        width: parent.width
+                                        spacing: 10
+
+                                        Text {
+                                            width: parent.width * 0.34
+                                            text: softHyphenate(modelData.model_id || "", 14)
+                                            font.pixelSize: 15
+                                            wrapMode: Text.WordWrap
+                                            elide: Text.ElideNone
+                                            color: Settings.app_color_green_1
+                                        }
+
+                                        Text {
+                                            width: parent.width * 0.14
+                                            text: modelData.license || ""
+                                            font.pixelSize: 15
+                                            wrapMode: Text.WordWrap
+                                            elide: Text.ElideNone
+                                            color: Settings.app_color_green_1
+                                        }
+
+                                        Text {
+                                            width: parent.width * 0.14
+                                            text: modelData.model_family || ""
+                                            font.pixelSize: 15
+                                            wrapMode: Text.WordWrap
+                                            elide: Text.ElideNone
+                                            color: Settings.app_color_green_1
+                                        }
+
+                                        Text {
+                                            width: parent.width * 0.14
+
+                                            // Normalize architectures into a string, then soft-hyphenate
+                                            text: softHyphenate(
+                                                Array.isArray(modelData.architectures)
+                                                    ? modelData.architectures.join(", ")
+                                                    : (modelData.architectures || ""),
+                                                14
+                                            )
+
+                                            font.pixelSize: 15
+                                            wrapMode: Text.WordWrap
+                                            elide: Text.ElideNone
+                                            color: Settings.app_color_green_1
+                                        }
+
+                                        Text {
+                                            width: parent.width * 0.2
+                                            text: softHyphenate(modelData.languages || "", 14)
+                                            font.pixelSize: 15
+                                            wrapMode: Text.WordWrap
+                                            elide: Text.ElideNone
+                                            color: Settings.app_color_green_1
+                                        }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
+
+                                Repeater {
+                                    model: (main_window.hf_compare_obj && main_window.hf_compare_obj.model_cards)
+                                        ? main_window.hf_compare_obj.model_cards : []
+
+                                    delegate: Column {
+                                        width: parent.width
+                                        spacing: 6
+
+                                        Text {
+                                            text: (modelData.model_id || "")
+                                            font.pixelSize: 17
+                                            font.bold: false
+                                            wrapMode: Text.NoWrap
+                                            color: Settings.app_color_green_4
+                                        }
+
+                                        Text {
+                                            text: modelData.purpose
+                                                ? ("<font color='" + Settings.app_color_green_4 + "'>Purpose:</font> " + modelData.purpose)
+                                                : ""
+                                            font.pixelSize: 15
+                                            wrapMode: Text.NoWrap
+                                            color: Settings.app_color_green_1
+                                        }
+
+                                        Text {
+                                            text: (modelData.best_for && modelData.best_for.length)
+                                                ? ("<font color='" + Settings.app_color_green_4 + "'>Best for:</font> " + modelData.best_for.join(", "))
+                                                : ""
+                                            font.pixelSize: 15
+                                            wrapMode: Text.NoWrap
+                                            color: Settings.app_color_green_1
+                                        }
+
+                                        Text {
+                                            text: (modelData.watch_out_for && modelData.watch_out_for.length)
+                                                ? ("<font color='" + Settings.app_color_green_4 + "'>Watch out for:</font> " + modelData.watch_out_for.join(", "))
+                                                : ""
+                                            font.pixelSize: 15
+                                            wrapMode: Text.NoWrap
+                                            color: Settings.app_color_green_1
+                                        }
+
+                                        Rectangle { width: parent.width; height: 1; color: "#E0E0E0" }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
+
+                                // Comparison summary
+                                Text {
+                                    text: "Comparison summary"
+                                    font.pixelSize: 19
+                                    font.bold: true
+                                    color: Settings.app_color_green_4
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: (main_window.hf_compare_obj && main_window.hf_compare_obj.comparison_summary)
+                                        ? main_window.hf_compare_obj.comparison_summary : ""
+                                    font.pixelSize: 15
+                                    wrapMode: Text.WordWrap
+                                    color: Settings.app_color_green_1
+                                }
+                            }
+
+                            Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                                policy: Controls2.ScrollBar.AlwaysOn
+                                width: 8
+                                anchors {
+                                    right: parent.right
+                                    top: parent.top
+                                    bottom: parent.bottom
+                                }
+                                contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
+                                background: Rectangle { color: "transparent" }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1435,8 +1968,8 @@ Window {
                 case ScreenManager.Screens.HFsearch:
                     screen_to_be_loaded = huggingFace_screen
                     break
-                case ScreenManager.Screens.NewScreen4TODOrename:
-                    screen_to_be_loaded = new_screen_4_todo_rename
+                case ScreenManager.Screens.Compare:
+                    screen_to_be_loaded = compare_screen
                     break
                 default:
                 case ScreenManager.Screens.Home:
@@ -1528,7 +2061,7 @@ Window {
                 movement[2] = Settings.background_2_x_final
                 movement[3] = Settings.background_2_y_initial
                 break
-            case ScreenManager.Screens.NewScreen4TODOrename:
+            case ScreenManager.Screens.Compare:
                 movement[0] = Settings.app_width * 5
                 movement[1] = Settings.app_height * 5
                 movement[2] = Settings.background_2_x_final
