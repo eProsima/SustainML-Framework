@@ -42,17 +42,20 @@ ComboBox {
         onPressed:
         {
             if (!sustainml_custom_combobox.disabled)
-            {
-                mouse.accepted = false;
                 sustainml_custom_combobox.__edited = true;
-            }
         }
         onReleased:
         {
             if (!sustainml_custom_combobox.disabled)
-            {
-                mouse.accepted = false;
                 sustainml_custom_combobox.__edited = true;
+        }
+        onClicked:
+        {
+            if (!sustainml_custom_combobox.disabled)
+            {
+                sustainml_custom_combobox.popup.visible
+                    ? sustainml_custom_combobox.close()
+                    : sustainml_custom_combobox.open()
             }
         }
     }
