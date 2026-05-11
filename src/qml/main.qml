@@ -252,7 +252,6 @@ Window {
         }
 
         function onHf_models_info_available(models) {
-            console.log("[HF][INFO] received", models.length, "models")
             engine.request_hf_models_compare(models)
         }
 
@@ -336,11 +335,11 @@ Window {
 
     // Load JSONL file with per-model info
     function loadUnetInfo() {
+        var url = engine.unet_models_info_url()
+        if (!url)
+            return
         var xhr = new XMLHttpRequest()
-        xhr.open(
-            "GET",
-            "file:///home/zesk/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp2/hw_provider_fpga/vendor/sustain_ml_predictor/xczu19eg-ffvb1517-2-i/unet_models_info.jsonl"
-        )
+        xhr.open("GET", url)
 
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {

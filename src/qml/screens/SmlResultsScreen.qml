@@ -323,7 +323,7 @@ Item
             leftMargin: Settings.spacing_small
         }
         onClicked: {
-            engine.request_for_cancel()  // Stop the current tasking TODO
+            engine.request_for_cancel()
         }
     }
 
