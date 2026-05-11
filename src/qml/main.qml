@@ -909,29 +909,7 @@ Window {
                 onGo_back_empty_input: {
                     var defInstance = _screenInst[ScreenManager.Screens.Definition];
                     if (defInstance !== undefined) {
-                        defInstance.__problem_short_description = "";
-                        defInstance.__modality = "";
-                        defInstance.__metric = "";
-                        defInstance.__problem_definition = "";
-                        defInstance.__inputs = "";
-                        defInstance.__outputs = "";
-                        defInstance.__minimum_samples = 1;
-                        defInstance.__maximum_samples = 1;
-                        defInstance.__optimize_carbon_footprint_auto = false;
-                        defInstance.__goal = "";
-                        defInstance.__types = defInstance.__types;
-                        defInstance.__optimize_carbon_footprint_manual = false;
-                        defInstance.__previous_iteration = 0;
-                        defInstance.__desired_carbon_footprint = 0.0;
-                        defInstance.__max_memory_footprint = 0;
-                        // defInstance.__hardware_required = "PIM-AI-1chip";
-                        defInstance.__geo_location_continent = "";
-                        defInstance.__geo_location_region = "";
-                        defInstance.__extra_data = "";
-                        defInstance.__previous_problem_id = 0;
-                        defInstance.__num_outputs = 1;
-                        defInstance.__model_selected = "";
-                        defInstance.__model_selected_copy = "";
+                        defInstance.clear_all();
                     }
                     main_window.load_screen(ScreenManager.Screens.Definition)
                 }

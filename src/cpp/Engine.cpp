@@ -1283,15 +1283,20 @@ void Engine::config_request(
         const QJsonObject& json_obj,
         std::function<void(const QJsonObject&)> callback)
 {
-    int node_id = json_obj["node_id"].toInt();
+    static std::atomic<int> request_counter{0};
+    int request_id = ++request_counter;
 
-    // Enqueue callback for this node_id
-    config_callback_queue_[node_id].push_back(callback);
+    // Enqueue callback keyed by unique request_id, not node_id, so concurrent
+    // requests to the same node cannot steal each other's callbacks.
+    config_callback_queue_[request_id].push_back(callback);
+
+    QJsonObject req_obj = json_obj;
+    req_obj["request_id"] = request_id;
 
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::config_response, this, std::placeholders::_1, std::placeholders::_2),
         REST_requester::RequestType::REQUEST_CONFIG,
-        json_obj);
+        req_obj);
 
     {
         std::lock_guard<std::mutex> lock(requesters_mutex_);
@@ -1306,18 +1311,22 @@ void Engine::config_response(
     if (!json_obj.empty())
     {
         QJsonObject response_obj = json_obj["response"].toObject();
-        int node_id = response_obj["node_id"].toInt();
+        int request_id = response_obj["request_id"].toInt();
 
-        auto it = config_callback_queue_.find(node_id);
+        auto it = config_callback_queue_.find(request_id);
         if (it != config_callback_queue_.end() && !it->second.empty())
         {
             auto cb = it->second.front();
             it->second.pop_front();
             cb(json_obj);
+            if (it->second.empty())
+            {
+                config_callback_queue_.erase(it);
+            }
         }
         else
         {
-            std::cout << "WARNING config_response node_id=" << node_id
+            std::cout << "WARNING config_response request_id=" << request_id
                       << " but no queued callback" << std::endl;
         }
     }

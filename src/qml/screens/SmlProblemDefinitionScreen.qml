@@ -1054,7 +1054,7 @@ Item
         {
             id: num_outputs_header
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Nº outputs models"
+            text_value: "Nº output models"
             color: num_outputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1739,6 +1739,11 @@ Item
         root.__num_outputs = 1
         root.__model_selected = ""
         root.__model_selected_copy = ""
+        root.__dataset_description = ""
+        root.__dataset_topic = ""
+        root.__dataset_profile = ""
+        root.__dataset_keywords = ""
+        root.__dataset_applications = ""
 
         // Reset visible widgets explicitly
         problem_short_description_input.text = ""
