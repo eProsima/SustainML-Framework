@@ -5,7 +5,7 @@ QtObject {
     // MAIN APP SETTINGS
     readonly property string app_name: "SustainML"
     readonly property int app_width:   1280
-    readonly property int app_height:  800
+    readonly property int app_height:  720
 
     // COLORS
     readonly property color app_color_green_1: "#3f6a2b"
