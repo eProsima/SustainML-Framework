@@ -24,6 +24,8 @@
 
 #include <atomic>
 #include <memory>
+#include <unordered_map>
+#include <deque>
 
 #include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
@@ -62,6 +64,18 @@ public:
      * @return Engine pointer
      */
     QObject* enable();
+
+    /**
+     * @brief Query Hugging Face Hub for suggested models given a free-text description
+     * @param description User description / query used to rank candidate models
+     */
+    Q_INVOKABLE void request_hf_models(QString description, int limit = 10);
+
+    /**
+     * @brief Fetch extra tooltip information for a single Hugging Face model
+     * @param model_id Hugging Face model id, e.g. "author/model-name"
+     */
+    Q_INVOKABLE void request_hf_model_tooltip(QString model_id);
 
 public slots:
 
@@ -517,6 +531,11 @@ signals:
     void notSupportProblem(
             const QString& message);
 
+    void hf_models_available(QVariantList models);
+    void hf_models_error(QString message);
+
+    void hf_model_tooltip_available(QString model_id, QString tooltip);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -555,9 +574,10 @@ private:
     std::vector<types::TaskId> received_task_ids;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
+    std::unordered_map<int, std::deque<std::function<void(const QJsonObject&)>>> config_callback_queue_;
     // bool has_active_problem_ = false;
 
-    // --------------- REST requester --------------- //
+    // REST requester
     //! Send user input to the Framework pipeline
     void user_input_request(
             const QJsonObject& json_obj);
@@ -615,8 +635,6 @@ private:
             const QJsonObject& json_obj);
 
     QTimer* node_status_timer_;
-
-    std::map<int, std::function<void(const QJsonObject&)>> config_callbacks_;
 
     bool ml_model_idle = true;
     bool ml_model_meta_idle = true;

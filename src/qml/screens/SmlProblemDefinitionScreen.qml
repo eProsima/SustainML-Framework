@@ -118,6 +118,9 @@ Item
         string goal_type
     )
 
+    signal go_hf_models()
+    signal ask_hf_models(string description)
+
     Connections
     {
         target: engine
@@ -1616,6 +1619,41 @@ Item
                     scroll_view.scroll_to(geo_location_region_input.y - Settings.spacing_big)
                 }
             }
+        }
+    }
+
+    // HF models button (top row, next to U-Net)
+    SmlButton
+    {
+        id: hf_search_button
+        visible: !root.__reiterate
+        icon_name: Settings.start_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: "HF models"
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Find best Hugging Face models for this description"
+
+        anchors
+        {
+            top: parent.top
+            topMargin: Settings.spacing_normal
+            left: unet_models_button.right
+            leftMargin: Settings.spacing_normal
+        }
+
+        onClicked: {
+            var q = root.__problem_definition
+            if (!q || q.trim().length === 0)
+                q = root.__problem_short_description
+
+            root.ask_hf_models(q)
+            root.go_hf_models()
         }
     }
 

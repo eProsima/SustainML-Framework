@@ -69,6 +69,154 @@ Engine::~Engine()
     node_status_timer_->deleteLater();
 }
 
+void Engine::request_hf_models(QString description, int limit)
+{
+    // Build config request
+    QJsonObject json_config;
+    json_config["configuration"] = "hf_search, " + description + ", " + QString::number(limit);
+
+    // This must match the node that implements hf_search in the backend
+    // hf_search is routed to ML_MODEL_PROVIDER; in the UI "model_from_goal" uses node_id=5 (ML provider),
+    // so keep node_id=5 here as well.
+    json_config["node_id"] = 5;
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+    {
+        QJsonObject response_obj = json_obj["response"].toObject();
+
+        if (response_obj.contains("success") && !response_obj["success"].toBool())
+        {
+            emit hf_models_error("hf_search: backend reported failure (success=false)");
+            return;
+        }
+
+        if (!response_obj.contains("configuration") || !response_obj["configuration"].isString())
+        {
+            emit hf_models_error("hf_search: missing configuration in response");
+            return;
+        }
+
+        QString cfg = response_obj["configuration"].toString();
+        if (cfg.trimmed().isEmpty())
+        {
+            emit hf_models_error("hf_search: empty configuration (backend error)");
+            return;
+        }
+
+
+        // The backend sends a JSON string inside "configuration"
+        QJsonDocument config_doc = QJsonDocument::fromJson(
+            response_obj["configuration"].toString().toUtf8());
+
+        if (!config_doc.isObject())
+        {
+            emit hf_models_error("hf_search: configuration is not a JSON object");
+            return;
+        }
+
+        QJsonObject config_obj = config_doc.object();
+
+        // Error propagation from backend
+        if (config_obj.contains("error") && config_obj["error"].isString())
+        {
+            emit hf_models_error("hf_search: " + config_obj["error"].toString());
+            return;
+        }
+
+        // Support BOTH possible payloads:
+        // 1) { "models": [ {...}, {...} ] }
+        // 2) { "models": "a, b, c" }   (string list)
+        if (config_obj.contains("models") && config_obj["models"].isArray())
+        {
+            QVariantList out;
+            QJsonArray arr = config_obj["models"].toArray();
+            for (const QJsonValue& v : arr)
+            {
+                // Each element can be an object (recommended) or a string
+                out.push_back(v.toVariant());
+            }
+            emit hf_models_available(out);
+            return;
+        }
+
+        if (config_obj.contains("models") && config_obj["models"].isString())
+        {
+            // Convert comma-separated list to list of { id: "..." } objects
+            QStringList ids = config_obj["models"].toString().split(",", Qt::SkipEmptyParts);
+            QVariantList out;
+            for (const QString& id : ids)
+            {
+                QVariantMap m;
+                m["id"] = id;
+                out.push_back(m);
+            }
+            emit hf_models_available(out);
+            return;
+        }
+
+        emit hf_models_error("hf_search: no 'models' field (array or string) in configuration");
+    });
+}
+
+void Engine::request_hf_model_tooltip(QString model_id)
+{
+    QString mid = model_id.trimmed();
+    if (mid.isEmpty())
+    {
+        return;
+    }
+
+    QJsonObject json_config;
+
+    // Reuse same MCP tool ("hf_search") but in special mode:
+    // description="__MODEL_CONFIG__:<model_id>"
+    json_config["configuration"] = "hf_search, __MODEL_CONFIG__:" + mid + ", 1";
+    json_config["node_id"] = 5;
+
+    config_request(json_config, [this, mid](const QJsonObject& json_obj)
+    {
+        QJsonObject response_obj = json_obj["response"].toObject();
+
+        if (response_obj.contains("success") && !response_obj["success"].toBool())
+        {
+            return;
+        }
+
+        if (!response_obj.contains("configuration") || !response_obj["configuration"].isString())
+        {
+            return;
+        }
+
+        QJsonDocument config_doc = QJsonDocument::fromJson(
+            response_obj["configuration"].toString().toUtf8());
+
+        if (!config_doc.isObject())
+        {
+            return;
+        }
+
+        QJsonObject config_obj = config_doc.object();
+
+        if (config_obj.contains("error") && config_obj["error"].isString())
+        {
+            // config.json missing / gated
+            emit hf_model_tooltip_available(mid, "");
+            return;
+        }
+
+        QString tooltip;
+        if (config_obj.contains("tooltip") && config_obj["tooltip"].isString())
+            tooltip = config_obj["tooltip"].toString();
+
+        if (!tooltip.trimmed().isEmpty()) {
+            emit hf_model_tooltip_available(mid, tooltip);
+            return;
+        }
+
+        emit hf_model_tooltip_available(mid, "");
+    });
+}
+
 void Engine::launch_task(
         QString problem_short_description,
         QString modality,
@@ -457,8 +605,6 @@ void Engine::request_model_from_goal(
     json_config["configuration"] = "model_from_goal, " + goal;
     json_config["node_id"] = 5;
 
-    // std::cout << "[Engine] request_model_from_goal called with goal='" << goal.toStdString() << "'" << std::endl;
-
     config_request(json_config, [this, goal](const QJsonObject& json_obj)
             {
                 QJsonObject response_obj = json_obj["response"].toObject();
@@ -473,8 +619,6 @@ void Engine::request_model_from_goal(
                         {
                             QString models_str = config_obj["models"].toString();
                             QStringList models = models_str.split(", ");
-
-                            // std::cout << "[Engine] models_available for goal='" << goal.toStdString() << "' count="  << models.size() << std::endl;
 
                             emit models_available(models);
                         }
@@ -1003,7 +1147,9 @@ void Engine::config_request(
         std::function<void(const QJsonObject&)> callback)
 {
     int node_id = json_obj["node_id"].toInt();
-    config_callbacks_[node_id] = callback;
+
+    // Enqueue callback for this node_id
+    config_callback_queue_[node_id].push_back(callback);
 
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::config_response, this, std::placeholders::_1, std::placeholders::_2),
@@ -1022,17 +1168,23 @@ void Engine::config_response(
 {
     if (!json_obj.empty())
     {
-        std::cout << "Config response: " << QJsonDocument(json_obj).toJson(QJsonDocument::Indented).toStdString()
-                  << std::endl;
         QJsonObject response_obj = json_obj["response"].toObject();
         int node_id = response_obj["node_id"].toInt();
-        if (config_callbacks_[node_id])
+
+        auto it = config_callback_queue_.find(node_id);
+        if (it != config_callback_queue_.end() && !it->second.empty())
         {
-            config_callbacks_[node_id](json_obj);
-            config_callbacks_[node_id] = nullptr; // Empty the callback
+            auto cb = it->second.front();
+            it->second.pop_front();
+            cb(json_obj);
+        }
+        else
+        {
+            std::cout << "[Engine][WARN] config_response node_id=" << node_id
+                      << " but no queued callback" << std::endl;
         }
     }
-    // Remove REST requester from queue
+
     std::lock_guard<std::mutex> lock(requesters_mutex_);
     for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
     {
