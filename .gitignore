@@ -75,6 +75,10 @@ Makefile*
 *.qmlproject.user
 *.qmlproject.user.*
 
+# QML bytecode cache
+*.qmlc
+*.jsc
+
 # QtCtreator CMake
 CMakeLists.txt.user*
 

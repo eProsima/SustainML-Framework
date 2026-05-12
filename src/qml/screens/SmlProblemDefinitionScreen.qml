@@ -907,6 +907,7 @@ Item
             activeFocusOnTab: true
             focus: true
             id: required_hardware_input
+            searchable: true
             displayText: root.__hardware_required
             placeholder_text: displayText !== "" ? "" : "Select hardware"
             model: filteredHardwareList()
@@ -993,6 +994,7 @@ Item
             activeFocusOnTab: true
             focus: true
             id: model_select_input
+            searchable: true
             // Disable model selection if the goal is not selected unless CNNs + FPGA combo
             disabled: root.__reiterate ||
                 (root.__goal === "" &&
@@ -1732,6 +1734,7 @@ Item
         root.__desired_carbon_footprint = 0.0
         root.__max_memory_footprint = 0
         root.__hardware_required = "PIM-AI-1chip"
+        root.__types = "Transformers"
         root.__geo_location_continent = ""
         root.__geo_location_region = ""
         root.__extra_data = ""
@@ -1756,6 +1759,7 @@ Item
         num_outputs_input.text = "1"
 
         // Reset combobox selections
+        types_input.currentIndex = 0
         modality_input.currentIndex = -1
         metrics_input.currentIndex = -1
         goal_input.currentIndex = -1
