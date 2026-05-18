@@ -120,6 +120,9 @@ Item
 
     signal go_hf_models()
     signal ask_hf_models(string description)
+    signal go_hf_results()
+
+    property bool hf_results_available: false
 
     Connections
     {
@@ -1649,15 +1652,66 @@ Item
             leftMargin: Settings.spacing_normal
         }
 
-        onClicked: {
-            var q = root.__problem_definition
-            if (!q || q.trim().length === 0)
-                q = root.__problem_short_description
+        onClicked: hf_choice_popup.open()
+    }
 
-            root.go_hf_models()
-            Qt.callLater(function() {
-                root.ask_hf_models(q)
-            })
+    Popup {
+        id: hf_choice_popup
+        parent: hf_search_button
+        y: hf_search_button.height + 4
+        x: 0
+        padding: Settings.spacing_normal
+        modal: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            radius: 8
+            color: Settings.app_color_light
+            border.color: Settings.app_color_green_4
+            border.width: 1
+        }
+
+        Row {
+            spacing: Settings.spacing_small
+
+            SmlButton {
+                text_kind: SmlText.TextKind.Header_2
+                text_value: "Search"
+                icon_name: Settings.start_icon_name
+                rounded: true
+                color: Settings.app_color_green_4
+                color_pressed: Settings.app_color_green_1
+                color_text: Settings.app_color_green_3
+                nightmode_color: Settings.app_color_green_2
+                nightmode_color_pressed: Settings.app_color_green_3
+                nightmode_color_text: Settings.app_color_green_1
+                onClicked: {
+                    hf_choice_popup.close()
+                    var q = root.__problem_definition
+                    if (!q || q.trim().length === 0)
+                        q = root.__problem_short_description
+                    root.go_hf_models()
+                    Qt.callLater(function() { root.ask_hf_models(q) })
+                }
+            }
+
+            SmlButton {
+                text_kind: SmlText.TextKind.Header_2
+                text_value: "Results"
+                icon_name: Settings.start_icon_name
+                rounded: true
+                disabled: !root.hf_results_available
+                color: Settings.app_color_green_4
+                color_pressed: Settings.app_color_green_1
+                color_text: Settings.app_color_green_3
+                nightmode_color: Settings.app_color_green_2
+                nightmode_color_pressed: Settings.app_color_green_3
+                nightmode_color_text: Settings.app_color_green_1
+                onClicked: {
+                    hf_choice_popup.close()
+                    root.go_hf_results()
+                }
+            }
         }
     }
 
