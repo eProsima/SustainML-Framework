@@ -869,14 +869,23 @@ Item
             {
                 if (text === "(empty)") text = ""
                 root.__goal = text
+
+                // Reset any previously selected model when the goal changes so
+                // dependent fields recompute their disabled state correctly.
+                root.__model_selected = ""
+                root.__model_selected_copy = ""
+                model_select_input.currentIndex = -1
+
                 if (text !== "")
                 {
                     if(root.__types !== "")
-
                         root.ask_models(text + ", " + root.__types)
                     else
                         root.ask_models(text)
                 }
+                // When goal is empty we clear the selected model but keep the
+                // __model_list binding coming from the main window so that
+                // backend updates can populate it when available.
             }
             onFocusChanged: {
                 if(focus === true){
@@ -1679,6 +1688,7 @@ Item
                 text_value: "Search"
                 icon_name: Settings.start_icon_name
                 rounded: true
+                disabled: root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === ""
                 color: Settings.app_color_green_4
                 color_pressed: Settings.app_color_green_1
                 color_text: Settings.app_color_green_3
@@ -1722,7 +1732,11 @@ Item
         icon_name: Settings.submit_icon_name
         text_kind: SmlText.TextKind.Header_3
         text_value: "Submit"
-        disabled: root.__refreshing || root.__initializing
+        disabled: root.__refreshing || root.__initializing ||
+            (root.__problem_definition.trim() === "" &&
+             root.__problem_short_description.trim() === "" &&
+             root.__model_selected === "" &&
+             root.__dataset_description === "")
         rounded: true
         color: Settings.app_color_light
         color_pressed: Settings.app_color_green_1
