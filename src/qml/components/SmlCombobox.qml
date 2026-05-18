@@ -23,11 +23,13 @@ ComboBox {
     property string border_nightmode_editting_color: ""
     property string placeholder_text: ""
     property bool disabled: false
+    property bool searchable: false
 
     enabled: !disabled
 
     // Internal properties
     property bool __edited: false
+    property string __search_text: ""
 
     // External signal
     signal text_changed(string text)
@@ -42,17 +44,20 @@ ComboBox {
         onPressed:
         {
             if (!sustainml_custom_combobox.disabled)
-            {
-                mouse.accepted = false;
                 sustainml_custom_combobox.__edited = true;
-            }
         }
         onReleased:
         {
             if (!sustainml_custom_combobox.disabled)
-            {
-                mouse.accepted = false;
                 sustainml_custom_combobox.__edited = true;
+        }
+        onClicked:
+        {
+            if (!sustainml_custom_combobox.disabled)
+            {
+                sustainml_custom_combobox.popup.visible
+                    ? sustainml_custom_combobox.close()
+                    : sustainml_custom_combobox.open()
             }
         }
     }
@@ -125,7 +130,11 @@ ComboBox {
     delegate: ItemDelegate {
         id: item_delegate
         width: sustainml_custom_combobox.width
-        height: sustainml_custom_combobox.height * 0.75
+        visible: !sustainml_custom_combobox.searchable ||
+                 sustainml_custom_combobox.__search_text === "" ||
+                 (typeof modelData === "string" &&
+                  modelData.toLowerCase().indexOf(sustainml_custom_combobox.__search_text.toLowerCase()) !== -1)
+        height: visible ? sustainml_custom_combobox.height * 0.75 : 0
 
         contentItem: Rectangle{
             width: parent.implicitWidth
@@ -172,22 +181,80 @@ ComboBox {
         id:comboPopup
         y: sustainml_custom_combobox.height - 1
         width: sustainml_custom_combobox.width
-        height:contentItem.implicitHeigh
+        height: contentItem.implicitHeight + topPadding + bottomPadding
         padding: 10
 
-        contentItem: ListView {
-            id:listView
-            interactive: true
-            clip: true
-            implicitHeight: contentHeight
-            model: sustainml_custom_combobox.popup.visible ? sustainml_custom_combobox.delegateModel : null
+        onOpened: {
+            sustainml_custom_combobox.__search_text = ""
+            if (sustainml_custom_combobox.searchable)
+                popupSearchInput.forceActiveFocus()
+        }
+        onClosed: {
+            sustainml_custom_combobox.__edited = false
+            sustainml_custom_combobox.__search_text = ""
+        }
 
-            // Adds a little extra space so the last item isn't clipped by rounded border/padding
-            bottomMargin: 5
+        contentItem: Column {
+            width: comboPopup.width - 2 * comboPopup.padding
 
-            ScrollBar.vertical: ScrollBar {
+            // Search field — only shown when searchable
+            Rectangle {
+                visible: sustainml_custom_combobox.searchable
+                width: parent.width
+                height: sustainml_custom_combobox.searchable ? sustainml_custom_combobox.height * 0.65 : 0
+                radius: 4
+                color: ScreenManager.night_mode
+                    ? sustainml_custom_combobox.background_nightmode_color
+                    : sustainml_custom_combobox.background_color
+                border.color: ScreenManager.night_mode
+                    ? sustainml_custom_combobox.border_nightmode_editting_color
+                    : sustainml_custom_combobox.border_editting_color
+                border.width: sustainml_custom_combobox.border_width
+
+                TextInput {
+                    id: popupSearchInput
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        leftMargin: Settings.spacing_normal
+                        rightMargin: Settings.spacing_normal
+                        verticalCenter: parent.verticalCenter
+                    }
+                    height: font.pixelSize + 4
+                    font.pixelSize: 13
+                    color: ScreenManager.night_mode
+                        ? sustainml_custom_combobox.border_nightmode_editting_color
+                        : sustainml_custom_combobox.border_editting_color
+                    clip: true
+                    onTextChanged: sustainml_custom_combobox.__search_text = text
+                    KeyNavigation.down: listView
+
+                    Text {
+                        anchors.fill: parent
+                        text: "Filter..."
+                        color: "#aaa"
+                        font.pixelSize: 13
+                        visible: popupSearchInput.text === ""
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+
+            ListView {
+                id:listView
+                width: parent.width
                 interactive: true
-                width: 8
+                clip: true
+                implicitHeight: contentHeight
+                model: sustainml_custom_combobox.popup.visible ? sustainml_custom_combobox.delegateModel : null
+
+                // Adds a little extra space so the last item isn't clipped by rounded border/padding
+                bottomMargin: 5
+
+                ScrollBar.vertical: ScrollBar {
+                    interactive: true
+                    width: 8
+                }
             }
         }
 
@@ -201,7 +268,6 @@ ComboBox {
                         : sustainml_custom_combobox.border_editting_color
             border.width: sustainml_custom_combobox.border_width
         }
-        onClosed: sustainml_custom_combobox.__edited = false;
     }
 
     // Combobox indicator

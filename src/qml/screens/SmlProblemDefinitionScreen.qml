@@ -120,6 +120,9 @@ Item
 
     signal go_hf_models()
     signal ask_hf_models(string description)
+    signal go_hf_results()
+
+    property bool hf_results_available: false
 
     Connections
     {
@@ -866,14 +869,23 @@ Item
             {
                 if (text === "(empty)") text = ""
                 root.__goal = text
+
+                // Reset any previously selected model when the goal changes so
+                // dependent fields recompute their disabled state correctly.
+                root.__model_selected = ""
+                root.__model_selected_copy = ""
+                model_select_input.currentIndex = -1
+
                 if (text !== "")
                 {
                     if(root.__types !== "")
-
                         root.ask_models(text + ", " + root.__types)
                     else
                         root.ask_models(text)
                 }
+                // When goal is empty we clear the selected model but keep the
+                // __model_list binding coming from the main window so that
+                // backend updates can populate it when available.
             }
             onFocusChanged: {
                 if(focus === true){
@@ -907,6 +919,7 @@ Item
             activeFocusOnTab: true
             focus: true
             id: required_hardware_input
+            searchable: true
             displayText: root.__hardware_required
             placeholder_text: displayText !== "" ? "" : "Select hardware"
             model: filteredHardwareList()
@@ -993,6 +1006,7 @@ Item
             activeFocusOnTab: true
             focus: true
             id: model_select_input
+            searchable: true
             // Disable model selection if the goal is not selected unless CNNs + FPGA combo
             disabled: root.__reiterate ||
                 (root.__goal === "" &&
@@ -1054,7 +1068,7 @@ Item
         {
             id: num_outputs_header
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Nº outputs models"
+            text_value: "Nº output models"
             color: num_outputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1647,15 +1661,67 @@ Item
             leftMargin: Settings.spacing_normal
         }
 
-        onClicked: {
-            var q = root.__problem_definition
-            if (!q || q.trim().length === 0)
-                q = root.__problem_short_description
+        onClicked: hf_choice_popup.open()
+    }
 
-            root.go_hf_models()
-            Qt.callLater(function() {
-                root.ask_hf_models(q)
-            })
+    Popup {
+        id: hf_choice_popup
+        parent: hf_search_button
+        y: hf_search_button.height + 4
+        x: 0
+        padding: Settings.spacing_normal
+        modal: false
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            radius: 8
+            color: Settings.app_color_light
+            border.color: Settings.app_color_green_4
+            border.width: 1
+        }
+
+        Row {
+            spacing: Settings.spacing_small
+
+            SmlButton {
+                text_kind: SmlText.TextKind.Header_2
+                text_value: "Search"
+                icon_name: Settings.start_icon_name
+                rounded: true
+                disabled: root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === ""
+                color: Settings.app_color_green_4
+                color_pressed: Settings.app_color_green_1
+                color_text: Settings.app_color_green_3
+                nightmode_color: Settings.app_color_green_2
+                nightmode_color_pressed: Settings.app_color_green_3
+                nightmode_color_text: Settings.app_color_green_1
+                onClicked: {
+                    hf_choice_popup.close()
+                    var q = root.__problem_definition
+                    if (!q || q.trim().length === 0)
+                        q = root.__problem_short_description
+                    root.go_hf_models()
+                    Qt.callLater(function() { root.ask_hf_models(q) })
+                }
+            }
+
+            SmlButton {
+                text_kind: SmlText.TextKind.Header_2
+                text_value: "Results"
+                icon_name: Settings.start_icon_name
+                rounded: true
+                disabled: !root.hf_results_available
+                color: Settings.app_color_green_4
+                color_pressed: Settings.app_color_green_1
+                color_text: Settings.app_color_green_3
+                nightmode_color: Settings.app_color_green_2
+                nightmode_color_pressed: Settings.app_color_green_3
+                nightmode_color_text: Settings.app_color_green_1
+                onClicked: {
+                    hf_choice_popup.close()
+                    root.go_hf_results()
+                }
+            }
         }
     }
 
@@ -1666,7 +1732,11 @@ Item
         icon_name: Settings.submit_icon_name
         text_kind: SmlText.TextKind.Header_3
         text_value: "Submit"
-        disabled: root.__refreshing || root.__initializing
+        disabled: root.__refreshing || root.__initializing ||
+            (root.__problem_definition.trim() === "" &&
+             root.__problem_short_description.trim() === "" &&
+             root.__model_selected === "" &&
+             root.__dataset_description === "")
         rounded: true
         color: Settings.app_color_light
         color_pressed: Settings.app_color_green_1
@@ -1732,6 +1802,7 @@ Item
         root.__desired_carbon_footprint = 0.0
         root.__max_memory_footprint = 0
         root.__hardware_required = "PIM-AI-1chip"
+        root.__types = "Transformers"
         root.__geo_location_continent = ""
         root.__geo_location_region = ""
         root.__extra_data = ""
@@ -1739,6 +1810,11 @@ Item
         root.__num_outputs = 1
         root.__model_selected = ""
         root.__model_selected_copy = ""
+        root.__dataset_description = ""
+        root.__dataset_topic = ""
+        root.__dataset_profile = ""
+        root.__dataset_keywords = ""
+        root.__dataset_applications = ""
 
         // Reset visible widgets explicitly
         problem_short_description_input.text = ""
@@ -1751,6 +1827,7 @@ Item
         num_outputs_input.text = "1"
 
         // Reset combobox selections
+        types_input.currentIndex = 0
         modality_input.currentIndex = -1
         metrics_input.currentIndex = -1
         goal_input.currentIndex = -1

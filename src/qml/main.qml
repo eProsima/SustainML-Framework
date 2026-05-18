@@ -47,9 +47,15 @@ Window {
 
     property var _screenInst: ({})
     property var unetInfoMap: ({})
+    property int previous_screen: ScreenManager.Screens.Home
 
     property var hf_models_list: []
+    property var hf_saved_searches: []
     property string hf_query_text: ""
+    // Preserve the query used for the most recent HF request until results
+    // are saved, so saved entries keep the original query even if the UI
+    // clears `hf_query_text` when navigating away.
+    property string hf_pending_query: ""
     property var hf_tooltip_cache: ({})
     property bool hoverArmed: false
     property string lastRequested: ""
@@ -210,6 +216,26 @@ Window {
             }
             main_window.hf_models_list = arr
             main_window.refreshing = false
+
+            if (arr.length > 0) {
+                var entry = {
+                    ts: Date.now(),
+                    // Prefer the pending query (the original search text) if set
+                    // This avoids showing "(no query)" when hf_query_text was
+                    // cleared before results arrived.
+                    query: main_window.hf_pending_query || main_window.hf_query_text,
+                    models: arr
+                }
+                var saved = main_window.hf_saved_searches.slice(0)
+                saved.unshift(entry)
+                main_window.hf_saved_searches = saved
+
+                // Clear selection on the results screen so user chooses manually
+                var hfr = _screenInst[ScreenManager.Screens.HFresults]
+                if (hfr) hfr.selectedIndex = -1
+                // Clear the pending query now that the results are saved
+                main_window.hf_pending_query = ""
+            }
         }
 
         function onHf_models_error(message)
@@ -252,7 +278,6 @@ Window {
         }
 
         function onHf_models_info_available(models) {
-            console.log("[HF][INFO] received", models.length, "models")
             engine.request_hf_models_compare(models)
         }
 
@@ -336,11 +361,11 @@ Window {
 
     // Load JSONL file with per-model info
     function loadUnetInfo() {
+        var url = engine.unet_models_info_url()
+        if (!url)
+            return
         var xhr = new XMLHttpRequest()
-        xhr.open(
-            "GET",
-            "file:///home/zesk/SustainML/SustainML_ws/src/sustainml_lib/sustainml_modules/sustainml_modules/sustainml-wp2/hw_provider_fpga/vendor/sustain_ml_predictor/xczu19eg-ffvb1517-2-i/unet_models_info.jsonl"
-        )
+        xhr.open("GET", url)
 
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
@@ -504,7 +529,6 @@ Window {
             arr = arr.slice(0, hf_compare_history_max)
 
         hf_compare_history = arr
-        console.log("[HF][HISTORY] saved. count=", hf_compare_history.length)
     }
 
     function hf_load_saved_compare(index) {
@@ -512,7 +536,6 @@ Window {
         var e = hf_compare_history[index]
         hf_selected_ids = e.ids.slice(0)
         hf_compare_obj = e.obj
-        console.log("[HF][HISTORY] loaded index=", index, "models=", hf_selected_ids.length)
     }
 
     // Background
@@ -658,7 +681,10 @@ Window {
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
+                hf_results_available: main_window.hf_saved_searches.length > 0
+
                 onGo_hf_models: main_window.load_screen(ScreenManager.Screens.HFsearch)
+                onGo_hf_results: main_window.load_screen(ScreenManager.Screens.HFresults)
 
                 onClear_all_clicked: {
                     // Clear dataset metadata stored in main_window
@@ -730,7 +756,10 @@ Window {
                     main_window.hf_models_list = []
                     main_window.hf_tooltip_cache = ({})
                     main_window.refreshing = true
+                    // Preserve the query in a pending field so it can be used
+                    // when saving results even if hf_query_text is cleared.
                     main_window.hf_query_text = description
+                    main_window.hf_pending_query = description
                     engine.request_hf_models(description, 10)
                 }
             }
@@ -910,29 +939,7 @@ Window {
                 onGo_back_empty_input: {
                     var defInstance = _screenInst[ScreenManager.Screens.Definition];
                     if (defInstance !== undefined) {
-                        defInstance.__problem_short_description = "";
-                        defInstance.__modality = "";
-                        defInstance.__metric = "";
-                        defInstance.__problem_definition = "";
-                        defInstance.__inputs = "";
-                        defInstance.__outputs = "";
-                        defInstance.__minimum_samples = 1;
-                        defInstance.__maximum_samples = 1;
-                        defInstance.__optimize_carbon_footprint_auto = false;
-                        defInstance.__goal = "";
-                        defInstance.__types = defInstance.__types;
-                        defInstance.__optimize_carbon_footprint_manual = false;
-                        defInstance.__previous_iteration = 0;
-                        defInstance.__desired_carbon_footprint = 0.0;
-                        defInstance.__max_memory_footprint = 0;
-                        // defInstance.__hardware_required = "PIM-AI-1chip";
-                        defInstance.__geo_location_continent = "";
-                        defInstance.__geo_location_region = "";
-                        defInstance.__extra_data = "";
-                        defInstance.__previous_problem_id = 0;
-                        defInstance.__num_outputs = 1;
-                        defInstance.__model_selected = "";
-                        defInstance.__model_selected_copy = "";
+                        defInstance.clear_all();
                     }
                     main_window.load_screen(ScreenManager.Screens.Definition)
                 }
@@ -965,6 +972,7 @@ Window {
                 metadata: main_window.ml_model_metadata_node_last_status
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
+                onGo_back: main_window.load_screen(main_window.previous_screen)
             }
         }
 
@@ -1186,6 +1194,7 @@ Window {
                         leftMargin: Settings.spacing_normal
                     }
                     onClicked: {
+                        main_window.refreshing = false
                         main_window.clear_hf_models()
                         main_window.load_screen(ScreenManager.Screens.Home)
                     }
@@ -1212,6 +1221,7 @@ Window {
                         leftMargin: Settings.spacing_small
                     }
                     onClicked: {
+                        main_window.refreshing = false
                         main_window.clear_hf_models()
                         main_window.load_screen(ScreenManager.Screens.Definition)
                     }
@@ -1243,7 +1253,7 @@ Window {
                     nightmode_color_text: Settings.app_color_green_1
 
                     onClicked: {
-                        console.log("[HF][INFO] selection:", main_window.hf_selected_ids)
+                        console.log("[HF INFO] selection:", main_window.hf_selected_ids)
 
                         // Freeze ids (so they don't get lost/changed later)
                         main_window.hf_compare_last_request_ids = main_window.hf_selected_ids.slice(0)
@@ -1254,6 +1264,34 @@ Window {
                         engine.request_hf_models_info(main_window.hf_compare_last_request_ids)
                         main_window.load_screen(ScreenManager.Screens.Compare)
                     }
+                }
+
+                // Results (top bar)
+                SmlButton {
+                    id: hf_go_results_button
+                    z: 100000
+
+                    anchors {
+                        top: hf_go_home_button.top
+                        left: hf_go_compare_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+
+                    icon_name: ""
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Results"
+                    rounded: true
+
+                    disabled: main_window.hf_saved_searches.length === 0
+
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+
+                    onClicked: main_window.load_screen(ScreenManager.Screens.HFresults)
                 }
 
                 Rectangle
@@ -1419,7 +1457,6 @@ Window {
                                                                     return
                                                                 }
 
-                                                                console.log("[HF][CheckBox] mid=", mid, "checked=", checked)
                                                                 main_window.hf_set_selected(mid, checked)
                                                             }
                                                         }
@@ -1881,6 +1918,277 @@ Window {
             }
         }
 
+        // HF RESULTS SCREEN
+        Component
+        {
+            id: huggingFace_results_screen
+
+            Rectangle
+            {
+                color: "transparent"
+
+                property int selectedIndex: -1
+                property var currentModels: {
+                    if (selectedIndex >= 0 &&
+                            selectedIndex < main_window.hf_saved_searches.length)
+                        return main_window.hf_saved_searches[selectedIndex].models
+                    return []
+                }
+
+                function formatTs(ts) {
+                    var d = new Date(ts)
+                    return Qt.formatDateTime(d, "dd/MM/yyyy HH:mm")
+                }
+
+                SmlButton {
+                    id: hfr_home_button
+                    icon_name: Settings.home_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Home"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Home screen"
+                    anchors {
+                        top: parent.top
+                        topMargin: Settings.spacing_normal
+                        left: parent.left
+                        leftMargin: Settings.spacing_normal
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                }
+
+                SmlButton {
+                    id: hfr_back_button
+                    icon_name: Settings.back_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: ""
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Back to Problem Definition"
+                    anchors {
+                        top: hfr_home_button.top
+                        left: hfr_home_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                }
+
+                Rectangle {
+                    anchors {
+                        top: hfr_back_button.bottom
+                        topMargin: Settings.spacing_big * 2
+                        left: parent.left
+                        leftMargin: Settings.spacing_big
+                        right: parent.right
+                        rightMargin: Settings.spacing_big
+                        bottom: parent.bottom
+                        bottomMargin: Settings.spacing_big * 2
+                    }
+                    radius: 18
+                    color: "white"
+                    border.color: Settings.app_color_green_4
+                    border.width: 2
+                    clip: true
+
+                    Item {
+                        anchors.fill: parent
+                        anchors.margins: Settings.spacing_big
+
+                        Flickable {
+                            id: hfrFlickable
+                            anchors {
+                                top: parent.top
+                                left: parent.left
+                                right: hfrScrollBar.left
+                                bottom: parent.bottom
+                                rightMargin: 4
+                            }
+                            contentWidth: width
+                            contentHeight: hfrMainColumn.implicitHeight
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+
+                            Controls2.ScrollBar.vertical: hfrScrollBar
+
+                            Column {
+                                id: hfrMainColumn
+                                width: hfrFlickable.width
+                                spacing: Settings.spacing_small
+
+                                SmlText {
+                                    text_kind: SmlText.TextKind.Header_2
+                                    text_value: "HF Search Results"
+                                    color: Settings.app_color_green_4
+                                }
+
+                                // Saved search entries
+                                Repeater {
+                                    model: main_window.hf_saved_searches
+
+                                    delegate: Rectangle {
+                                        width: hfrMainColumn.width
+                                        height: 36
+                                        radius: 8
+                                        border.color: Settings.app_color_green_4
+                                        border.width: index === selectedIndex ? 2 : 1
+                                        color: index === selectedIndex
+                                            ? Settings.app_color_green_4
+                                            : "transparent"
+
+                                        Row {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 10
+                                            anchors.rightMargin: 10
+                                            spacing: 10
+
+                                            Text {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                width: parent.width * 0.6
+                                                text: modelData.query || "(no query)"
+                                                font.pixelSize: 14
+                                                elide: Text.ElideRight
+                                                color: index === selectedIndex
+                                                    ? Settings.app_color_light
+                                                    : Settings.app_color_green_1
+                                            }
+                                            Text {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                text: (modelData.models ? modelData.models.length : 0) + " models"
+                                                font.pixelSize: 12
+                                                color: index === selectedIndex
+                                                    ? Settings.app_color_light
+                                                    : Settings.app_color_green_1
+                                            }
+                                            Text {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                text: formatTs(modelData.ts)
+                                                font.pixelSize: 12
+                                                color: index === selectedIndex
+                                                    ? Settings.app_color_light
+                                                    : Settings.app_color_green_1
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: selectedIndex = (selectedIndex === index) ? -1 : index
+                                        }
+                                    }
+                                }
+
+                                // Separator
+                                Item {
+                                    width: hfrMainColumn.width
+                                    height: Settings.spacing_normal
+
+                                    Rectangle {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: parent.width
+                                        height: 2
+                                        color: Settings.app_color_green_4
+                                    }
+                                }
+
+                                // Model cards for selected entry
+                                Repeater {
+                                    model: currentModels
+
+                                    delegate: Rectangle {
+                                        width: hfrMainColumn.width
+                                        radius: 10
+                                        border.color: Settings.app_color_green_4
+                                        border.width: 1
+                                        color: "transparent"
+                                        height: 54
+
+                                        property string mid: {
+                                            if (typeof modelData === "string") return modelData
+                                            if (modelData && modelData["model_id"] !== undefined) return modelData["model_id"]
+                                            if (modelData && modelData["id"] !== undefined) return modelData["id"]
+                                            if (modelData && modelData["modelId"] !== undefined) return modelData["modelId"]
+                                            return ""
+                                        }
+
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            onClicked: { if (mid) Qt.openUrlExternally("https://huggingface.co/" + mid) }
+                                        }
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: Settings.spacing_small
+                                            spacing: Settings.spacing_big
+
+                                            Text {
+                                                text: parent.parent.mid
+                                                font.pixelSize: 14
+                                                color: Settings.app_color_green_4
+                                                elide: Text.ElideRight
+                                                Layout.fillWidth: true
+                                                Layout.alignment: Qt.AlignVCenter
+                                            }
+
+                                            Text {
+                                                text: (typeof modelData === "object" && modelData.score !== undefined)
+                                                    ? ("score " + Number(modelData.score).toFixed(6)) : ""
+                                                font.pixelSize: 12
+                                                color: Settings.app_color_green_1
+                                                horizontalAlignment: Text.AlignRight
+                                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                                Layout.preferredWidth: 180
+                                            }
+
+                                            Controls2.Button {
+                                                text: "⚡ Analyze"
+                                                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                                                Layout.preferredWidth: 90
+                                                height: 32
+                                                contentItem: Text {
+                                                    text: parent.text
+                                                    font.pixelSize: 15
+                                                    color: Settings.app_color_light
+                                                    horizontalAlignment: Text.AlignHCenter
+                                                    verticalAlignment: Text.AlignVCenter
+                                                }
+                                                background: Rectangle {
+                                                    radius: 8
+                                                    color: Settings.app_color_green_4
+                                                }
+                                                onClicked: main_window.open_hf_analyze(modelData)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Controls2.ScrollBar {
+                            id: hfrScrollBar
+                            policy: Controls2.ScrollBar.AlwaysOn
+                            width: 8
+                            anchors {
+                                top: parent.top
+                                bottom: parent.bottom
+                                right: parent.right
+                            }
+                            contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
+                            background: Rectangle { color: "transparent" }
+                        }
+                    }
+                }
+            }
+        }
+
         // Transition
         delegate: StackViewDelegate {
             function transitionFinished(properties)
@@ -1953,6 +2261,7 @@ Window {
                     screen_to_be_loaded = results_screen
                     break
                 case ScreenManager.Screens.Log:
+                    main_window.previous_screen = ScreenManager.current_screen
                     screen_to_be_loaded = log_screen
                     break
                 case ScreenManager.Screens.DatasetPath:
@@ -1970,6 +2279,9 @@ Window {
                     break
                 case ScreenManager.Screens.Compare:
                     screen_to_be_loaded = compare_screen
+                    break
+                case ScreenManager.Screens.HFresults:
+                    screen_to_be_loaded = huggingFace_results_screen
                     break
                 default:
                 case ScreenManager.Screens.Home:
@@ -2066,6 +2378,12 @@ Window {
                 movement[1] = Settings.app_height * 5
                 movement[2] = Settings.background_2_x_final
                 movement[3] = Settings.background_2_y_final
+                break
+            case ScreenManager.Screens.HFresults:
+                movement[0] = Settings.app_width * 5
+                movement[1] = Settings.app_height * 5
+                movement[2] = Settings.background_2_x_final
+                movement[3] = Settings.background_2_y_initial
                 break
             default:
             case ScreenManager.Screens.Home:
