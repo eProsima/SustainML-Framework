@@ -37,6 +37,7 @@ Item
 
     // External signals
     signal go_home();
+    signal go_back();
 
     Rectangle
     {
@@ -47,6 +48,7 @@ Item
         // Go home button
         SmlButton
         {
+            id: go_home_button
             icon_name: Settings.home_icon_name
             text_kind: SmlText.TextKind.Header_2
             text_value: "Home"
@@ -64,6 +66,27 @@ Item
                 leftMargin: Settings.spacing_normal
             }
             onClicked: root.go_home()
+        }
+
+        // Go back button
+        SmlButton
+        {
+            icon_name: Settings.back_icon_name
+            text_kind: SmlText.TextKind.Header_2
+            text_value: ""
+            rounded: true
+            color: Settings.app_color_green_3
+            color_pressed: Settings.app_color_green_1
+            nightmode_color: Settings.app_color_green_1
+            nightmode_color_pressed: Settings.app_color_green_3
+            tooltip_text: "Go back to previous screen"
+            anchors
+            {
+                top: go_home_button.top
+                left: go_home_button.right
+                leftMargin: Settings.spacing_small
+            }
+            onClicked: root.go_back()
         }
 
         // Node status

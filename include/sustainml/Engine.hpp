@@ -68,25 +68,36 @@ public:
      * @brief Query Hugging Face Hub for suggested models given a free-text description
      * @param description User description / query used to rank candidate models
      */
-    Q_INVOKABLE void request_hf_models(QString description, int limit = 10);
+    Q_INVOKABLE void request_hf_models(
+            QString description,
+            int limit = 10);
 
     /**
      * @brief Fetch extra tooltip information for a single Hugging Face model
      * @param model_id Hugging Face model id, e.g. "author/model-name"
      */
-    Q_INVOKABLE void request_hf_model_tooltip(QString model_id);
+    Q_INVOKABLE void request_hf_model_tooltip(
+            QString model_id);
 
     /**
      * @brief Fetch Hugging Face detailed info objects for a list of model ids
      * @param model_ids List of HF model ids
      */
-    Q_INVOKABLE void request_hf_models_info(const QVariantList& model_ids);
+    Q_INVOKABLE void request_hf_models_info(
+            const QVariantList& model_ids);
+
+    /**
+     * @brief Return the file:// URL to the U-Net models info JSONL, resolved from the installed
+     *        hw_provider_fpga Python package at runtime. Returns empty string when not found.
+     */
+    Q_INVOKABLE QString unet_models_info_url() const;
 
     /**
      * @brief Ask backend to build a comparison report from the /hf_models_info payload
      * @param models List of model info objects returned by request_hf_models_info()
      */
-    Q_INVOKABLE void request_hf_models_compare(const QVariantList& models);
+    Q_INVOKABLE void request_hf_models_compare(
+            const QVariantList& models);
 
 public slots:
 
@@ -144,7 +155,7 @@ public slots:
             QString hardware_required,
             QString geo_location_continent,
             QString geo_location_region,
-            QString /*extra_data_*/,
+            QString extra_data_,
             int previous_problem_id,
             int num_outputs,
             QString model_selected,
@@ -546,44 +557,52 @@ signals:
      * @brief Emitted when HF search results are available
      * @param models List of model entries (objects or strings depending on backend payload)
      */
-    void hf_models_available(QVariantList models);
+    void hf_models_available(
+            QVariantList models);
 
     /**
      * @brief Emitted when HF search fails or returns an invalid payload
      * @param message Error description
      */
-    void hf_models_error(QString message);
+    void hf_models_error(
+            QString message);
 
     /**
      * @brief Emitted when extra tooltip text for a single HF model is available
      * @param model_id HF model id
      * @param tooltip Tooltip text (may be empty if unavailable/gated)
      */
-    void hf_model_tooltip_available(QString model_id, QString tooltip);
+    void hf_model_tooltip_available(
+            QString model_id,
+            QString tooltip);
 
     /**
      * @brief Emitted when /hf_models_info returns successfully
      * @param models Full model objects as returned by backend
      */
-    void hf_models_info_available(const QVariantList& models);
+    void hf_models_info_available(
+            const QVariantList& models);
 
     /**
      * @brief Emitted when /hf_models_info fails
      * @param message Error description
      */
-    void hf_models_info_error(const QString& message);
+    void hf_models_info_error(
+            const QString& message);
 
     /**
      * @brief Emitted when /hf_models_compare returns a comparison report
      * @param report Report object (summary + cards + table)
      */
-    void hf_models_compare_available(const QVariantMap& report);
+    void hf_models_compare_available(
+            const QVariantMap& report);
 
     /**
      * @brief Emitted when /hf_models_compare fails
      * @param message Error description
      */
-    void hf_models_compare_error(const QString& message);
+    void hf_models_compare_error(
+            const QString& message);
 
 protected:
 

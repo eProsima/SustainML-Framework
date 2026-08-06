@@ -17,7 +17,8 @@ Item
         Reiterate,
         UNet,
         HFsearch,
-        Compare
+        Compare,
+        HFresults
     }
 
     // Variables that user might change during the app execution
