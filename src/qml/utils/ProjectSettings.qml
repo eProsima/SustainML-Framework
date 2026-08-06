@@ -64,6 +64,8 @@ QtObject {
     readonly property string close_tab_icon_name:       "cross"
     readonly property string refresh_icon_name:         "refresh"
     readonly property string stop_icon_name:            "square"
+    readonly property string rename_icon_name:          "pencil"
+    readonly property string delete_icon_name:          "trash"
 
     // ICON SIZES
     readonly property int button_icon_size:         20

@@ -71,6 +71,8 @@ Window {
     property var hf_compare_last_request_ids: []   // Frozen ids for the last compare request
     property var hf_compare_history: []            // Saved comparisons
     property int hf_compare_history_max: 10        // Maximum number of saved comparisons
+    property int hf_open_compare_index: -1         // Index of the currently open saved comparison (-1 = none open)
+    property int hf_renaming_index: -1             // Index of the saved comparison currently being renamed (-1 = none)
 
     Timer {
         id: hfHoverDebounce
@@ -290,6 +292,7 @@ Window {
 
         function onHf_models_compare_error(message) {
             main_window.hf_compare_obj = ({})             // Clear stale content
+            main_window.hf_open_compare_index = -1
         }
     }
 
@@ -519,7 +522,8 @@ Window {
         var entry = {
             ts: Date.now(),
             ids: ids.slice(0),
-            obj: obj
+            obj: obj,
+            name: ""
         }
 
         var arr = hf_compare_history.slice(0)
@@ -529,13 +533,66 @@ Window {
             arr = arr.slice(0, hf_compare_history_max)
 
         hf_compare_history = arr
+        // Not auto-opened: nothing is selected by default, the user picks it from the list like any other saved entry
     }
 
     function hf_load_saved_compare(index) {
         if (index < 0 || index >= hf_compare_history.length) return
+
+        hf_renaming_index = -1     // Discard any unsaved rename in progress elsewhere
+
+        // Clicking the already-open comparison closes it
+        if (main_window.hf_open_compare_index === index) {
+            hf_open_compare_index = -1
+            hf_compare_obj = null
+            return
+        }
+
         var e = hf_compare_history[index]
-        hf_selected_ids = e.ids.slice(0)
+        // Note: deliberately does NOT touch hf_selected_ids - viewing a saved
+        // comparison must not leak its models into the checkboxes on the search
+        // screen for whatever comparison the user does next.
         hf_compare_obj = e.obj
+        hf_open_compare_index = index
+    }
+
+    function hf_delete_saved_compare(index) {
+        if (index < 0 || index >= hf_compare_history.length) return
+
+        hf_renaming_index = -1     // Discard any unsaved rename in progress elsewhere
+
+        var arr = hf_compare_history.slice(0)
+        arr.splice(index, 1)
+        hf_compare_history = arr
+
+        if (main_window.hf_open_compare_index === index) {
+            hf_open_compare_index = -1
+            hf_compare_obj = null
+        } else if (main_window.hf_open_compare_index > index) {
+            hf_open_compare_index = main_window.hf_open_compare_index - 1
+        }
+    }
+
+    function hf_rename_saved_compare(index, new_name) {
+        if (index < 0 || index >= hf_compare_history.length) return
+
+        var arr = hf_compare_history.slice(0)
+        var entry = Object.assign({}, arr[index])
+        entry.name = new_name
+        arr[index] = entry
+        hf_compare_history = arr
+    }
+
+    // Reassigning hf_compare_history (inside hf_rename_saved_compare, above) destroys and
+    // recreates every Repeater delegate for the saved-comparisons list - including the very
+    // row whose TextInput is still running the Keys.onReturnPressed handler that got us here.
+    // So this must be the ONE thing that delegate calls: everything it needs (index, the
+    // typed name, the old name to compare against) is passed in as arguments - evaluated
+    // BEFORE this call runs - and nothing in the delegate's own scope is touched afterward.
+    function hf_commit_rename(index, new_name, old_name) {
+        if (new_name.length > 0 && new_name !== old_name)
+            hf_rename_saved_compare(index, new_name)
+        hf_renaming_index = -1
     }
 
     // Background
@@ -1258,8 +1315,12 @@ Window {
                         // Freeze ids (so they don't get lost/changed later)
                         main_window.hf_compare_last_request_ids = main_window.hf_selected_ids.slice(0)
 
-                        // Clear current view
+                        // Clear current view: nothing should appear open/selected while the
+                        // new comparison is being computed, and the selection must not carry
+                        // over into whatever the user picks for their next comparison.
                         main_window.hf_compare_obj = ({})
+                        main_window.hf_open_compare_index = -1
+                        main_window.hf_selected_ids = []
 
                         engine.request_hf_models_info(main_window.hf_compare_last_request_ids)
                         main_window.load_screen(ScreenManager.Screens.Compare)
@@ -1640,6 +1701,14 @@ Window {
                     border.width: 2
                     clip: true
 
+                    // Clicking any blank area of this panel (declared first, so any
+                    // row/icon/button on top of it still gets the click instead)
+                    // discards an in-progress, unsaved rename.
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: main_window.hf_renaming_index = -1
+                    }
+
                     Column {
                         anchors.fill: parent
                         anchors.margins: Settings.spacing_big
@@ -1685,36 +1754,140 @@ Window {
                                     model: main_window.hf_compare_history
 
                                     delegate: Rectangle {
+                                        id: savedCompareRow
+
+                                        // Explicit required properties: Repeater's implicit "index"/"modelData"
+                                        // context properties are not reliably resolved from custom property
+                                        // bindings or nested item functions under Qt 5.15 - only from bindings
+                                        // written directly on a built-in property. Declaring them here makes
+                                        // them real properties of this delegate, resolvable everywhere below.
+                                        required property int index
+                                        required property var modelData
+
                                         width: parent.width
                                         height: 34
                                         radius: 8
                                         border.color: Settings.app_color_green_4
-                                        border.width: 1
-                                        color: "transparent"
+                                        border.width: isOpen ? 2 : 1
+                                        color: isOpen ? Settings.app_color_green_4 : "transparent"
+
+                                        readonly property bool isOpen: savedCompareRow.index === main_window.hf_open_compare_index
+                                        readonly property string displayName: (savedCompareRow.modelData.name && savedCompareRow.modelData.name.length > 0)
+                                            ? savedCompareRow.modelData.name
+                                            : (savedCompareRow.modelData.ids ? (savedCompareRow.modelData.ids.length + " models: " + savedCompareRow.modelData.ids.join(", ")) : "")
 
                                         Text {
+                                            id: savedCompareLabel
                                             anchors.verticalCenter: parent.verticalCenter
                                             anchors.left: parent.left
                                             anchors.leftMargin: 10
-                                            width: parent.width - 20
+                                            anchors.right: renameIcon.left
+                                            anchors.rightMargin: 8
                                             elide: Text.ElideRight
                                             font.pixelSize: 15
-                                            color: Settings.app_color_green_1
-                                            text: (modelData.ids ? (modelData.ids.length + " models: " + modelData.ids.join(", ")) : "")
+                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_1
+                                            text: savedCompareRow.displayName
+                                            visible: !renameField.visible
+                                        }
+
+                                        TextInput {
+                                            id: renameField
+
+                                            // Visibility is driven by shared main_window state (not a local
+                                            // flag) so that any other action in the screen - opening another
+                                            // row, clicking a blank area, deleting, navigating away - can
+                                            // reliably dismiss it. A local "visible: false" default plus
+                                            // focus-loss detection is not enough: clicking a plain Text/
+                                            // Rectangle with no MouseArea, or clicking another row's own
+                                            // (unrelated) MouseArea, never changes this TextInput's focus,
+                                            // so onFocusChanged would never fire and the field would be
+                                            // stuck open with the unsaved edit still showing.
+                                            visible: main_window.hf_renaming_index === savedCompareRow.index
+
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 10
+                                            anchors.right: renameIcon.left
+                                            anchors.rightMargin: 8
+                                            clip: true
+                                            selectByMouse: true
+                                            font.pixelSize: 15
+                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_1
+                                            selectionColor: savedCompareRow.isOpen ? Settings.app_color_green_1 : Settings.app_color_green_4
+                                            selectedTextColor: Settings.app_color_light
+
+                                            // Renaming (hf_commit_rename) reassigns hf_compare_history, which
+                                            // destroys and recreates every row's delegate - including this one,
+                                            // mid-handler. So the handler must be a SINGLE call passing everything
+                                            // it needs as arguments (evaluated up front), with nothing of this
+                                            // delegate's own scope touched afterward - a second statement here
+                                            // (e.g. a separate "...hf_renaming_index = -1" line after the call)
+                                            // would run against an already-destroyed delegate and throw.
+                                            // Only Enter applies the new name; anything else (click away, Escape) discards the edit and keeps the previous name.
+                                            Keys.onReturnPressed: main_window.hf_commit_rename(savedCompareRow.index, text.trim(), savedCompareRow.displayName)
+                                            Keys.onEnterPressed: main_window.hf_commit_rename(savedCompareRow.index, text.trim(), savedCompareRow.displayName)
+                                            Keys.onEscapePressed: main_window.hf_renaming_index = -1
+                                            onFocusChanged: if (!focus && visible) main_window.hf_renaming_index = -1
+                                        }
+
+                                        SmlIcon {
+                                            id: renameIcon
+                                            name: Settings.rename_icon_name
+                                            size: 16
+                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
+                                            nightmode_color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
+                                            clickable_text: "Rename"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.right: deleteIcon.left
+                                            anchors.rightMargin: 6
+                                            onClicked: {
+                                                renameField.text = savedCompareRow.displayName
+                                                main_window.hf_renaming_index = savedCompareRow.index
+                                                renameField.forceActiveFocus()
+                                                renameField.selectAll()
+                                            }
+                                        }
+
+                                        SmlIcon {
+                                            id: deleteIcon
+                                            name: Settings.delete_icon_name
+                                            size: 16
+                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
+                                            nightmode_color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
+                                            clickable_text: "Delete"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 10
+                                            onClicked: {
+                                                main_window.hf_renaming_index = -1
+                                                deleteCompareDialog.pendingIndex = savedCompareRow.index
+                                                deleteCompareDialog.pendingName = savedCompareRow.displayName
+                                                deleteCompareDialog.open()
+                                            }
                                         }
 
                                         MouseArea {
-                                            anchors.fill: parent
-                                            onClicked: main_window.hf_load_saved_compare(index)
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.left: parent.left
+                                            anchors.right: renameIcon.left
+                                            enabled: !renameField.visible
+                                            onClicked: main_window.hf_load_saved_compare(savedCompareRow.index)
                                         }
                                     }
                                 }
+
+                                // Comparison details: only shown while a comparison is open
+                                Column {
+                                    id: comparisonDetails
+                                    width: parent.width
+                                    spacing: 18
+                                    visible: main_window.hf_open_compare_index !== -1
 
                                 Rectangle {
                                     width: parent.width
                                     height: 1
                                     color: Settings.app_color_green_4
-                                    visible: main_window.hf_compare_history.length > 0
                                 }
 
                                 // Comparison table
@@ -1899,6 +2072,7 @@ Window {
                                     wrapMode: Text.WordWrap
                                     color: Settings.app_color_green_1
                                 }
+                                }   // end comparisonDetails Column
                             }
 
                             Controls2.ScrollBar.vertical: Controls2.ScrollBar {
@@ -1911,6 +2085,108 @@ Window {
                                 }
                                 contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
                                 background: Rectangle { color: "transparent" }
+                            }
+                        }
+
+                        // Delete confirmation dialog for saved comparisons
+                        Controls2.Dialog {
+                            id: deleteCompareDialog
+                            property int pendingIndex: -1
+                            property string pendingName: ""
+
+                            anchors.centerIn: parent
+                            modal: true
+                            width: dialogContent.implicitWidth
+                            height: dialogContent.implicitHeight
+
+                            background: Rectangle {
+                                anchors.fill: parent
+                                radius: 10
+                                color: Settings.app_color_light
+                                border.color: Settings.app_color_green_4
+                                border.width: 1
+                            }
+
+                            header: Item { }
+
+                            Column {
+                                id: dialogContent
+                                spacing: 16
+                                padding: 16
+                                anchors.centerIn: parent
+
+                                Text {
+                                    width: 260
+                                    text: "Delete comparison?"
+                                    font.pixelSize: 20
+                                    font.bold: true
+                                    color: Settings.app_color_green_1
+                                    wrapMode: Text.WordWrap
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+
+                                Text {
+                                    width: 260
+                                    text: "Are you sure you want to delete \"" + deleteCompareDialog.pendingName + "\"? This cannot be undone."
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 15
+                                    color: Settings.app_color_dark
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+
+                                Row {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    spacing: Settings.spacing_small
+
+                                    Controls2.Button {
+                                        id: cancelDeleteButton
+                                        height: 32
+                                        width: 80
+                                        font.pixelSize: 14
+                                        onClicked: deleteCompareDialog.close()
+
+                                        background: Rectangle {
+                                            anchors.fill: parent
+                                            radius: 5
+                                            color: Settings.app_color_light
+                                            border.color: Settings.app_color_green_1
+                                            border.width: 1
+                                        }
+                                        contentItem: Text {
+                                            text: "Cancel"
+                                            font.pixelSize: cancelDeleteButton.font.pixelSize
+                                            color: Settings.app_color_green_1
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                    }
+
+                                    Controls2.Button {
+                                        id: confirmDeleteButton
+                                        height: 32
+                                        width: 80
+                                        font.pixelSize: 14
+                                        onClicked: {
+                                            main_window.hf_delete_saved_compare(deleteCompareDialog.pendingIndex)
+                                            deleteCompareDialog.close()
+                                        }
+
+                                        background: Rectangle {
+                                            anchors.fill: parent
+                                            radius: 5
+                                            color: Settings.app_color_green_1
+                                            border.color: Settings.app_color_green_1
+                                            border.width: 1
+                                        }
+                                        contentItem: Text {
+                                            text: "Delete"
+                                            font.pixelSize: confirmDeleteButton.font.pixelSize
+                                            color: Settings.app_color_light
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
