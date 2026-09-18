@@ -486,8 +486,6 @@ Window {
             def.__type
         )
 
-        def.results_available = true
-
         // Go to Results like normal flow
         main_window.load_screen(ScreenManager.Screens.Results)
     }

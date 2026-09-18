@@ -332,5 +332,71 @@ Item
                 }
             }
         }
+
+        // Clear saved data button
+        SmlButton
+        {
+            id: clear_saved_data_button
+            icon_name: Settings.delete_icon_name
+            text_kind: SmlText.TextKind.Header_2
+            text_value: "Clear Saved Data"
+            rounded: true
+            color: Settings.app_color_green_3
+            color_pressed: Settings.app_color_green_1
+            nightmode_color: Settings.app_color_green_1
+            nightmode_color_pressed: Settings.app_color_green_3
+            tooltip_text: "Delete all saved result files from the backend"
+            anchors
+            {
+                top: metadata_item.bottom
+                topMargin: Settings.spacing_big
+                left: header.left
+            }
+            onClicked: clear_saved_data_dialog.open()
+        }
+
+        Dialog
+        {
+            id: clear_saved_data_dialog
+            anchors.centerIn: parent
+            modal: true
+            padding: 16
+            standardButtons: Dialog.Yes | Dialog.No
+
+            background: Rectangle
+            {
+                anchors.fill: parent
+                radius: 10
+                color: Settings.app_color_light
+                border.color: Settings.app_color_green_4
+                border.width: 1
+            }
+
+            header: Item { }
+
+            contentItem: Column
+            {
+                id: contentColumn
+                spacing: 16
+
+                SmlText
+                {
+                    text_value: "Clear Saved Data"
+                    text_kind: SmlText.TextKind.Header_2
+                    width: 320
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                SmlText
+                {
+                    text_value: "This will permanently delete all saved result files from the backend. Tasks currently in progress are not affected. Continue?"
+                    text_kind: SmlText.TextKind.Body
+                    width: 320
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
+
+            onAccepted: engine.clear_saved_data()
+        }
     }
 }

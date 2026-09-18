@@ -71,8 +71,6 @@ Item
     property string __dataset_metadata_keywords: __dataset_keywords
     property string __dataset_metadata_applications: __dataset_applications
 
-    property bool results_available: false
-
     // External signals
     signal go_home()
     signal go_results()
@@ -210,7 +208,6 @@ Item
     SmlButton
     {
         id: go_results
-        disabled: !results_available
         icon_name: Settings.start_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Results"
@@ -1753,7 +1750,6 @@ Item
         onClicked:
         {
             focus = true
-            root.results_available = true
             root.prepare_task()
         }
     }
