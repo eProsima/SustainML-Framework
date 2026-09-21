@@ -89,6 +89,20 @@
         <file>images/icons/trash/trash_4.svg</file>
         <file>images/icons/trash/trash_w.svg</file>
 
+        <file>images/icons/save/save.svg</file>
+        <file>images/icons/save/save_1.svg</file>
+        <file>images/icons/save/save_2.svg</file>
+        <file>images/icons/save/save_3.svg</file>
+        <file>images/icons/save/save_4.svg</file>
+        <file>images/icons/save/save_w.svg</file>
+
+        <file>images/icons/load/load.svg</file>
+        <file>images/icons/load/load_1.svg</file>
+        <file>images/icons/load/load_2.svg</file>
+        <file>images/icons/load/load_3.svg</file>
+        <file>images/icons/load/load_4.svg</file>
+        <file>images/icons/load/load_w.svg</file>
+
         <file>images/icons/square/square.svg</file>
         <file>images/icons/square/square_1.svg</file>
         <file>images/icons/square/square_2.svg</file>

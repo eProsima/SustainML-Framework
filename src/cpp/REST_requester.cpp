@@ -104,6 +104,12 @@ QString REST_requester::request_type_to_url(
         case RequestType::WIPE_DATABASE:
             url += "/wipe_db";
             break;
+        case RequestType::SAVE_ALL:
+            url += "/save_all";
+            break;
+        case RequestType::LOAD_ALL:
+            url += "/load_all";
+            break;
     }
     return url;
 }

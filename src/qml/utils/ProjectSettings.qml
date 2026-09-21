@@ -66,6 +66,8 @@ QtObject {
     readonly property string stop_icon_name:            "square"
     readonly property string rename_icon_name:          "pencil"
     readonly property string delete_icon_name:          "trash"
+    readonly property string save_icon_name:            "save"
+    readonly property string load_icon_name:            "load"
 
     // ICON SIZES
     readonly property int button_icon_size:         20

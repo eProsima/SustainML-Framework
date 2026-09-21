@@ -56,6 +56,15 @@ int main(
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif // if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+
+    // Needed for QSettings to have somewhere to store its data - without these,
+    // any QML component that relies on Qt.labs.settings (e.g. the built-in
+    // FileDialog used to pick a dataset) fails to initialize its QSettings
+    // instance and warns about it every time that dialog opens.
+    QCoreApplication::setOrganizationName("eProsima");
+    QCoreApplication::setOrganizationDomain("eprosima.com");
+    QCoreApplication::setApplicationName("SustainML");
+
     QApplication app(argc, argv);
 
     // Register main project settings

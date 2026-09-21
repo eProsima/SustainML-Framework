@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <deque>
 
+#include <QJsonArray>
 #include <QMap>
 #include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
@@ -160,6 +161,29 @@ public:
      * @param name name of the save file to delete
      */
     Q_INVOKABLE void delete_saved_file(
+            QString name);
+
+    /**
+     * @brief Save every currently open task (same as save_current_tasks()) AND the
+     *        given HF search/comparison history into one named file in a single
+     *        call (full replace, like save_current_tasks())
+     * @param name name to save under
+     * @param hf_searches HF search history entries - opaque, stored and returned verbatim
+     * @param hf_comparisons HF comparison history entries - opaque, stored and returned verbatim
+     */
+    Q_INVOKABLE void save_all(
+            QString name,
+            const QVariantList& hf_searches,
+            const QVariantList& hf_comparisons);
+
+    /**
+     * @brief Load every task (same as load_saved_tasks()) AND the HF search/
+     *        comparison history from a named save file. Tasks are replayed the
+     *        same way load_saved_tasks() does; the HF history is reported via
+     *        hf_state_loaded() for the caller to merge into its own lists.
+     * @param name name of the save file to load
+     */
+    Q_INVOKABLE void load_all(
             QString name);
 
 public slots:
@@ -675,6 +699,16 @@ signals:
     void saved_files_available(
             const QVariantList& names);
 
+    /**
+     * @brief Emitted after load_all(), with the HF search/comparison history found
+     *        in that save file - each opaque, the caller merges them into its own lists
+     * @param hf_searches HF search history entries found in the save file
+     * @param hf_comparisons HF comparison history entries found in the save file
+     */
+    void hf_state_loaded(
+            const QVariantList& hf_searches,
+            const QVariantList& hf_comparisons);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -774,6 +808,22 @@ private:
     void delete_saved_file_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
+
+    //! Receive the response to a save_all() request
+    void save_all_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive loaded tasks and HF search/comparison history from a load_all() request
+    void load_all_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Shared by load_tasks_response()/load_all_response(): replay each task in
+    //! the given array through the existing results path (see load_tasks_response
+    //! for why), assigning saved_display_names_ along the way
+    void replay_loaded_tasks(
+            const QJsonArray& tasks_array);
 
     //! Request node status to the Framework
     void node_status_request(

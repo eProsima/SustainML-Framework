@@ -56,11 +56,6 @@ Item
     readonly property int __tab_view_width: 1000
     readonly property int __tab_view_height: 600
     property bool tasking: false
-    property var __saved_file_names: []
-    property bool __opening_save_dialog: false
-    // Which save is currently selected (highlighted) in the Load picker - loading
-    // now requires an explicit Load click, a row click only selects it.
-    property string __selected_saved_file: ""
 
     function __mark_node_complete(problem_id, node_key)
     {
@@ -78,21 +73,6 @@ Item
     Connections
     {
         target: engine
-
-        function onSaved_files_available(names)
-        {
-            root.__saved_file_names = names
-            if (root.__opening_save_dialog)
-            {
-                root.__opening_save_dialog = false
-                save_name_dialog.open()
-            }
-            else
-            {
-                root.__selected_saved_file = ""
-                load_picker_dialog.open()
-            }
-        }
 
         function onNew_app_requirements_node_output(problem_id, iteration_id, app_requirements)
         {
@@ -374,7 +354,7 @@ Item
     SmlButton
     {
         id: save_results_button
-        icon_name: ""
+        icon_name: Settings.save_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Save"
         disabled: list_of_ready_problems.length === 0
@@ -392,18 +372,14 @@ Item
             left: stop_button.right
             leftMargin: Settings.spacing_small
         }
-        onClicked: {
-            save_name_field.text = ""
-            root.__opening_save_dialog = true
-            engine.request_saved_files_list()
-        }
+        onClicked: save_load_dialogs.open_save()
     }
 
     // Button to load results from a previously saved file
     SmlButton
     {
         id: load_results_button
-        icon_name: ""
+        icon_name: Settings.load_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Load"
         rounded: true
@@ -420,7 +396,7 @@ Item
             left: save_results_button.right
             leftMargin: Settings.spacing_small
         }
-        onClicked: engine.request_saved_files_list()
+        onClicked: save_load_dialogs.open_load()
     }
 
     // Tasking status text
@@ -540,296 +516,15 @@ SmlDialog
     }
 }
 
-Dialog
+SmlSaveLoadDialogs
 {
-    id: save_name_dialog
-    anchors.centerIn: parent
-    modal: true
-    padding: 16
-    standardButtons: Dialog.Save | Dialog.Cancel
-
-    background: Rectangle
-    {
-        anchors.fill: parent
-        radius: 10
-        color: Settings.app_color_light
-        border.color: Settings.app_color_green_4
-        border.width: 1
-    }
-
-    header: Item { }
-
-    contentItem: Column
-    {
-        id: save_dialog_column
-        spacing: 16
-
-        SmlText
-        {
-            text_value: "Save Results"
-            text_kind: SmlText.TextKind.Header_2
-            width: 280
-            horizontalAlignment: Text.AlignHCenter
-        }
-
-        SmlText
-        {
-            text_value: "Name this save, or pick an existing one below to overwrite it:"
-            text_kind: SmlText.TextKind.Body
-            width: 280
-        }
-
-        TextField
-        {
-            id: save_name_field
-            width: 280
-            placeholderText: "e.g. experiment 1"
-        }
-
-        SmlText
-        {
-            visible: root.__saved_file_names.length > 0
-            text_value: "Existing saves:"
-            text_kind: SmlText.TextKind.Body
-            width: 280
-        }
-
-        ScrollView
-        {
-            width: 280
-            height: Math.min(save_existing_column.implicitHeight, 160)
-            clip: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
-            Column
-            {
-                id: save_existing_column
-                // Narrower than the ScrollView itself, leaving clearance on the right
-                // for its overlay scrollbar so it doesn't cover the row content.
-                width: 280 - 16
-                spacing: 8
-
-                Repeater
-                {
-                    model: root.__saved_file_names
-
-                    delegate: Rectangle
-                    {
-                        id: existing_save_row
-                        required property var modelData
-
-                        width: save_existing_column.width
-                        height: 36
-                        radius: height / 2.5
-                        // "Selected" here just means it matches whatever's currently
-                        // typed in the name field - the same thing clicking a row sets,
-                        // so it also highlights correctly if someone types a match by hand.
-                        color: existing_save_row.modelData === save_name_field.text
-                            ? Settings.app_color_green_1
-                            : (ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4)
-
-                        SmlText
-                        {
-                            anchors
-                            {
-                                left: parent.left
-                                leftMargin: Settings.spacing_normal
-                                right: parent.right
-                                rightMargin: Settings.spacing_normal
-                                verticalCenter: parent.verticalCenter
-                            }
-                            force_elide: true
-                            text_value: existing_save_row.modelData
-                            text_kind: SmlText.TextKind.Body
-                            force_color: true
-                            forced_color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
-                        }
-
-                        MouseArea
-                        {
-                            anchors.fill: parent
-                            onClicked: save_name_field.text = existing_save_row.modelData
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    onAccepted:
-    {
-        var chosen_name = save_name_field.text.trim()
-        if (chosen_name.length > 0)
-        {
-            engine.save_current_tasks(chosen_name)
-        }
-    }
-}
-
-Dialog
-{
-    id: load_picker_dialog
-    anchors.centerIn: parent
-    modal: true
-    padding: 16
-    standardButtons: Dialog.Open | Dialog.Cancel
-
-    width: 320
-
-    Component.onCompleted:
-    {
-        var open_button = load_picker_dialog.standardButton(Dialog.Open)
-        open_button.text = "Load"
-        open_button.enabled = Qt.binding(function() { return root.__selected_saved_file !== "" })
-    }
-
-    onAccepted:
-    {
-        if (root.__selected_saved_file !== "")
-        {
-            engine.load_saved_tasks(root.__selected_saved_file)
-        }
-    }
-
-    background: Rectangle
-    {
-        anchors.fill: parent
-        radius: 10
-        color: Settings.app_color_light
-        border.color: Settings.app_color_green_4
-        border.width: 1
-    }
-
-    header: Item { }
-
-    contentItem: Column
-    {
-        id: load_dialog_column
-        spacing: 12
-        width: load_picker_dialog.availableWidth
-
-        SmlText
-        {
-            text_value: "Load Results"
-            text_kind: SmlText.TextKind.Header_2
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-        }
-
-        SmlText
-        {
-            visible: root.__saved_file_names.length === 0
-            text_value: "No saved files yet."
-            text_kind: SmlText.TextKind.Body
-            width: parent.width
-        }
-
-        ScrollView
-        {
-            width: parent.width
-            height: Math.min(load_files_column.implicitHeight, 260)
-            clip: true
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
-            Column
-            {
-                id: load_files_column
-                // Narrower than the ScrollView itself, leaving clearance on the right
-                // for its overlay scrollbar so it doesn't cover the row content
-                // (including the delete X, which sits at the row's right edge).
-                width: load_picker_dialog.contentItem.width - 16
-                spacing: 8
-
-                Repeater
-                {
-                    model: root.__saved_file_names
-
-                    delegate: Rectangle
-                    {
-                        id: saved_file_row
-                        required property var modelData
-
-                        width: load_files_column.width
-                        height: 36
-                        radius: height / 2.5
-                        color: saved_file_row.modelData === root.__selected_saved_file
-                            ? Settings.app_color_green_1
-                            : (ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4)
-
-                        SmlText
-                        {
-                            id: saved_file_label
-                            anchors
-                            {
-                                left: parent.left
-                                leftMargin: Settings.spacing_normal
-                                right: delete_icon.left
-                                rightMargin: Settings.spacing_small
-                                verticalCenter: parent.verticalCenter
-                            }
-                            force_elide: true
-                            text_value: saved_file_row.modelData
-                            text_kind: SmlText.TextKind.Body
-                            force_color: true
-                            forced_color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
-                        }
-
-                        SmlIcon
-                        {
-                            id: delete_icon
-                            anchors
-                            {
-                                right: parent.right
-                                rightMargin: Settings.spacing_normal
-                                verticalCenter: parent.verticalCenter
-                            }
-                            name: Settings.close_tab_icon_name
-                            size: Settings.spacing_normal
-                            color: Settings.app_color_green_3
-                            nightmode_color: Settings.app_color_green_1
-                        }
-
-                        // Click anywhere but the X to select this saved file - loading
-                        // itself happens via the separate Load button below
-                        MouseArea
-                        {
-                            anchors
-                            {
-                                left: parent.left
-                                top: parent.top
-                                bottom: parent.bottom
-                                right: delete_icon.left
-                                rightMargin: -Settings.spacing_small
-                            }
-                            onClicked: root.__selected_saved_file = saved_file_row.modelData
-                        }
-
-                        // Click the X to delete just this one saved file
-                        MouseArea
-                        {
-                            anchors
-                            {
-                                left: delete_icon.left
-                                leftMargin: -Settings.spacing_small
-                                top: parent.top
-                                bottom: parent.bottom
-                                right: parent.right
-                            }
-                            onClicked:
-                            {
-                                engine.delete_saved_file(saved_file_row.modelData)
-                                root.__saved_file_names = root.__saved_file_names.filter(function(n) { return n !== saved_file_row.modelData })
-                                if (root.__selected_saved_file === saved_file_row.modelData)
-                                {
-                                    root.__selected_saved_file = ""
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    id: save_load_dialogs
+    anchors.fill: parent
+    save_title: "Save Results"
+    load_title: "Load Results"
+    no_files_text: "No saved files yet."
+    onSave_requested: engine.save_current_tasks(name)
+    onLoad_requested: engine.load_saved_tasks(name)
 }
 
 }

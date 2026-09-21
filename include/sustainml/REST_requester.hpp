@@ -56,7 +56,9 @@ public:
         SAVE_TASKS,
         LOAD_TASKS,
         DELETE_SAVED_FILE,
-        WIPE_DATABASE
+        WIPE_DATABASE,
+        SAVE_ALL,
+        LOAD_ALL
     };
 
     //! Object performs a REST request and registers the functor for the response management

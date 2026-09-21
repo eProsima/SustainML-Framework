@@ -47,7 +47,14 @@ Window {
 
     property var _screenInst: ({})
     property var unetInfoMap: ({})
-    property int previous_screen: ScreenManager.Screens.Home
+    // Real back-navigation history (a stack), not just a single "last screen"
+    // slot - a single slot breaks as soon as two screens can reach each other
+    // (e.g. Compare <-> Log via the gear icon): going back from either would
+    // overwrite the other's remembered origin, causing an infinite A<->B bounce
+    // instead of ever reaching further back. go_back() below is the only thing
+    // that should ever read/pop this - screens' own Back buttons call it, not
+    // load_screen() directly.
+    property var screen_history: []
 
     property var hf_models_list: []
     property var hf_saved_searches: []
@@ -244,6 +251,30 @@ Window {
         {
             main_window.refreshing = false
             console.log("[HF] onHf_models_error message=", message, "query=", main_window.hf_query_text)
+        }
+
+        // Loaded HF search/comparison history (from engine.load_all()) - merged
+        // into the current in-memory lists, same spirit as loaded tasks always
+        // appearing as new tabs: nothing already open/shown is replaced or lost.
+        function onHf_state_loaded(hf_searches, hf_comparisons)
+        {
+            if (hf_searches && hf_searches.length > 0)
+            {
+                var searches = main_window.hf_saved_searches.slice(0)
+                for (var i = 0; i < hf_searches.length; ++i)
+                    searches.push(hf_searches[i])
+                main_window.hf_saved_searches = searches
+            }
+
+            if (hf_comparisons && hf_comparisons.length > 0)
+            {
+                var comparisons = main_window.hf_compare_history.slice(0)
+                for (var j = 0; j < hf_comparisons.length; ++j)
+                    comparisons.push(hf_comparisons[j])
+                if (comparisons.length > main_window.hf_compare_history_max)
+                    comparisons = comparisons.slice(0, main_window.hf_compare_history_max)
+                main_window.hf_compare_history = comparisons
+            }
         }
 
         function onHf_model_tooltip_available(model_id, tooltip) {
@@ -694,9 +725,13 @@ Window {
     {
         id: stack_view
         anchors.fill: parent
+        // Shown once, on launch, bypassing load_screen()/its _screenInst cache on
+        // purpose: it's a one-shot splash, not a destination - once you leave it
+        // (via its own Start button, below), nothing ever navigates back to it,
+        // since load_screen() treats Screens.Home as an alias for Definition.
         initialItem: home_screen
 
-        // HOME SCREEN
+        // START SCREEN (shown once, at launch, only)
         Component
         {
             id: home_screen
@@ -732,14 +767,15 @@ Window {
                 __refreshing: main_window.refreshing
                 __initializing: main_window.initializing
 
-                onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
                 hf_results_available: main_window.hf_saved_searches.length > 0
+                hf_comparisons_available: main_window.hf_compare_history.length > 0
 
                 onGo_hf_models: main_window.load_screen(ScreenManager.Screens.HFsearch)
                 onGo_hf_results: main_window.load_screen(ScreenManager.Screens.HFresults)
+                onGo_hf_comparisons: main_window.load_screen(ScreenManager.Screens.Compare)
 
                 onClear_all_clicked: {
                     // Clear dataset metadata stored in main_window
@@ -878,7 +914,6 @@ Window {
                         __model_selected: reiterateModel.get(2).value
                         __hardware_required: reiterateModel.get(3).value
 
-                        onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                         onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
                         onSend_task: {
@@ -1025,9 +1060,11 @@ Window {
                 hw_resources: main_window.hw_resources_node_last_status
                 model: main_window.ml_model_node_last_status
                 metadata: main_window.ml_model_metadata_node_last_status
+                hf_saved_searches: main_window.hf_saved_searches
+                hf_compare_history: main_window.hf_compare_history
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
-                onGo_back: main_window.load_screen(main_window.previous_screen)
+                onGo_back: main_window.go_back()
             }
         }
 
@@ -1349,6 +1386,38 @@ Window {
                     nightmode_color_text: Settings.app_color_green_1
 
                     onClicked: main_window.load_screen(ScreenManager.Screens.HFresults)
+                }
+
+                // Comparisons (top bar) - browse comparisons already done, without
+                // starting a new one (unlike the "Compare" button above, this never
+                // touches hf_compare_obj/hf_selected_ids). The Compare screen already
+                // shows the hf_compare_history sidebar to pick from - this just adds a
+                // direct path to it.
+                SmlButton {
+                    id: hf_go_comparisons_button
+                    z: 100000
+
+                    anchors {
+                        top: hf_go_home_button.top
+                        left: hf_go_results_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+
+                    icon_name: ""
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Comparisons"
+                    rounded: true
+
+                    disabled: main_window.hf_compare_history.length === 0
+
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Compare)
                 }
 
                 Rectangle
@@ -1685,7 +1754,7 @@ Window {
                     nightmode_color: Settings.app_color_green_2
                     nightmode_color_pressed: Settings.app_color_green_3
                     nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Back to Hugging Face list"
+                    tooltip_text: "Go back to previous screen"
                     anchors {
                         top: parent.top
                         topMargin: Settings.spacing_normal
@@ -1694,7 +1763,7 @@ Window {
                     }
 
                     onClicked: {
-                        main_window.load_screen(ScreenManager.Screens.HFsearch)
+                        main_window.go_back()
                     }
                 }
 
@@ -2527,14 +2596,30 @@ Window {
         onClicked: main_window.load_screen(ScreenManager.Screens.Log);
     }
 
-    // Screen loader plus background animation trigger
-    function load_screen(screen)
+    // Screen loader plus background animation trigger. is_back is true only when
+    // called from go_back() below - it means "unwind", so the current screen must
+    // NOT be pushed onto screen_history again (that would immediately turn the very
+    // next go_back() call into a bounce right back to where we just came from).
+    function load_screen(screen, is_back)
     {
+        // "Home" is now just an alias for the Problem Definition screen - the
+        // actual useful starting point (fields/buttons), not the old near-empty
+        // welcome screen. Every Home button/link across the app lands here.
+        if (screen === ScreenManager.Screens.Home)
+        {
+            screen = ScreenManager.Screens.Definition
+        }
+
         var screen_to_be_loaded  = ScreenManager.current_screen // Current screen as default
 
         // Check if actual change is required
         if (ScreenManager.current_screen !== screen)
         {
+            if (!is_back)
+            {
+                main_window.screen_history.push(ScreenManager.current_screen)
+            }
+
             // Always hide tooltip before starting a transition
             stop_hf_tooltip()
 
@@ -2551,7 +2636,6 @@ Window {
                     screen_to_be_loaded = results_screen
                     break
                 case ScreenManager.Screens.Log:
-                    main_window.previous_screen = ScreenManager.current_screen
                     screen_to_be_loaded = log_screen
                     break
                 case ScreenManager.Screens.DatasetPath:
@@ -2574,8 +2658,7 @@ Window {
                     screen_to_be_loaded = huggingFace_results_screen
                     break
                 default:
-                case ScreenManager.Screens.Home:
-                    screen_to_be_loaded = home_screen
+                    screen_to_be_loaded = definition_screen
                     break
             }
 
@@ -2612,6 +2695,19 @@ Window {
             background_2_x_animation.start()
             background_2_y_animation.start()
         }
+    }
+
+    // Navigate to whichever screen was actually shown right before the current
+    // one, per screen_history - the single correct "Back" implementation for
+    // every screen (Log/Settings, Compare, ...) instead of each tracking its own
+    // "previous screen" slot, which breaks as soon as two screens can reach each
+    // other (see screen_history's own comment above for why).
+    function go_back()
+    {
+        var history = main_window.screen_history.slice(0)
+        var target = history.length > 0 ? history.pop() : ScreenManager.Screens.Definition
+        main_window.screen_history = history
+        main_window.load_screen(target, true)
     }
 
     // Determine location of each screen

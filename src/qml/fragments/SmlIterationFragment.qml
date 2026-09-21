@@ -70,6 +70,10 @@ Rectangle {
         target: sustainml_fragment_problem
 
         function onUpdate_iteration(comparison_interation_ids_list) {
+            // problem_id -1 is the "New Tab" placeholder (no real problem behind it) -
+            // requesting results for it crashes the backend (uint32_t can't hold -1).
+            if (problem_id < 0) return;
+
             comparison_interation_ids_list.sort(function(a, b) { return a - b; });
 
             var newList = [];
