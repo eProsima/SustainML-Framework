@@ -1308,8 +1308,6 @@ Window {
                     nightmode_color_text: Settings.app_color_green_1
 
                     onClicked: {
-                        console.log("[HF INFO] selection:", main_window.hf_selected_ids)
-
                         // Freeze ids (so they don't get lost/changed later)
                         main_window.hf_compare_last_request_ids = main_window.hf_selected_ids.slice(0)
 
@@ -1498,11 +1496,29 @@ Window {
                                                             id: hfSelectBox
                                                             anchors.centerIn: parent
 
-                                                            // Avoid re-entrancy when we revert checked state
+                                                            // Avoid re-entrancy when we programmatically sync/revert checked state
                                                             property bool _blocking: false
 
-                                                            checked: main_window.hf_is_selected(mid)
                                                             enabled: checked || main_window.hf_selected_ids.length < maxCompareModels
+
+                                                            // Kept in sync with the model imperatively (guarded by _blocking) rather
+                                                            // than via a live `checked: main_window.hf_is_selected(mid)` binding -
+                                                            // that binding caused a genuine binding loop, since toggling this box
+                                                            // calls hf_set_selected() below, which reassigns hf_selected_ids (the
+                                                            // same property the binding reads) synchronously, while still inside
+                                                            // this box's own checked-change handling.
+                                                            function _syncChecked() {
+                                                                _blocking = true
+                                                                checked = main_window.hf_is_selected(mid)
+                                                                _blocking = false
+                                                            }
+
+                                                            Component.onCompleted: _syncChecked()
+
+                                                            Connections {
+                                                                target: main_window
+                                                                function onHf_selected_idsChanged() { hfSelectBox._syncChecked() }
+                                                            }
 
                                                             onCheckedChanged: {
                                                                 if (_blocking) return

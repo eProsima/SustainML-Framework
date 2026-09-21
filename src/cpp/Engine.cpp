@@ -1455,8 +1455,15 @@ void Engine::save_tasks_response(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
-    Q_UNUSED(json_obj);
-    emit update_log(QString("Saved current results."));
+    QString path = json_obj.value("path").toString();
+    if (!path.isEmpty())
+    {
+        emit update_log(QString("Saved current results to ") + path);
+    }
+    else
+    {
+        emit update_log(QString("Saved current results."));
+    }
 
     // Remove REST requester from queue
     std::lock_guard<std::mutex> lock(requesters_mutex_);

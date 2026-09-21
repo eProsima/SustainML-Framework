@@ -384,9 +384,6 @@ Item {
             }
             if (!tabExists) {
                 __create_new_custom_tab(tab_title, stack_id, problem_id, stack_component_name);
-                console.log("Creating tab with stack id '" + stack_id + "'");    // debug
-            } else {
-                console.log("The given stack id '" + stack_id + "' already exists");    // debug
             }
         }
         else
@@ -406,12 +403,7 @@ Item {
         }
         if (tabExists)
         {
-            console.log("The given stack id '" + stack_id + "' is going to get closed");
             __remove_idx(i);
-            console.log("The given stack id '" + stack_id + "' is closed");
-        } else
-        {
-            console.log("The given stack id '" + stack_id + "' doesn't exists");
         }
     }
 
@@ -553,7 +545,6 @@ Item {
     // the earlier crash and tabs ending up showing the wrong (or no) content.
     function __close_tab(idx, stack_id_to_close)
     {
-        console.log("The tab '" + sustainml_custom_tabview.__tab_model.get(idx).title + "' with " + stack_id_to_close + " is being closed.");
         tabClosed(stack_id_to_close)
         __remove_idx(idx)
     }
@@ -565,7 +556,6 @@ Item {
         var should_add_new_tab = (sustainml_custom_tabview.__tab_model.count <= 1)
 
         var removedStackId = sustainml_custom_tabview.__tab_model.get(idx).stack_id
-        console.log("Removing tab with stack_id: " + removedStackId)
 
         var wasCurrent = (idx === __current_tab)
 

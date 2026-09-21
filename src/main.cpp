@@ -21,13 +21,38 @@
 #include <QtQml>
 #include <QtQuick/QQuickView>
 
+#include <cstdio>
+
 #include <sustainml/Engine.hpp>
 #include <sustainml/tree/TreeModel.h>
+
+namespace {
+
+//! Qt's TableView already safely skips a forceLayout() call made while a previous
+//! one is still in progress (harmless - happens whenever several tabs are created
+//! back-to-back, e.g. after Load) but still logs a warning about it every time.
+//! Drop just that one message; everything else is formatted and printed exactly as
+//! Qt's own default handler would.
+void filtered_message_handler(
+        QtMsgType type,
+        const QMessageLogContext& context,
+        const QString& msg)
+{
+    if (msg.contains(QLatin1String("Cannot do an immediate re-layout during an ongoing layout")))
+    {
+        return;
+    }
+    fprintf(stderr, "%s\n", qFormatLogMessage(type, context, msg).toLocal8Bit().constData());
+}
+
+} // namespace
 
 int main(
         int argc,
         char* argv[])
 {
+    qInstallMessageHandler(filtered_message_handler);
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif // if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
