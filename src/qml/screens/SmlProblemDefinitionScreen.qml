@@ -19,9 +19,6 @@ Item
     readonly property int __margin: Settings.spacing_big * 1
     readonly property int __input_height: 50
     readonly property int __input_height_big: 120
-    readonly property int __input_width: 900
-    readonly property int __input_width_split: 435
-    readonly property int __input_width_small: 293
 
     // Input values
     property string __problem_short_description: ""
@@ -121,7 +118,8 @@ Item
     signal go_hf_comparisons()
 
     property bool hf_results_available: false
-    property bool hf_comparisons_available: false
+    // Count (not just a flag) so the "Comparisons" button can badge how many are saved
+    property int hf_comparisons_count: 0
 
     Connections
     {
@@ -186,7 +184,7 @@ Item
     SmlButton
     {
         id: go_results
-        icon_name: Settings.start_icon_name
+        icon_name: Settings.results_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Results"
         rounded: true
@@ -215,7 +213,7 @@ Item
     {
         id: dataset_path_button
         visible: !root.__reiterate
-        icon_name: Settings.start_icon_name
+        icon_name: Settings.upload_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Upload Dataset"
         rounded: true
@@ -317,7 +315,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height
             KeyNavigation.tab: problem_definition_input
             anchors
@@ -365,7 +363,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height_big
             KeyNavigation.tab: modality_input
             anchors
@@ -416,8 +414,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__metrics.length > 0 ? root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split :
-                   root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: root.__metrics.length > 0 ? (scroll_view.width - Settings.spacing_big) / 2 * 0.9 : scroll_view.width * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: inputs_input
@@ -488,7 +485,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: inputs_input
@@ -550,7 +547,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: inputs_input
@@ -624,7 +621,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height_big * 0.75
             KeyNavigation.tab: outputs_input
             anchors
@@ -672,7 +669,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height_big * 0.75
             KeyNavigation.tab: minimum_samples_input
             anchors
@@ -720,7 +717,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             KeyNavigation.tab: maximum_samples_input
             anchors
@@ -773,7 +770,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             KeyNavigation.tab: goal_input
             anchors
@@ -829,7 +826,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 + 1 : root.__input_width_small + 1
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9 + 1
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: required_hardware_input
@@ -907,7 +904,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: model_select_input
@@ -999,7 +996,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: num_outputs_input
@@ -1067,7 +1064,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1121,7 +1118,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width:root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height_big
             KeyNavigation.tab: problem_short_description_input
             anchors
@@ -1173,7 +1170,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height:root.__input_height
             KeyNavigation.tab: problem_short_description_input
             anchors
@@ -1224,7 +1221,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1274,7 +1271,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height * 2
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1325,7 +1322,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height_big
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1377,7 +1374,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: desired_carbon_footprint_input
@@ -1442,7 +1439,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: max_mem_footprint_input
             anchors
@@ -1490,7 +1487,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: geo_location_continent_input
             anchors
@@ -1543,7 +1540,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: geo_location_region_input
             anchors
@@ -1591,7 +1588,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: problem_short_description_input
             anchors
@@ -1664,7 +1661,7 @@ Item
             SmlButton {
                 text_kind: SmlText.TextKind.Header_2
                 text_value: "Search"
-                icon_name: Settings.start_icon_name
+                icon_name: Settings.search_icon_name
                 rounded: true
                 disabled: root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === ""
                 color: Settings.app_color_green_4
@@ -1686,7 +1683,7 @@ Item
             SmlButton {
                 text_kind: SmlText.TextKind.Header_2
                 text_value: "Results"
-                icon_name: Settings.start_icon_name
+                icon_name: Settings.results_icon_name
                 rounded: true
                 disabled: !root.hf_results_available
                 color: Settings.app_color_green_4
@@ -1704,9 +1701,9 @@ Item
             SmlButton {
                 text_kind: SmlText.TextKind.Header_2
                 text_value: "Comparisons"
-                icon_name: Settings.start_icon_name
+                icon_name: Settings.comparisons_icon_name
                 rounded: true
-                disabled: !root.hf_comparisons_available
+                disabled: root.hf_comparisons_count === 0
                 color: Settings.app_color_green_4
                 color_pressed: Settings.app_color_green_1
                 color_text: Settings.app_color_green_3
@@ -1725,7 +1722,7 @@ Item
     SmlButton
     {
         id: submit_button
-        icon_name: Settings.submit_icon_name
+        icon_name: Settings.check_icon_name
         text_kind: SmlText.TextKind.Header_3
         text_value: "Submit"
         disabled: root.__refreshing || root.__initializing ||
@@ -1757,7 +1754,7 @@ Item
     SmlButton
     {
         id: clear_all_button
-        icon_name: Settings.submit_icon_name
+        icon_name: Settings.clear_icon_name
         text_kind: SmlText.TextKind.Header_3
         text_value: "Clear all"
         rounded: true

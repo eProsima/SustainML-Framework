@@ -75,6 +75,7 @@ Item
         // Go back button
         SmlButton
         {
+            id: go_back_button
             icon_name: Settings.back_icon_name
             text_kind: SmlText.TextKind.Header_2
             text_value: ""
@@ -352,9 +353,9 @@ Item
             tooltip_text: "Save current results, HF searches, and comparisons into a named file"
             anchors
             {
-                top: metadata_item.bottom
-                topMargin: Settings.spacing_big
-                left: header.left
+                top: go_home_button.top
+                left: go_back_button.right
+                leftMargin: Settings.spacing_small
             }
             onClicked: save_load_all_dialogs.open_save()
         }

@@ -126,7 +126,7 @@ Item
 
     SmlButton {
         id: browse_button
-        icon_name: Settings.start_icon_name
+        icon_name: Settings.browse_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Browse"
         rounded: true
@@ -143,21 +143,34 @@ Item
             topMargin: Settings.spacing_normal
             horizontalCenter: parent.horizontalCenter
         }
-        onClicked: dataset_file_dialog.open()
+        onClicked: dataset_file_dialog_loader.active = true
         height: root.__input_height
     }
 
 
-    FileDialog {
-        id: dataset_file_dialog
-        title: "Select Dataset"
-        selectFolder: false
-        nameFilters: ["CSV Files (*.csv)", "JSON Files (*.json)", "All Files (*)"]
-        onAccepted: {
-            const file = dataset_file_dialog.fileUrl.toString();
-            dataset_path_input.text = file
-            engine.launch_dataset_path_task(file)
-            root.send_dataset_path_task();
+    // Loaded on demand (only once Browse is clicked) rather than declared
+    // directly: QtQuick.Dialogs 1.x's fallback (non-native) FileDialog has a
+    // known, harmless internal binding-loop warning in its own bundled QML
+    // (DefaultFileDialog.qml's toolbar buttons) that fires as soon as it's
+    // constructed - a permanent child here would trigger it the instant this
+    // screen loads, before the user ever opens the dialog.
+    Loader {
+        id: dataset_file_dialog_loader
+        active: false
+
+        sourceComponent: FileDialog {
+            title: "Select Dataset"
+            selectFolder: false
+            nameFilters: ["CSV Files (*.csv)", "JSON Files (*.json)", "All Files (*)"]
+            Component.onCompleted: open()
+            onAccepted: {
+                const file = fileUrl.toString();
+                dataset_path_input.text = file
+                engine.launch_dataset_path_task(file)
+                root.send_dataset_path_task();
+                dataset_file_dialog_loader.active = false
+            }
+            onRejected: dataset_file_dialog_loader.active = false
         }
     }
 
