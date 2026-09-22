@@ -89,6 +89,27 @@ QString REST_requester::request_type_to_url(
         case RequestType::REQUEST_HF_MODELS_COMPARE:
             url += "/hf_models_compare";
             break;
+        case RequestType::REQUEST_SAVED_FILES:
+            url += "/saved_files";
+            break;
+        case RequestType::SAVE_TASKS:
+            url += "/save_tasks";
+            break;
+        case RequestType::LOAD_TASKS:
+            url += "/load_tasks";
+            break;
+        case RequestType::DELETE_SAVED_FILE:
+            url += "/delete_saved_file";
+            break;
+        case RequestType::WIPE_DATABASE:
+            url += "/wipe_db";
+            break;
+        case RequestType::SAVE_ALL:
+            url += "/save_all";
+            break;
+        case RequestType::LOAD_ALL:
+            url += "/load_all";
+            break;
     }
     return url;
 }

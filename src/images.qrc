@@ -89,12 +89,89 @@
         <file>images/icons/trash/trash_4.svg</file>
         <file>images/icons/trash/trash_w.svg</file>
 
+        <file>images/icons/save/save.svg</file>
+        <file>images/icons/save/save_1.svg</file>
+        <file>images/icons/save/save_2.svg</file>
+        <file>images/icons/save/save_3.svg</file>
+        <file>images/icons/save/save_4.svg</file>
+        <file>images/icons/save/save_w.svg</file>
+
+        <file>images/icons/load/load.svg</file>
+        <file>images/icons/load/load_1.svg</file>
+        <file>images/icons/load/load_2.svg</file>
+        <file>images/icons/load/load_3.svg</file>
+        <file>images/icons/load/load_4.svg</file>
+        <file>images/icons/load/load_w.svg</file>
+
+        <file>images/icons/scale/scale.svg</file>
+        <file>images/icons/scale/scale_1.svg</file>
+        <file>images/icons/scale/scale_2.svg</file>
+        <file>images/icons/scale/scale_3.svg</file>
+        <file>images/icons/scale/scale_4.svg</file>
+        <file>images/icons/scale/scale_w.svg</file>
+
+        <file>images/icons/mop/mop.svg</file>
+        <file>images/icons/mop/mop_1.svg</file>
+        <file>images/icons/mop/mop_2.svg</file>
+        <file>images/icons/mop/mop_3.svg</file>
+        <file>images/icons/mop/mop_4.svg</file>
+        <file>images/icons/mop/mop_w.svg</file>
+
+        <file>images/icons/chart/chart.svg</file>
+        <file>images/icons/chart/chart_1.svg</file>
+        <file>images/icons/chart/chart_2.svg</file>
+        <file>images/icons/chart/chart_3.svg</file>
+        <file>images/icons/chart/chart_4.svg</file>
+        <file>images/icons/chart/chart_w.svg</file>
+
+        <file>images/icons/checklist/checklist.svg</file>
+        <file>images/icons/checklist/checklist_1.svg</file>
+        <file>images/icons/checklist/checklist_2.svg</file>
+        <file>images/icons/checklist/checklist_3.svg</file>
+        <file>images/icons/checklist/checklist_4.svg</file>
+        <file>images/icons/checklist/checklist_w.svg</file>
+
+        <file>images/icons/upload/upload.svg</file>
+        <file>images/icons/upload/upload_1.svg</file>
+        <file>images/icons/upload/upload_2.svg</file>
+        <file>images/icons/upload/upload_3.svg</file>
+        <file>images/icons/upload/upload_4.svg</file>
+        <file>images/icons/upload/upload_w.svg</file>
+
+        <file>images/icons/check/check.svg</file>
+        <file>images/icons/check/check_1.svg</file>
+        <file>images/icons/check/check_2.svg</file>
+        <file>images/icons/check/check_3.svg</file>
+        <file>images/icons/check/check_4.svg</file>
+        <file>images/icons/check/check_w.svg</file>
+
+        <file>images/icons/search/search.svg</file>
+        <file>images/icons/search/search_1.svg</file>
+        <file>images/icons/search/search_2.svg</file>
+        <file>images/icons/search/search_3.svg</file>
+        <file>images/icons/search/search_4.svg</file>
+        <file>images/icons/search/search_w.svg</file>
+
         <file>images/icons/square/square.svg</file>
         <file>images/icons/square/square_1.svg</file>
         <file>images/icons/square/square_2.svg</file>
         <file>images/icons/square/square_3.svg</file>
         <file>images/icons/square/square_4.svg</file>
         <file>images/icons/square/square_w.svg</file>
+
+        <file>images/icons/history/history.svg</file>
+        <file>images/icons/history/history_1.svg</file>
+        <file>images/icons/history/history_2.svg</file>
+        <file>images/icons/history/history_3.svg</file>
+        <file>images/icons/history/history_4.svg</file>
+        <file>images/icons/history/history_w.svg</file>
+
+        <file>images/icons/folder/folder.svg</file>
+        <file>images/icons/folder/folder_1.svg</file>
+        <file>images/icons/folder/folder_2.svg</file>
+        <file>images/icons/folder/folder_3.svg</file>
+        <file>images/icons/folder/folder_4.svg</file>
+        <file>images/icons/folder/folder_w.svg</file>
 
     </qresource>
 </RCC>

@@ -23,6 +23,10 @@ Item
     property string hw_resources: ""
     property string model: ""
     property string metadata: ""
+    // HF search/comparison history, bound in from main_window - needed here only to
+    // hand to engine.save_all() below, this screen never reads/displays it itself.
+    property var hf_saved_searches: []
+    property var hf_compare_history: []
 
     // Internal properties
     readonly property int __margin: Settings.spacing_big * 2
@@ -71,6 +75,7 @@ Item
         // Go back button
         SmlButton
         {
+            id: go_back_button
             icon_name: Settings.back_icon_name
             text_kind: SmlText.TextKind.Header_2
             text_value: ""
@@ -331,6 +336,128 @@ Item
                     forced_color: Settings.app_color_light
                 }
             }
+        }
+
+        // Save everything (current results + HF searches + comparisons) into a named file
+        SmlButton
+        {
+            id: save_all_button
+            icon_name: Settings.save_icon_name
+            text_kind: SmlText.TextKind.Header_2
+            text_value: "Save"
+            rounded: true
+            color: Settings.app_color_green_3
+            color_pressed: Settings.app_color_green_1
+            nightmode_color: Settings.app_color_green_1
+            nightmode_color_pressed: Settings.app_color_green_3
+            tooltip_text: "Save current results, HF searches, and comparisons into a named file"
+            anchors
+            {
+                top: go_home_button.top
+                left: go_back_button.right
+                leftMargin: Settings.spacing_small
+            }
+            onClicked: save_load_all_dialogs.open_save()
+        }
+
+        // Load everything (results + HF searches + comparisons) from a named file
+        SmlButton
+        {
+            id: load_all_button
+            icon_name: Settings.load_icon_name
+            text_kind: SmlText.TextKind.Header_2
+            text_value: "Load"
+            rounded: true
+            color: Settings.app_color_green_3
+            color_pressed: Settings.app_color_green_1
+            nightmode_color: Settings.app_color_green_1
+            nightmode_color_pressed: Settings.app_color_green_3
+            tooltip_text: "Load results, HF searches, and comparisons from a named file"
+            anchors
+            {
+                top: save_all_button.top
+                left: save_all_button.right
+                leftMargin: Settings.spacing_small
+            }
+            onClicked: save_load_all_dialogs.open_load()
+        }
+
+        // Clear saved data button
+        SmlButton
+        {
+            id: clear_saved_data_button
+            icon_name: Settings.delete_icon_name
+            text_kind: SmlText.TextKind.Header_2
+            text_value: "Clear Saved Data"
+            rounded: true
+            color: Settings.app_color_green_3
+            color_pressed: Settings.app_color_green_1
+            nightmode_color: Settings.app_color_green_1
+            nightmode_color_pressed: Settings.app_color_green_3
+            tooltip_text: "Delete all saved result files from the backend"
+            anchors
+            {
+                top: save_all_button.top
+                left: load_all_button.right
+                leftMargin: Settings.spacing_small
+            }
+            onClicked: clear_saved_data_dialog.open()
+        }
+
+        Dialog
+        {
+            id: clear_saved_data_dialog
+            anchors.centerIn: parent
+            modal: true
+            padding: 16
+            standardButtons: Dialog.Yes | Dialog.No
+
+            background: Rectangle
+            {
+                anchors.fill: parent
+                radius: 10
+                color: Settings.app_color_light
+                border.color: Settings.app_color_green_4
+                border.width: 1
+            }
+
+            header: Item { }
+
+            contentItem: Column
+            {
+                id: contentColumn
+                spacing: 16
+
+                SmlText
+                {
+                    text_value: "Clear Saved Data"
+                    text_kind: SmlText.TextKind.Header_2
+                    width: 320
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                SmlText
+                {
+                    text_value: "This will permanently delete all saved result files from the backend. Tasks currently in progress are not affected. Continue?"
+                    text_kind: SmlText.TextKind.Body
+                    width: 320
+                    horizontalAlignment: Text.AlignHCenter
+                }
+            }
+
+            onAccepted: engine.clear_saved_data()
+        }
+
+        SmlSaveLoadDialogs
+        {
+            id: save_load_all_dialogs
+            anchors.fill: parent
+            save_title: "Save Everything"
+            load_title: "Load Everything"
+            save_prompt: "Name this save, or pick an existing one below to overwrite it. Saves current results, HF searches, and comparisons together."
+            no_files_text: "No saved files yet."
+            onSave_requested: engine.save_all(name, root.hf_saved_searches, root.hf_compare_history)
+            onLoad_requested: engine.load_all(name)
         }
     }
 }

@@ -47,7 +47,14 @@ Window {
 
     property var _screenInst: ({})
     property var unetInfoMap: ({})
-    property int previous_screen: ScreenManager.Screens.Home
+    // Real back-navigation history (a stack), not just a single "last screen"
+    // slot - a single slot breaks as soon as two screens can reach each other
+    // (e.g. Compare <-> Log via the gear icon): going back from either would
+    // overwrite the other's remembered origin, causing an infinite A<->B bounce
+    // instead of ever reaching further back. go_back() below is the only thing
+    // that should ever read/pop this - screens' own Back buttons call it, not
+    // load_screen() directly.
+    property var screen_history: []
 
     property var hf_models_list: []
     property var hf_saved_searches: []
@@ -73,6 +80,7 @@ Window {
     property int hf_compare_history_max: 10        // Maximum number of saved comparisons
     property int hf_open_compare_index: -1         // Index of the currently open saved comparison (-1 = none open)
     property int hf_renaming_index: -1             // Index of the saved comparison currently being renamed (-1 = none)
+    property int hf_renaming_search_index: -1      // Index of the saved search currently being renamed (-1 = none)
 
     Timer {
         id: hfHoverDebounce
@@ -100,6 +108,9 @@ Window {
     // Main view properties
     width:  Settings.app_width
     height: Settings.app_height
+    // Minimal window size
+    minimumWidth: 1050
+    minimumHeight: 390
     visible: true
     title:  Settings.app_name
 
@@ -226,7 +237,8 @@ Window {
                     // This avoids showing "(no query)" when hf_query_text was
                     // cleared before results arrived.
                     query: main_window.hf_pending_query || main_window.hf_query_text,
-                    models: arr
+                    models: arr,
+                    name: ""
                 }
                 var saved = main_window.hf_saved_searches.slice(0)
                 saved.unshift(entry)
@@ -244,6 +256,30 @@ Window {
         {
             main_window.refreshing = false
             console.log("[HF] onHf_models_error message=", message, "query=", main_window.hf_query_text)
+        }
+
+        // Loaded HF search/comparison history (from engine.load_all()) - merged
+        // into the current in-memory lists, same spirit as loaded tasks always
+        // appearing as new tabs: nothing already open/shown is replaced or lost.
+        function onHf_state_loaded(hf_searches, hf_comparisons)
+        {
+            if (hf_searches && hf_searches.length > 0)
+            {
+                var searches = main_window.hf_saved_searches.slice(0)
+                for (var i = 0; i < hf_searches.length; ++i)
+                    searches.push(hf_searches[i])
+                main_window.hf_saved_searches = searches
+            }
+
+            if (hf_comparisons && hf_comparisons.length > 0)
+            {
+                var comparisons = main_window.hf_compare_history.slice(0)
+                for (var j = 0; j < hf_comparisons.length; ++j)
+                    comparisons.push(hf_comparisons[j])
+                if (comparisons.length > main_window.hf_compare_history_max)
+                    comparisons = comparisons.slice(0, main_window.hf_compare_history_max)
+                main_window.hf_compare_history = comparisons
+            }
         }
 
         function onHf_model_tooltip_available(model_id, tooltip) {
@@ -486,8 +522,6 @@ Window {
             def.__type
         )
 
-        def.results_available = true
-
         // Go to Results like normal flow
         main_window.load_screen(ScreenManager.Screens.Results)
     }
@@ -595,6 +629,46 @@ Window {
         hf_renaming_index = -1
     }
 
+    function hf_delete_saved_search(index) {
+        if (index < 0 || index >= hf_saved_searches.length) return
+
+        hf_renaming_search_index = -1     // Discard any unsaved rename in progress elsewhere
+
+        var arr = hf_saved_searches.slice(0)
+        arr.splice(index, 1)
+        hf_saved_searches = arr
+
+        // Keep the results screen's selection pointing at the same entry (or
+        // clear it), the same way hf_delete_saved_compare does for hf_open_compare_index.
+        var hfr = _screenInst[ScreenManager.Screens.HFresults]
+        if (hfr) {
+            if (hfr.selectedIndex === index) {
+                hfr.selectedIndex = -1
+            } else if (hfr.selectedIndex > index) {
+                hfr.selectedIndex = hfr.selectedIndex - 1
+            }
+        }
+    }
+
+    function hf_rename_saved_search(index, new_name) {
+        if (index < 0 || index >= hf_saved_searches.length) return
+
+        var arr = hf_saved_searches.slice(0)
+        var entry = Object.assign({}, arr[index])
+        entry.name = new_name
+        arr[index] = entry
+        hf_saved_searches = arr
+    }
+
+    // Same reasoning as hf_commit_rename above: reassigning hf_saved_searches
+    // destroys/recreates every row delegate, including this one mid-handler, so
+    // this must be the single call made, with everything it needs passed in.
+    function hf_commit_rename_search(index, new_name, old_name) {
+        if (new_name.length > 0 && new_name !== old_name)
+            hf_rename_saved_search(index, new_name)
+        hf_renaming_search_index = -1
+    }
+
     // Background
     Rectangle
     {
@@ -696,9 +770,13 @@ Window {
     {
         id: stack_view
         anchors.fill: parent
+        // Shown once, on launch, bypassing load_screen()/its _screenInst cache on
+        // purpose: it's a one-shot splash, not a destination - once you leave it
+        // (via its own Start button, below), nothing ever navigates back to it,
+        // since load_screen() treats Screens.Home as an alias for Definition.
         initialItem: home_screen
 
-        // HOME SCREEN
+        // START SCREEN (shown once, at launch, only)
         Component
         {
             id: home_screen
@@ -734,14 +812,15 @@ Window {
                 __refreshing: main_window.refreshing
                 __initializing: main_window.initializing
 
-                onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
                 hf_results_available: main_window.hf_saved_searches.length > 0
+                hf_comparisons_count: main_window.hf_compare_history.length
 
                 onGo_hf_models: main_window.load_screen(ScreenManager.Screens.HFsearch)
                 onGo_hf_results: main_window.load_screen(ScreenManager.Screens.HFresults)
+                onGo_hf_comparisons: main_window.load_screen(ScreenManager.Screens.Compare)
 
                 onClear_all_clicked: {
                     // Clear dataset metadata stored in main_window
@@ -880,7 +959,6 @@ Window {
                         __model_selected: reiterateModel.get(2).value
                         __hardware_required: reiterateModel.get(3).value
 
-                        onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                         onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
                         onSend_task: {
@@ -1027,9 +1105,11 @@ Window {
                 hw_resources: main_window.hw_resources_node_last_status
                 model: main_window.ml_model_node_last_status
                 metadata: main_window.ml_model_metadata_node_last_status
+                hf_saved_searches: main_window.hf_saved_searches
+                hf_compare_history: main_window.hf_compare_history
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
-                onGo_back: main_window.load_screen(main_window.previous_screen)
+                onGo_back: main_window.go_back()
             }
         }
 
@@ -1295,7 +1375,7 @@ Window {
                         leftMargin: Settings.spacing_small
                     }
 
-                    icon_name: ""
+                    icon_name: Settings.compare_icon_name
                     text_kind: SmlText.TextKind.Header_2
                     text_value: "Compare"
                     rounded: true
@@ -1310,8 +1390,6 @@ Window {
                     nightmode_color_text: Settings.app_color_green_1
 
                     onClicked: {
-                        console.log("[HF INFO] selection:", main_window.hf_selected_ids)
-
                         // Freeze ids (so they don't get lost/changed later)
                         main_window.hf_compare_last_request_ids = main_window.hf_selected_ids.slice(0)
 
@@ -1338,7 +1416,7 @@ Window {
                         leftMargin: Settings.spacing_small
                     }
 
-                    icon_name: ""
+                    icon_name: Settings.results_icon_name
                     text_kind: SmlText.TextKind.Header_2
                     text_value: "Results"
                     rounded: true
@@ -1353,6 +1431,39 @@ Window {
                     nightmode_color_text: Settings.app_color_green_1
 
                     onClicked: main_window.load_screen(ScreenManager.Screens.HFresults)
+                }
+
+                // Comparisons (top bar) - browse comparisons already done, without
+                // starting a new one (unlike the "Compare" button above, this never
+                // touches hf_compare_obj/hf_selected_ids). The Compare screen already
+                // shows the hf_compare_history sidebar to pick from - this just adds a
+                // direct path to it. Distinguished from "Compare" by icon (history
+                // clock vs. scale) rather than color.
+                SmlButton {
+                    id: hf_go_comparisons_button
+                    z: 100000
+
+                    anchors {
+                        top: hf_go_home_button.top
+                        left: hf_go_results_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+
+                    icon_name: Settings.comparisons_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Comparisons"
+                    rounded: true
+
+                    disabled: main_window.hf_compare_history.length === 0
+
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Compare)
                 }
 
                 Rectangle
@@ -1427,14 +1538,20 @@ Window {
                                             height: 54
 
                                             property string mid: {
-                                                if (typeof modelData === "string")
-                                                    return modelData
-                                                if (modelData && modelData["model_id"] !== undefined)
-                                                    return modelData["model_id"]
-                                                if (modelData && modelData["id"] !== undefined)
-                                                    return modelData["id"]
-                                                if (modelData && modelData["modelId"] !== undefined)
-                                                    return modelData["modelId"]
+                                                // Wrapped in try/catch: modelData can briefly become unresolvable
+                                                // while this delegate is being torn down (e.g. the search results
+                                                // list refreshing mid-render) - fall through to "" instead of
+                                                // throwing/logging a ReferenceError for that harmless case.
+                                                try {
+                                                    if (typeof modelData === "string")
+                                                        return modelData
+                                                    if (modelData && modelData["model_id"] !== undefined)
+                                                        return modelData["model_id"]
+                                                    if (modelData && modelData["id"] !== undefined)
+                                                        return modelData["id"]
+                                                    if (modelData && modelData["modelId"] !== undefined)
+                                                        return modelData["modelId"]
+                                                } catch (e) { }
                                                 return ""
                                             }
 
@@ -1500,11 +1617,29 @@ Window {
                                                             id: hfSelectBox
                                                             anchors.centerIn: parent
 
-                                                            // Avoid re-entrancy when we revert checked state
+                                                            // Avoid re-entrancy when we programmatically sync/revert checked state
                                                             property bool _blocking: false
 
-                                                            checked: main_window.hf_is_selected(mid)
                                                             enabled: checked || main_window.hf_selected_ids.length < maxCompareModels
+
+                                                            // Kept in sync with the model imperatively (guarded by _blocking) rather
+                                                            // than via a live `checked: main_window.hf_is_selected(mid)` binding -
+                                                            // that binding caused a genuine binding loop, since toggling this box
+                                                            // calls hf_set_selected() below, which reassigns hf_selected_ids (the
+                                                            // same property the binding reads) synchronously, while still inside
+                                                            // this box's own checked-change handling.
+                                                            function _syncChecked() {
+                                                                _blocking = true
+                                                                checked = main_window.hf_is_selected(mid)
+                                                                _blocking = false
+                                                            }
+
+                                                            Component.onCompleted: _syncChecked()
+
+                                                            Connections {
+                                                                target: main_window
+                                                                function onHf_selected_idsChanged() { hfSelectBox._syncChecked() }
+                                                            }
 
                                                             onCheckedChanged: {
                                                                 if (_blocking) return
@@ -1532,7 +1667,8 @@ Window {
                                                     }
 
                                                     Text {
-                                                        text: parent.parent.parent.mid
+                                                        id: modelNameText
+                                                        text: mid
                                                         font.pixelSize: 14
                                                         color: Settings.app_color_green_4
                                                         elide: Text.ElideRight
@@ -1671,7 +1807,7 @@ Window {
                     nightmode_color: Settings.app_color_green_2
                     nightmode_color_pressed: Settings.app_color_green_3
                     nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Back to Hugging Face list"
+                    tooltip_text: "Go back to previous screen"
                     anchors {
                         top: parent.top
                         topMargin: Settings.spacing_normal
@@ -1680,7 +1816,7 @@ Window {
                     }
 
                     onClicked: {
-                        main_window.load_screen(ScreenManager.Screens.HFsearch)
+                        main_window.go_back()
                     }
                 }
 
@@ -2276,6 +2412,13 @@ Window {
                     border.width: 2
                     clip: true
 
+                    // Clicking any blank area of this panel discards an
+                    // in-progress, unsaved rename (same as the Compare screen).
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: main_window.hf_renaming_search_index = -1
+                    }
+
                     Item {
                         anchors.fill: parent
                         anchors.margins: Settings.spacing_big
@@ -2312,52 +2455,143 @@ Window {
                                     model: main_window.hf_saved_searches
 
                                     delegate: Rectangle {
+                                        id: savedSearchRow
+
+                                        // Explicit required properties: Repeater's implicit "index"/"modelData"
+                                        // context properties are not reliably resolved from custom property
+                                        // bindings or nested item functions under Qt 5.15 - only from bindings
+                                        // written directly on a built-in property. Declaring them here makes
+                                        // them real properties of this delegate, resolvable everywhere below.
+                                        // (Same reasoning as savedCompareRow in the Compare screen.)
+                                        required property int index
+                                        required property var modelData
+
                                         width: hfrMainColumn.width
                                         height: 36
                                         radius: 8
                                         border.color: Settings.app_color_green_4
-                                        border.width: index === selectedIndex ? 2 : 1
-                                        color: index === selectedIndex
+                                        border.width: savedSearchRow.index === selectedIndex ? 2 : 1
+                                        color: savedSearchRow.index === selectedIndex
                                             ? Settings.app_color_green_4
                                             : "transparent"
 
-                                        Row {
-                                            anchors.fill: parent
-                                            anchors.leftMargin: 10
-                                            anchors.rightMargin: 10
-                                            spacing: 10
+                                        readonly property string displayName: (savedSearchRow.modelData.name && savedSearchRow.modelData.name.length > 0)
+                                            ? savedSearchRow.modelData.name
+                                            : (savedSearchRow.modelData.query || "(no query)")
 
-                                            Text {
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                width: parent.width * 0.6
-                                                text: modelData.query || "(no query)"
-                                                font.pixelSize: 14
-                                                elide: Text.ElideRight
-                                                color: index === selectedIndex
-                                                    ? Settings.app_color_light
-                                                    : Settings.app_color_green_1
+                                        Text {
+                                            id: searchLabel
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 10
+                                            anchors.right: modelCountText.left
+                                            anchors.rightMargin: 8
+                                            elide: Text.ElideRight
+                                            font.pixelSize: 14
+                                            color: savedSearchRow.index === selectedIndex
+                                                ? Settings.app_color_light
+                                                : Settings.app_color_green_1
+                                            text: savedSearchRow.displayName
+                                            visible: !renameSearchField.visible
+                                        }
+
+                                        TextInput {
+                                            id: renameSearchField
+
+                                            // Driven by shared main_window state, not a local flag - same
+                                            // reasoning as renameField in the Compare screen's saved list.
+                                            visible: main_window.hf_renaming_search_index === savedSearchRow.index
+
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.left: parent.left
+                                            anchors.leftMargin: 10
+                                            anchors.right: modelCountText.left
+                                            anchors.rightMargin: 8
+                                            clip: true
+                                            selectByMouse: true
+                                            font.pixelSize: 14
+                                            color: savedSearchRow.index === selectedIndex
+                                                ? Settings.app_color_light
+                                                : Settings.app_color_green_1
+                                            selectionColor: savedSearchRow.index === selectedIndex
+                                                ? Settings.app_color_green_1
+                                                : Settings.app_color_green_4
+                                            selectedTextColor: Settings.app_color_light
+
+                                            // Only Enter applies the new name; anything else (click away,
+                                            // Escape) discards the edit and keeps the previous name.
+                                            Keys.onReturnPressed: main_window.hf_commit_rename_search(savedSearchRow.index, text.trim(), savedSearchRow.displayName)
+                                            Keys.onEnterPressed: main_window.hf_commit_rename_search(savedSearchRow.index, text.trim(), savedSearchRow.displayName)
+                                            Keys.onEscapePressed: main_window.hf_renaming_search_index = -1
+                                            onFocusChanged: if (!focus && visible) main_window.hf_renaming_search_index = -1
+                                        }
+
+                                        Text {
+                                            id: modelCountText
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.right: tsText.left
+                                            anchors.rightMargin: 10
+                                            text: (savedSearchRow.modelData.models ? savedSearchRow.modelData.models.length : 0) + " models"
+                                            font.pixelSize: 12
+                                            color: savedSearchRow.index === selectedIndex
+                                                ? Settings.app_color_light
+                                                : Settings.app_color_green_1
+                                        }
+                                        Text {
+                                            id: tsText
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.right: renameSearchIcon.left
+                                            anchors.rightMargin: 10
+                                            text: formatTs(savedSearchRow.modelData.ts)
+                                            font.pixelSize: 12
+                                            color: savedSearchRow.index === selectedIndex
+                                                ? Settings.app_color_light
+                                                : Settings.app_color_green_1
+                                        }
+
+                                        SmlIcon {
+                                            id: renameSearchIcon
+                                            name: Settings.rename_icon_name
+                                            size: 16
+                                            color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
+                                            nightmode_color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
+                                            clickable_text: "Rename"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.right: deleteSearchIcon.left
+                                            anchors.rightMargin: 6
+                                            onClicked: {
+                                                renameSearchField.text = savedSearchRow.displayName
+                                                main_window.hf_renaming_search_index = savedSearchRow.index
+                                                renameSearchField.forceActiveFocus()
+                                                renameSearchField.selectAll()
                                             }
-                                            Text {
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                text: (modelData.models ? modelData.models.length : 0) + " models"
-                                                font.pixelSize: 12
-                                                color: index === selectedIndex
-                                                    ? Settings.app_color_light
-                                                    : Settings.app_color_green_1
-                                            }
-                                            Text {
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                text: formatTs(modelData.ts)
-                                                font.pixelSize: 12
-                                                color: index === selectedIndex
-                                                    ? Settings.app_color_light
-                                                    : Settings.app_color_green_1
+                                        }
+
+                                        SmlIcon {
+                                            id: deleteSearchIcon
+                                            name: Settings.delete_icon_name
+                                            size: 16
+                                            color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
+                                            nightmode_color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
+                                            clickable_text: "Delete"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            anchors.right: parent.right
+                                            anchors.rightMargin: 10
+                                            onClicked: {
+                                                main_window.hf_renaming_search_index = -1
+                                                deleteSearchDialog.pendingIndex = savedSearchRow.index
+                                                deleteSearchDialog.pendingName = savedSearchRow.displayName
+                                                deleteSearchDialog.open()
                                             }
                                         }
 
                                         MouseArea {
-                                            anchors.fill: parent
-                                            onClicked: selectedIndex = (selectedIndex === index) ? -1 : index
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.left: parent.left
+                                            anchors.right: renameSearchIcon.left
+                                            enabled: !renameSearchField.visible
+                                            onClicked: selectedIndex = (selectedIndex === savedSearchRow.index) ? -1 : savedSearchRow.index
                                         }
                                     }
                                 }
@@ -2388,10 +2622,12 @@ Window {
                                         height: 54
 
                                         property string mid: {
-                                            if (typeof modelData === "string") return modelData
-                                            if (modelData && modelData["model_id"] !== undefined) return modelData["model_id"]
-                                            if (modelData && modelData["id"] !== undefined) return modelData["id"]
-                                            if (modelData && modelData["modelId"] !== undefined) return modelData["modelId"]
+                                            try {
+                                                if (typeof modelData === "string") return modelData
+                                                if (modelData && modelData["model_id"] !== undefined) return modelData["model_id"]
+                                                if (modelData && modelData["id"] !== undefined) return modelData["id"]
+                                                if (modelData && modelData["modelId"] !== undefined) return modelData["modelId"]
+                                            } catch (e) { }
                                             return ""
                                         }
 
@@ -2406,7 +2642,7 @@ Window {
                                             spacing: Settings.spacing_big
 
                                             Text {
-                                                text: parent.parent.mid
+                                                text: mid
                                                 font.pixelSize: 14
                                                 color: Settings.app_color_green_4
                                                 elide: Text.ElideRight
@@ -2461,6 +2697,108 @@ Window {
                             background: Rectangle { color: "transparent" }
                         }
                     }
+
+                    // Delete confirmation dialog for saved searches
+                    Controls2.Dialog {
+                        id: deleteSearchDialog
+                        property int pendingIndex: -1
+                        property string pendingName: ""
+
+                        anchors.centerIn: parent
+                        modal: true
+                        width: deleteSearchDialogContent.implicitWidth
+                        height: deleteSearchDialogContent.implicitHeight
+
+                        background: Rectangle {
+                            anchors.fill: parent
+                            radius: 10
+                            color: Settings.app_color_light
+                            border.color: Settings.app_color_green_4
+                            border.width: 1
+                        }
+
+                        header: Item { }
+
+                        Column {
+                            id: deleteSearchDialogContent
+                            spacing: 16
+                            padding: 16
+                            anchors.centerIn: parent
+
+                            Text {
+                                width: 260
+                                text: "Delete search result?"
+                                font.pixelSize: 20
+                                font.bold: true
+                                color: Settings.app_color_green_1
+                                wrapMode: Text.WordWrap
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Text {
+                                width: 260
+                                text: "Are you sure you want to delete \"" + deleteSearchDialog.pendingName + "\"? This cannot be undone."
+                                wrapMode: Text.WordWrap
+                                font.pixelSize: 15
+                                color: Settings.app_color_dark
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            Row {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                spacing: Settings.spacing_small
+
+                                Controls2.Button {
+                                    id: cancelDeleteSearchButton
+                                    height: 32
+                                    width: 80
+                                    font.pixelSize: 14
+                                    onClicked: deleteSearchDialog.close()
+
+                                    background: Rectangle {
+                                        anchors.fill: parent
+                                        radius: 5
+                                        color: Settings.app_color_light
+                                        border.color: Settings.app_color_green_1
+                                        border.width: 1
+                                    }
+                                    contentItem: Text {
+                                        text: "Cancel"
+                                        font.pixelSize: cancelDeleteSearchButton.font.pixelSize
+                                        color: Settings.app_color_green_1
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+
+                                Controls2.Button {
+                                    id: confirmDeleteSearchButton
+                                    height: 32
+                                    width: 80
+                                    font.pixelSize: 14
+                                    onClicked: {
+                                        main_window.hf_delete_saved_search(deleteSearchDialog.pendingIndex)
+                                        deleteSearchDialog.close()
+                                    }
+
+                                    background: Rectangle {
+                                        anchors.fill: parent
+                                        radius: 5
+                                        color: Settings.app_color_green_1
+                                        border.color: Settings.app_color_green_1
+                                        border.width: 1
+                                    }
+                                    contentItem: Text {
+                                        text: "Delete"
+                                        font.pixelSize: confirmDeleteSearchButton.font.pixelSize
+                                        color: Settings.app_color_light
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2513,14 +2851,30 @@ Window {
         onClicked: main_window.load_screen(ScreenManager.Screens.Log);
     }
 
-    // Screen loader plus background animation trigger
-    function load_screen(screen)
+    // Screen loader plus background animation trigger. is_back is true only when
+    // called from go_back() below - it means "unwind", so the current screen must
+    // NOT be pushed onto screen_history again (that would immediately turn the very
+    // next go_back() call into a bounce right back to where we just came from).
+    function load_screen(screen, is_back)
     {
+        // "Home" is now just an alias for the Problem Definition screen - the
+        // actual useful starting point (fields/buttons), not the old near-empty
+        // welcome screen. Every Home button/link across the app lands here.
+        if (screen === ScreenManager.Screens.Home)
+        {
+            screen = ScreenManager.Screens.Definition
+        }
+
         var screen_to_be_loaded  = ScreenManager.current_screen // Current screen as default
 
         // Check if actual change is required
         if (ScreenManager.current_screen !== screen)
         {
+            if (!is_back)
+            {
+                main_window.screen_history.push(ScreenManager.current_screen)
+            }
+
             // Always hide tooltip before starting a transition
             stop_hf_tooltip()
 
@@ -2537,7 +2891,6 @@ Window {
                     screen_to_be_loaded = results_screen
                     break
                 case ScreenManager.Screens.Log:
-                    main_window.previous_screen = ScreenManager.current_screen
                     screen_to_be_loaded = log_screen
                     break
                 case ScreenManager.Screens.DatasetPath:
@@ -2560,8 +2913,7 @@ Window {
                     screen_to_be_loaded = huggingFace_results_screen
                     break
                 default:
-                case ScreenManager.Screens.Home:
-                    screen_to_be_loaded = home_screen
+                    screen_to_be_loaded = definition_screen
                     break
             }
 
@@ -2598,6 +2950,19 @@ Window {
             background_2_x_animation.start()
             background_2_y_animation.start()
         }
+    }
+
+    // Navigate to whichever screen was actually shown right before the current
+    // one, per screen_history - the single correct "Back" implementation for
+    // every screen (Log/Settings, Compare, ...) instead of each tracking its own
+    // "previous screen" slot, which breaks as soon as two screens can reach each
+    // other (see screen_history's own comment above for why).
+    function go_back()
+    {
+        var history = main_window.screen_history.slice(0)
+        var target = history.length > 0 ? history.pop() : ScreenManager.Screens.Definition
+        main_window.screen_history = history
+        main_window.load_screen(target, true)
     }
 
     // Determine location of each screen

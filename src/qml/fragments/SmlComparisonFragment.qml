@@ -43,6 +43,10 @@ Rectangle
         target: sustainml_fragment_problem
 
         function onUpdate_iteration(comparison_interation_ids_list) {
+            // problem_id -1 is the "New Tab" placeholder (no real problem behind it) -
+            // requesting results for it crashes the backend (uint32_t can't hold -1).
+            if (problem_id < 0) return;
+
             var newList = [];
             for (var i = 0; i < comparison_interation_ids_list.length; i++) {
                 var iterationId = comparison_interation_ids_list[i];
