@@ -1299,7 +1299,20 @@ Window {
                                         width: parent.width
                                         height: unetRowContent.implicitHeight + Settings.spacing_small
                                         radius: 6
-                                        color: unetRowMouse.containsMouse ? Settings.app_color_light : "transparent"
+                                        color: unetRowMouse.pressed || unetRow.__flash
+                                               ? Qt.rgba(Settings.app_color_green_4.r, Settings.app_color_green_4.g, Settings.app_color_green_4.b, 0.35)
+                                               : unetRowMouse.containsMouse ? Settings.app_color_light
+                                               // Transparent light gray, not "transparent" (black), so the fade never passes through dark gray
+                                               : Qt.rgba(Settings.app_color_light.r, Settings.app_color_light.g, Settings.app_color_light.b, 0)
+                                        Behavior on color { ColorAnimation { duration: 50 } }
+
+                                        // Keeps the "clicked" color visible briefly, even for a quick click
+                                        property bool __flash: false
+                                        Timer {
+                                            id: unetRowFlashTimer
+                                            interval: 100
+                                            onTriggered: unetRow.__flash = false
+                                        }
 
                                         Row {
                                             id: unetRowContent
@@ -1332,7 +1345,31 @@ Window {
                                             anchors.fill: parent
                                             hoverEnabled: true
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: main_window.openUnetVisualizer(modelData)
+                                            onClicked: {
+                                                unetRow.__flash = true
+                                                main_window.openUnetVisualizer(modelData)
+                                                unetRowFlashTimer.restart()
+                                            }
+                                        }
+
+                                        Controls2.ToolTip {
+                                            id: unetRowTooltip
+                                            visible: unetRowMouse.containsMouse && !unetRowMouse.pressed && !unetRow.__flash
+                                            text: "Click to open the architecture visualization of " + modelData
+                                            delay: 150
+                                            x: unetRowMouse.mouseX + 12
+                                            y: unetRowMouse.mouseY + 18
+
+                                            background: Rectangle {
+                                                color: Qt.rgba(0.18, 0.18, 0.18, 0.75)
+                                                radius: 6
+                                            }
+                                            contentItem: Text {
+                                                text: unetRowTooltip.text
+                                                color: "white"
+                                                font.pixelSize: 12
+                                                padding: 8
+                                            }
                                         }
                                     }
                                 }
