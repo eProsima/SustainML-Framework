@@ -70,12 +70,14 @@ Rectangle {
         target: sustainml_fragment_problem
 
         function onUpdate_iteration(comparison_interation_ids_list) {
+            // problem_id -1 is the "New Tab" placeholder (no real problem behind it) -
+            // requesting results for it crashes the backend (uint32_t can't hold -1).
+            if (problem_id < 0) return;
+
             comparison_interation_ids_list.sort(function(a, b) { return a - b; });
 
             var newList = [];
             var newRows = [];
-
-            console.log("Updating iteration view with comparison_iteration_ids_list: " + comparison_interation_ids_list);
 
             for (var i = 0; i < comparison_interation_ids_list.length; i++)
             {
@@ -140,9 +142,16 @@ Rectangle {
                 width: scroll_view.width > general_header_table.contentWidth ? scroll_view.width : general_header_table.contentWidth
                 height: __header_height
                 color: ScreenManager.night_mode ? __cell_background_nightmode_color : __cell_background_color
+                // Deferred: forceLayout() re-triggers columnWidthProvider, which changes
+                // general_header_table.contentWidth - a synchronous call here would run
+                // that recompute while this very "width" binding (it reads that same
+                // contentWidth) is still being resolved, which is what Qt's binding-loop
+                // detector was flagging. Qt.callLater breaks the reentrant chain.
                 onWidthChanged: {
-                    general_header_table.forceLayout(),
-                    general_table.forceLayout();
+                    Qt.callLater(function() {
+                        general_header_table.forceLayout();
+                        general_table.forceLayout();
+                    })
                 }
 
                 TableView
@@ -297,14 +306,12 @@ Rectangle {
                             MenuItem {
                                 text: "Compare"
                                 onTriggered: {
-                                    console.log("Compare triggered");
                                     root.component_signal("iteration_view", "add_to_compare", model.display);
                                 }
                             }
                             MenuItem {
                                 text: "More info"
                                 onTriggered: {
-                                    console.log("More info or " + model.display);
                                     metricInfoPopup.metricName = model.display
                                     metricInfoPopup.open()
                                 }
@@ -364,9 +371,13 @@ Rectangle {
                     width: headerRect.width
                     height: general_table.contentHeight
                     color: "transparent"
+                    // Deferred for the same reason as headerRect's onWidthChanged above -
+                    // this width mirrors headerRect.width, so it fires in the same instant.
                     onWidthChanged: {
-                        general_header_table.forceLayout(),
-                        general_table.forceLayout();
+                        Qt.callLater(function() {
+                            general_header_table.forceLayout();
+                            general_table.forceLayout();
+                        })
                     }
 
                     TableView {
@@ -530,7 +541,6 @@ Rectangle {
                                 MenuItem {
                                     text: "More info"
                                     onTriggered: {
-                                        console.log("More info triggered, iterationValue = " + iterationValue);
                                         infoPopup.iteration = iterationValue;
                                         infoPopup.open();
                                     }
@@ -542,14 +552,10 @@ Rectangle {
                                 MenuItem {
                                     text: "More on HF"
                                     onTriggered: {
-                                        console.log("Search model " + model.display + " on HF triggered");
-
                                         var modelName = model.display;
                                         if (modelName) {
                                             var searchUrl = "https://huggingface.co/" + modelName;
                                             Qt.openUrlExternally(searchUrl);
-                                        } else {
-                                            console.log("The name of the model is not available.");
                                         }
                                     }
                                 }
@@ -756,7 +762,6 @@ Rectangle {
             function expandAllNodes() {
                 try {
                     var rootRowCount = jsonTreeModel.rowCount();
-                    console.log("Root row count:", rootRowCount);
 
                     for (var i = 0; i < rootRowCount; i++) {
                         var rootIndex = jsonTreeModel.index(i, 0);

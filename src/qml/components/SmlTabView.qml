@@ -45,14 +45,15 @@ Item {
     // Private signals
     signal change_stack_view_(int stack_id, var stack_component_name)
     signal tabClosed(int stack_id_closed)
+    signal tab_renamed(int stack_id, string new_title)
 
     // Read only design properties
     readonly property int __max_tabs: 15
     readonly property int __tabs_height: 36
     readonly property int __tabs_margins: 15
     readonly property int __tab_icons_size: 16
-    readonly property int __max_tab_size: allow_close_tabs || !reduced_tabs ? 200 : 200 - __tab_icons_size - (2 * __tabs_margins)
-    readonly property int __min_tab_size: allow_close_tabs || !reduced_tabs ? 180 : 180 - __tab_icons_size - (2 * __tabs_margins)
+    readonly property int __max_tab_size: !reduced_tabs ? 200 : 200 - __tab_icons_size - (2 * __tabs_margins)
+    readonly property int __min_tab_size: !reduced_tabs ? 180 : 180 - __tab_icons_size - (2 * __tabs_margins)
     readonly property int __add_tab_width: 50
     readonly property int __min_gap: 80
     readonly property int __radius: Settings.input_default_rounded_radius
@@ -61,7 +62,7 @@ Item {
     Component.onCompleted:{
         sustainml_custom_tabview.__tab_model.append( {"idx" : 0, "title": "New Tab", "stack_id": 0})
         var new_stack = stack_component.createObject(null)
-        new_stack.setSource(sustainml_custom_tabview.__get_load_component(default_stack_component), {"stack_id": 0, "problem_id": -1, "total_tabs": sustainml_custom_tabview.__tab_model.count})
+        new_stack.setSource(sustainml_custom_tabview.__get_load_component(default_stack_component), {"stack_id": 0, "problem_id": -1, "total_tabs": sustainml_custom_tabview.__tab_model.count, "problem_tabs_width": tab_list.width})
         stack_layout.children.push(new_stack)
         __refresh_layout(__current_tab)
         sustainml_custom_tabview.tab_view_loaded()
@@ -168,8 +169,75 @@ Item {
                 }
             }
 
+            // Measures candidate strings against tab_title_display's font, so the
+            // truncation below can tell exactly how many trailing characters fit.
+            // A pure function call (advanceWidth), not a mutable property like
+            // TextMetrics.text - writing to another item's property from inside
+            // tab_title_display's own "text" binding evaluation is what caused
+            // Qt to (falsely) detect a binding loop on "text" itself.
+            FontMetrics {
+                id: tab_title_metrics
+                font: tab_title_display.font
+            }
+
+            // Read-only display label. TextEdit (below) has no "elide" support at all
+            // (it wraps or overflows instead) - so with many tabs open and each one
+            // squeezed narrow, its WrapAnywhere text used to spill onto a second line
+            // and collide with the close icon. This truncates from the FRONT (keeping
+            // the more useful trailing part, e.g. "...oblem 12"), and simply renders
+            // nothing once the tab is too narrow for any text at all, leaving just the
+            // close icon visible - no special-casing needed for that.
+            //
+            // Built manually with literal "..." instead of Qt's own "elide: Text.ElideLeft"
+            // - that inserts a single Unicode ellipsis glyph (U+2026) using this item's
+            // own font, and title_font (Arima Madurai) renders that specific glyph as an
+            // unclear pair of cramped dots rather than a recognizable ellipsis. Three
+            // literal "." characters render correctly in this font, so build the elided
+            // string ourselves instead of relying on Qt's automatic substitution.
+            Text {
+                id: tab_title_display
+                visible: !tab_title.editing
+                horizontalAlignment: Qt.AlignLeft; verticalAlignment: Qt.AlignVCenter
+                anchors.left: parent.left
+                anchors.leftMargin: __tabs_margins
+                anchors.right: close_icon.visible ? close_icon.left : parent.right
+                anchors.rightMargin: __tabs_margins
+                anchors.verticalCenter: parent.verticalCenter
+                text: __elide_left(title, width)
+                clip: true
+                font.bold: true
+                font.family: SustainMLFont.title_font
+                font.pixelSize: Settings.body_font_size
+                color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
+
+                function __elide_left(str, availWidth) {
+                    if (availWidth <= 0)
+                        return ""
+
+                    if (tab_title_metrics.advanceWidth(str) <= availWidth)
+                        return str
+
+                    var prefix = "..."
+                    if (tab_title_metrics.advanceWidth(prefix) >= availWidth)
+                        return ""
+
+                    // Longest trailing slice of str that still fits alongside the prefix.
+                    var lo = 0, hi = str.length
+                    while (lo < hi) {
+                        var mid = Math.ceil((lo + hi) / 2)
+                        var candidate = prefix + str.substr(str.length - mid)
+                        if (tab_title_metrics.advanceWidth(candidate) <= availWidth)
+                            lo = mid
+                        else
+                            hi = mid - 1
+                    }
+                    return lo > 0 ? prefix + str.substr(str.length - lo) : ""
+                }
+            }
+
             TextEdit {
                 id: tab_title
+                visible: editing
                 horizontalAlignment: Qt.AlignLeft; verticalAlignment: Qt.AlignVCenter
                 anchors.left: parent.left
                 anchors.leftMargin: __tabs_margins
@@ -182,7 +250,8 @@ Item {
                 font.family: SustainMLFont.title_font
                 font.pixelSize: Settings.body_font_size
                 color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
-                wrapMode: TextEdit.WrapAnywhere
+                wrapMode: TextEdit.NoWrap
+                clip: true
                 selectByKeyboard: true
                 selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
                 readOnly: !sustainml_custom_tabview.allow_tab_rename
@@ -208,6 +277,7 @@ Item {
                     }
                     __original = newTitle;
                     sustainml_custom_tabview.update_tab_name(newTitle, stack_id);
+                    sustainml_custom_tabview.tab_renamed(stack_id, newTitle);
                 }
 
                 function cancelRename() {
@@ -254,14 +324,11 @@ Item {
                     // act as close is close icon shown (same expression as in close_icon visible attribute)
                     if (sustainml_custom_tabview.allow_close_tabs && title !== "Overview" && title !== "Iteration" && (idx == __current_tab || parent.width > __min_tab_size))
                     {
-                        console.log("The tab '" + sustainml_custom_tabview.__tab_model.get(idx).title + "' with " + stack_id + " is being closed.");
-                        tabClosed(stack_id)
-                        __remove_idx(idx)
-                        if (idx > 0) {
-                            __refresh_layout(idx - 1)
-                        } else {
-                            __refresh_layout(0)
-                        }
+                        // __tab_model.remove() inside this call can destroy/recreate this very
+                        // delegate mid-handler, so nothing after it may touch this delegate's own
+                        // scope (bare __refresh_layout etc.) - do it all in one call on the stable
+                        // outer component instead.
+                        sustainml_custom_tabview.__close_tab(idx, stack_id)
                     }
                     // if not, act as open tab action
                     else
@@ -284,6 +351,21 @@ Item {
         interactive: false
         model: sustainml_custom_tabview.__tab_model
         delegate: delegated_component
+
+        // Keep every loaded tab's content in sync with how wide the tab bar itself
+        // currently is (grows/shrinks as tabs are added/removed), so content that
+        // wants to visually align with the tab row (e.g. SmlProblemFragment's
+        // Overview/Iteration background) can do so without guessing at tab widths.
+        onWidthChanged:
+        {
+            for (var k = 0; k < stack_layout.children.length; k++)
+            {
+                if (stack_layout.children[k].item && stack_layout.children[k].item.problem_tabs_width !== undefined)
+                {
+                    stack_layout.children[k].item.problem_tabs_width = width;
+                }
+            }
+        }
 
         Rectangle
         {
@@ -370,9 +452,6 @@ Item {
             }
             if (!tabExists) {
                 __create_new_custom_tab(tab_title, stack_id, problem_id, stack_component_name);
-                console.log("Creating tab with stack id '" + stack_id + "'");    // debug
-            } else {
-                console.log("The given stack id '" + stack_id + "' already exists");    // debug
             }
         }
         else
@@ -392,12 +471,7 @@ Item {
         }
         if (tabExists)
         {
-            console.log("The given stack id '" + stack_id + "' is going to get closed");
             __remove_idx(i);
-            console.log("The given stack id '" + stack_id + "' is closed");
-        } else
-        {
-            console.log("The given stack id '" + stack_id + "' doesn't exists");
         }
     }
 
@@ -504,7 +578,7 @@ Item {
         sustainml_custom_tabview.__tab_model.set(idx, {"idx" : idx, "title": tab_title, "stack_id": stack_id})
         var new_stack = stack_component.createObject(null)
         new_stack.setSource(sustainml_custom_tabview.__get_load_component(initial_component),
-                {"stack_id": stack_id, "problem_id": problem_id, "total_tabs": sustainml_custom_tabview.__tab_model.count})
+                {"stack_id": stack_id, "problem_id": problem_id, "total_tabs": sustainml_custom_tabview.__tab_model.count, "problem_tabs_width": tab_list.width})
         stack_layout.children.push(new_stack)
         for (var i = 0; i < stack_layout.children.length; i++){
             if (stack_layout.children[i].item && stack_layout.children[i].item.total_tabs !== undefined) {
@@ -529,26 +603,62 @@ Item {
         tab_list.model = sustainml_custom_tabview.__tab_model
     }
 
+    // Close the tab at idx, in one call so nothing runs afterward in a delegate whose
+    // model row (and possibly the delegate itself) __remove_idx() may already have
+    // destroyed. __remove_idx() already picks and switches to the correct remaining
+    // tab itself (by searching stack_layout.children for a matching stack_id, not by
+    // raw position) - calling __refresh_layout(idx) again afterward would overwrite
+    // that correct choice with a raw tab_model-relative index that doesn't actually
+    // correspond to stack_layout.children's order, which was the real cause of both
+    // the earlier crash and tabs ending up showing the wrong (or no) content.
+    function __close_tab(idx, stack_id_to_close)
+    {
+        tabClosed(stack_id_to_close)
+        __remove_idx(idx)
+    }
+
     // remove tab and all contained components
     function __remove_idx(idx)
     {
-        var should_add_new_tab = false
         // add new tab if closing the last opened tab
-        if (sustainml_custom_tabview.__tab_model.count <= 1)
-        {
-            should_add_new_tab = true
-        }
+        var should_add_new_tab = (sustainml_custom_tabview.__tab_model.count <= 1)
 
         var removedStackId = sustainml_custom_tabview.__tab_model.get(idx).stack_id
-        console.log("Removing tab with stack_id: " + removedStackId)
 
-        var removedLoaderIndex = -1
+        var wasCurrent = (idx === __current_tab)
+
+        // Decide, BEFORE anything is removed, which tab should be shown afterward -
+        // by identity (stack_id), never by raw position: positions shift as soon as
+        // a row is removed, which was the source of previous bugs here.
+        //  - closing a tab that ISN'T the one currently shown: keep showing the
+        //    same tab it already was.
+        //  - closing the CURRENTLY shown tab: prefer the tab that follows it, else
+        //    the one before it.
+        var newCurrentStackId = null
+        if (!should_add_new_tab)
+        {
+            if (wasCurrent)
+            {
+                if (idx + 1 < sustainml_custom_tabview.__tab_model.count)
+                {
+                    newCurrentStackId = sustainml_custom_tabview.__tab_model.get(idx + 1).stack_id
+                }
+                else if (idx - 1 >= 0)
+                {
+                    newCurrentStackId = sustainml_custom_tabview.__tab_model.get(idx - 1).stack_id
+                }
+            }
+            else if (__current_tab >= 0 && __current_tab < sustainml_custom_tabview.__tab_model.count)
+            {
+                newCurrentStackId = sustainml_custom_tabview.__tab_model.get(__current_tab).stack_id
+            }
+        }
+
         for (var j = 0; j < stack_layout.children.length; j++)
         {
             var loader = stack_layout.children[j]
             if (loader.item && loader.item.stack_id === removedStackId)
             {
-                removedLoaderIndex = j
                 loader.destroy()
                 break
             }
@@ -561,43 +671,70 @@ Item {
             sustainml_custom_tabview.__tab_model.setProperty(i, "idx", i)
         }
 
-        var newCurrentTab = __current_tab
-        if (__current_tab >= sustainml_custom_tabview.__tab_model.count)
+        // Tell the remaining tabs' content how many tabs are left, mirroring what
+        // __create_new_custom_tab already does on add - otherwise a tab closed after
+        // others were added leaves stale (too-large) total_tabs on the survivors, and
+        // anything sized from it (e.g. SmlProblemFragment's background rectangle)
+        // keeps reserving space for tabs that no longer exist.
+        for (var k = 0; k < stack_layout.children.length; k++)
         {
-            newCurrentTab = Math.max(0, sustainml_custom_tabview.__tab_model.count - 1)
-        } else if (idx <= __current_tab && __current_tab > 0)
-        {
-            newCurrentTab = __current_tab - 1
+            if (stack_layout.children[k].item && stack_layout.children[k].item.total_tabs !== undefined)
+            {
+                stack_layout.children[k].item.total_tabs = sustainml_custom_tabview.__tab_model.count;
+            }
         }
 
         if (should_add_new_tab)
         {
             sustainml_custom_tabview.retrieve_default_data()
-        } else
+        }
+        else if (newCurrentStackId !== null)
         {
-            if (newCurrentTab >= 0 && newCurrentTab < sustainml_custom_tabview.__tab_model.count)
+            // __tab_model's position can be resolved immediately - ListModel.remove()
+            // above already took effect synchronously.
+            var newCurrentTab = -1
+            for (var m = 0; m < sustainml_custom_tabview.__tab_model.count; m++)
             {
-                var targetStackId = sustainml_custom_tabview.__tab_model.get(newCurrentTab).stack_id
-
-                var correctStackIndex = -1
-                for (var k = 0; k < stack_layout.children.length; k++)
+                if (sustainml_custom_tabview.__tab_model.get(m).stack_id === newCurrentStackId)
                 {
-                    if (stack_layout.children[k].item && stack_layout.children[k].item.stack_id === targetStackId)
+                    newCurrentTab = m
+                    break
+                }
+            }
+            __current_tab = newCurrentTab
+
+            // stack_layout.children's position can NOT be resolved yet: the removed
+            // loader's destroy() (above) is deferred to the next event loop tick, so
+            // the array is still its old, longer length right now. Searching and
+            // assigning currentIndex immediately can pick an index that's valid now
+            // but out of range a moment later once the array actually shrinks - which
+            // shows as an empty tab, and only when the surviving target happens to be
+            // at (or near) the end of the array, e.g. "viewing the last tab, closing
+            // an earlier one". Deferring this lookup until after the shrink avoids it.
+            Qt.callLater(function()
+            {
+                var correctStackIndex = -1
+                for (var n = 0; n < stack_layout.children.length; n++)
+                {
+                    if (stack_layout.children[n].item && stack_layout.children[n].item.stack_id === newCurrentStackId)
                     {
-                        correctStackIndex = k
+                        correctStackIndex = n
                         break
                     }
                 }
 
                 if (correctStackIndex !== -1)
                 {
-                    __current_tab = newCurrentTab
                     stack_layout.currentIndex = correctStackIndex
                 }
-            }
-
-            tab_list.model = sustainml_custom_tabview.__tab_model
+                else
+                {
+                    console.log("[__remove_idx] WARNING: could not resolve newCurrentStackId=" + newCurrentStackId + " in stack_layout.children - current tab selection left unchanged")
+                }
+            })
         }
+
+        tab_list.model = sustainml_custom_tabview.__tab_model
     }
 
     // order tabs by stack id (minor to major)
@@ -635,6 +772,18 @@ Item {
                         sustainml_custom_tabview.__tab_model.setProperty(idx_dst, "title", title_src)
                         sustainml_custom_tabview.__tab_model.setProperty(idx_src, "stack_id", stack_dst)
                         sustainml_custom_tabview.__tab_model.setProperty(idx_dst, "stack_id", stack_src)
+
+                        // Keep each loader's own stack_id/problem_id in sync with the
+                        // swap above - previously only __tab_model was updated, so a
+                        // loader's .item.stack_id kept pointing at its OLD identity
+                        // forever after any reorder, and any later close/focus/rename
+                        // looked up by stack_id would silently act on the wrong tab.
+                        var problem_src = stack_layout.children[i].item.problem_id
+                        var problem_dst = stack_layout.children[j].item.problem_id
+                        stack_layout.children[i].item.stack_id = stack_dst
+                        stack_layout.children[j].item.stack_id = stack_src
+                        stack_layout.children[i].item.problem_id = problem_dst
+                        stack_layout.children[j].item.problem_id = problem_src
                     }
                 }
             }

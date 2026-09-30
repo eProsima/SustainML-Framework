@@ -245,7 +245,9 @@ ComboBox {
                 width: parent.width
                 interactive: true
                 clip: true
-                implicitHeight: contentHeight
+                // Cap to ~8 rows before scrolling - a long result list (e.g. HF model
+                // search) would otherwise size the popup to fit every item at once.
+                implicitHeight: Math.min(contentHeight, sustainml_custom_combobox.height * 0.75 * 8)
                 model: sustainml_custom_combobox.popup.visible ? sustainml_custom_combobox.delegateModel : null
 
                 // Adds a little extra space so the last item isn't clipped by rounded border/padding

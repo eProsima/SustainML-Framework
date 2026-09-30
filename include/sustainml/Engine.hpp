@@ -27,6 +27,8 @@
 #include <unordered_map>
 #include <deque>
 
+#include <QJsonArray>
+#include <QMap>
 #include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
 #include <QQueue>
@@ -98,6 +100,91 @@ public:
      */
     Q_INVOKABLE void request_hf_models_compare(
             const QVariantList& models);
+
+    /**
+     * @brief Remember a user-chosen display name for a problem_id locally, so it's
+     *        included the next time this task is explicitly saved. Does not by itself
+     *        talk to the backend.
+     * @param problem_id problem identifier whose display name should be updated
+     * @param display_name new display name to remember
+     */
+    Q_INVOKABLE void persist_task_display_name(
+            int problem_id,
+            QString display_name);
+
+    /**
+     * @brief Look up a display name for a problem_id (set via persist_task_display_name,
+     *        or restored by a previous load_saved_tasks())
+     * @param problem_id problem identifier
+     * @return the display name, or an empty string if none is known
+     */
+    Q_INVOKABLE QString saved_display_name(
+            int problem_id) const;
+
+    /**
+     * @brief Forget a problem_id that's no longer wanted (e.g. its tab was closed),
+     *        so it's no longer included the next time save_current_tasks() is called
+     * @param problem_id problem identifier to forget
+     */
+    Q_INVOKABLE void forget_task(
+            int problem_id);
+
+    /**
+     * @brief Delete every save file from the backend
+     */
+    Q_INVOKABLE void clear_saved_data();
+
+    /**
+     * @brief Explicitly save every task currently open/shown into a named file
+     * @param name name to save under (an existing name is fully replaced, not merged into)
+     */
+    Q_INVOKABLE void save_current_tasks(
+            QString name);
+
+    /**
+     * @brief Explicitly load every task from a named save file and replay it into the
+     *        Results screen. Loaded tasks are assigned fresh problem_ids by the backend,
+     *        so they always appear as new tasks.
+     * @param name name of the save file to load
+     */
+    Q_INVOKABLE void load_saved_tasks(
+            QString name);
+
+    /**
+     * @brief Ask the backend for the list of save file names, e.g. to populate a Load
+     *        picker. Result is reported via saved_files_available().
+     */
+    Q_INVOKABLE void request_saved_files_list();
+
+    /**
+     * @brief Delete a single named save file from the backend
+     * @param name name of the save file to delete
+     */
+    Q_INVOKABLE void delete_saved_file(
+            QString name);
+
+    /**
+     * @brief Save every currently open task (same as save_current_tasks()) AND the
+     *        given HF search/comparison history into one named file in a single
+     *        call (full replace, like save_current_tasks())
+     * @param name name to save under
+     * @param hf_searches HF search history entries - opaque, stored and returned verbatim
+     * @param hf_comparisons HF comparison history entries - opaque, stored and returned verbatim
+     */
+    Q_INVOKABLE void save_all(
+            QString name,
+            const QVariantList& hf_searches,
+            const QVariantList& hf_comparisons);
+
+    /**
+     * @brief Load every task (same as load_saved_tasks()) AND the HF search/
+     *        comparison history from a named save file. Tasks are replayed the
+     *        same way load_saved_tasks() does; the HF history is reported via
+     *        hf_state_loaded() for the caller to merge into its own lists.
+     * @param name name of the save file to load
+     */
+    Q_INVOKABLE void load_all(
+            QString name);
 
 public slots:
 
@@ -604,6 +691,24 @@ signals:
     void hf_models_compare_error(
             const QString& message);
 
+    /**
+     * @brief Emitted after request_saved_files_list(), with the names of every save
+     *        file that currently exists - e.g. to populate a Load picker
+     * @param names list of save file names
+     */
+    void saved_files_available(
+            const QVariantList& names);
+
+    /**
+     * @brief Emitted after load_all(), with the HF search/comparison history found
+     *        in that save file - each opaque, the caller merges them into its own lists
+     * @param hf_searches HF search history entries found in the save file
+     * @param hf_comparisons HF comparison history entries found in the save file
+     */
+    void hf_state_loaded(
+            const QVariantList& hf_searches,
+            const QVariantList& hf_comparisons);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -640,6 +745,7 @@ private:
             const QJsonObject& json_obj);
 
     std::vector<types::TaskId> received_task_ids;
+    QMap<int, QString> saved_display_names_;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
     std::unordered_map<int, std::deque<std::function<void(const QJsonObject&)>>> config_callback_queue_;
@@ -676,6 +782,48 @@ private:
     void orchestrator_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
+
+    //! Receive the list of save file names
+    void saved_files_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive loaded tasks (with freshly-assigned problem_ids) and replay them
+    //! through the existing results path
+    void load_tasks_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive the response to a wipe-database request
+    void wipe_database_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive the response to an explicit save-tasks request
+    void save_tasks_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive the response to a delete-single-saved-file request
+    void delete_saved_file_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive the response to a save_all() request
+    void save_all_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive loaded tasks and HF search/comparison history from a load_all() request
+    void load_all_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Shared by load_tasks_response()/load_all_response(): replay each task in
+    //! the given array through the existing results path (see load_tasks_response
+    //! for why), assigning saved_display_names_ along the way
+    void replay_loaded_tasks(
+            const QJsonArray& tasks_array);
 
     //! Request node status to the Framework
     void node_status_request(

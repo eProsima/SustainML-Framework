@@ -19,9 +19,6 @@ Item
     readonly property int __margin: Settings.spacing_big * 1
     readonly property int __input_height: 50
     readonly property int __input_height_big: 120
-    readonly property int __input_width: 900
-    readonly property int __input_width_split: 435
-    readonly property int __input_width_small: 293
 
     // Input values
     property string __problem_short_description: ""
@@ -71,10 +68,7 @@ Item
     property string __dataset_metadata_keywords: __dataset_keywords
     property string __dataset_metadata_applications: __dataset_applications
 
-    property bool results_available: false
-
     // External signals
-    signal go_home()
     signal go_results()
     signal go_dataset_path()
     signal go_unet_models()
@@ -109,6 +103,19 @@ Item
     )
 
     signal clear_all_clicked()
+    // Reiterating a past problem needs to update main_window.dataset_description
+    // (and siblings) - the true source __dataset_description etc. below are
+    // one-way bound FROM - rather than assign root.__dataset_description
+    // directly, which would permanently sever that binding (any subsequent
+    // dataset upload would then update main_window's copy but never reach this
+    // screen again). Same reasoning as clear_all_clicked() above.
+    signal dataset_metadata_reiterated(
+        string description,
+        string topic,
+        string profile,
+        string keywords,
+        string applications
+    )
     signal refresh()
     signal ask_metrics(
         string metric_req_type,
@@ -121,8 +128,11 @@ Item
     signal go_hf_models()
     signal ask_hf_models(string description)
     signal go_hf_results()
+    signal go_hf_comparisons()
 
     property bool hf_results_available: false
+    // Count (not just a flag) so the "Comparisons" button can badge how many are saved
+    property int hf_comparisons_count: 0
 
     Connections
     {
@@ -143,11 +153,8 @@ Item
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
-            root.__dataset_description = dataset_metadata_description
-            root.__dataset_topic = dataset_metadata_topic
-            root.__dataset_profile = dataset_metadata_profile
-            root.__dataset_keywords = dataset_metadata_keywords
-            root.__dataset_applications = dataset_metadata_applications
+            root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
+                    dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
             root.__minimum_samples = minimum_samples
             root.__maximum_samples = maximum_samples
             root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
@@ -156,6 +163,16 @@ Item
             root.__geo_location_continent = geo_location_continent
             root.__geo_location_region = geo_location_region
             root.__goal = goal
+            // Not carried by this signal at all (no model_selected parameter above),
+            // so there's nothing to restore it to - but it must still be reset to ""
+            // here, otherwise a model chosen via the CNN+FPGA direct-model-selection
+            // path (see required_hardware_input above) stays stuck non-empty forever,
+            // permanently disabling every field gated by "__model_selected !== \"\""
+            // (min/max samples, num_outputs, etc.) even after going back to submit a
+            // different model. The goal-driven path never sets this in the first
+            // place, which is why only the CNN+FPGA flow showed this symptom.
+            root.__model_selected = ""
+            root.__model_selected_copy = ""
             // root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
             root.__previous_iteration = 0
@@ -183,35 +200,11 @@ Item
         onClicked: focus = true
     }
 
-    // Go home button
-    SmlButton
-    {
-        id: home_button
-        icon_name: Settings.home_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Home"
-        rounded: true
-        color: Settings.app_color_green_3
-        color_pressed: Settings.app_color_green_1
-        nightmode_color: Settings.app_color_green_1
-        nightmode_color_pressed: Settings.app_color_green_3
-        tooltip_text: "Go to Home screen"
-        anchors
-        {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-            left: parent.left
-            leftMargin: Settings.spacing_normal
-        }
-        onClicked: root.go_home()
-    }
-
     // Go results button
     SmlButton
     {
         id: go_results
-        disabled: !results_available
-        icon_name: Settings.start_icon_name
+        icon_name: Settings.results_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Results"
         rounded: true
@@ -226,8 +219,11 @@ Item
         {
             top: parent.top
             topMargin: Settings.spacing_normal
-            left: home_button.right
-            leftMargin: Settings.spacing_normal
+            // Align with the fields below (e.g. scroll_view's left: parent.left +
+            // root.__margin), instead of the tighter spacing_normal every other
+            // top-bar button row in this app uses.
+            left: parent.left
+            leftMargin: root.__margin
         }
         onClicked: root.go_results()
     }
@@ -237,7 +233,7 @@ Item
     {
         id: dataset_path_button
         visible: !root.__reiterate
-        icon_name: Settings.start_icon_name
+        icon_name: Settings.upload_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Upload Dataset"
         rounded: true
@@ -295,7 +291,7 @@ Item
 
         anchors
         {
-            top: home_button.bottom
+            top: go_results.bottom
             topMargin: Settings.spacing_normal
             left: parent.left
             leftMargin: root.__margin
@@ -339,7 +335,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height
             KeyNavigation.tab: problem_definition_input
             anchors
@@ -387,7 +383,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height_big
             KeyNavigation.tab: modality_input
             anchors
@@ -438,8 +434,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__metrics.length > 0 ? root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split :
-                   root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: root.__metrics.length > 0 ? (scroll_view.width - Settings.spacing_big) / 2 * 0.9 : scroll_view.width * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: inputs_input
@@ -510,7 +505,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: inputs_input
@@ -572,7 +567,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: inputs_input
@@ -646,7 +641,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height_big * 0.75
             KeyNavigation.tab: outputs_input
             anchors
@@ -694,7 +689,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height_big * 0.75
             KeyNavigation.tab: minimum_samples_input
             anchors
@@ -735,6 +730,10 @@ Item
             id: minimum_samples_input
             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
+            // Not IntValidator: it's locale-aware and treats the locale's group
+            // separator (a comma, in many locales) as acceptable input. A plain
+            // digit-only pattern has no such leniency.
+            validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: "Min samples required (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
@@ -742,7 +741,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             KeyNavigation.tab: maximum_samples_input
             anchors
@@ -788,6 +787,7 @@ Item
             id: maximum_samples_input
             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
+            validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: "Max samples required (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
@@ -795,7 +795,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             KeyNavigation.tab: goal_input
             anchors
@@ -841,7 +841,13 @@ Item
             activeFocusOnTab: true
             focus: true
             id: goal_input
-            disabled: root.__reiterate || root.__model_selected !== ""
+            // Expressed fully declaratively (rather than toggled imperatively from
+            // required_hardware_input.onText_changed below) so this can never get
+            // permanently stuck: a direct "goal_input.disabled = ..." assignment
+            // would sever this binding for good, the same way direct assignments to
+            // the dataset-metadata properties elsewhere in this file used to.
+            disabled: root.__reiterate || root.__model_selected !== "" ||
+                (root.__types.toLowerCase() === "cnns" && root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)")
             displayText: root.__goal
             placeholder_text: displayText !== "" ? "" : "Select your model goal"
             model: root.__goal_list
@@ -851,7 +857,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 + 1 : root.__input_width_small + 1
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9 + 1
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: required_hardware_input
@@ -929,7 +935,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: model_select_input
@@ -947,19 +953,14 @@ Item
                 if (root.__types.toLowerCase() === "cnns" &&
                     text === "FPGA (xczu19eg-ffvb1517-2-i)") {
 
-                    // Disable goal selection
-                    goal_input.disabled = true
-
-                    // Clear goal if set
+                    // Clear goal if set (goal_input.disabled reacts on its own,
+                    // declaratively, to __types/__hardware_required above)
                     root.__goal = ""
 
                     // Ask backend for U-Net models directly
                     // The backend already supports this string
                     var cfg = "U_NET_MODELS, " + text + ", " + root.__types
                     root.ask_models(cfg)
-                } else {
-                    // Otherwise, re-enable the goal selection
-                    goal_input.disabled = false
                 }
             }
             onModelChanged:
@@ -1021,7 +1022,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: num_outputs_input
@@ -1082,6 +1083,7 @@ Item
             id: num_outputs_input
             disabled: root.__reiterate || root.__model_selected !== ""
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
+            validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
@@ -1089,7 +1091,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - 2*Settings.spacing_small)/3 * 0.9 : root.__input_width_small
+            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
             height: root.__input_height
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1143,7 +1145,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width:root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height_big
             KeyNavigation.tab: problem_short_description_input
             anchors
@@ -1195,7 +1197,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height:root.__input_height
             KeyNavigation.tab: problem_short_description_input
             anchors
@@ -1246,7 +1248,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1296,7 +1298,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height * 2
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1347,7 +1349,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height_big
             KeyNavigation.tab: optimize_carbon_input
             anchors
@@ -1399,7 +1401,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? scroll_view.width * 0.9 : root.__input_width
+            width: scroll_view.width * 0.9
             height: root.__input_height
             rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: desired_carbon_footprint_input
@@ -1464,7 +1466,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: max_mem_footprint_input
             anchors
@@ -1512,7 +1514,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: geo_location_continent_input
             anchors
@@ -1565,7 +1567,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: geo_location_region_input
             anchors
@@ -1613,7 +1615,7 @@ Item
             border_nightmode_editting_color: Settings.app_color_green_2
             background_color: Settings.app_color_light
             background_nightmode_color: Settings.app_color_dark
-            width: root.__input_width > scroll_view.width * 0.9 ? (scroll_view.width - Settings.spacing_big)/2 * 0.9 : root.__input_width_split
+            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
             KeyNavigation.tab: problem_short_description_input
             anchors
@@ -1667,8 +1669,8 @@ Item
     Popup {
         id: hf_choice_popup
         parent: hf_search_button
-        y: hf_search_button.height + 4
-        x: 0
+        y: hf_search_button.height + 8
+        x: (hf_search_button.width - width) / 2
         padding: Settings.spacing_normal
         modal: false
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -1686,7 +1688,7 @@ Item
             SmlButton {
                 text_kind: SmlText.TextKind.Header_2
                 text_value: "Search"
-                icon_name: Settings.start_icon_name
+                icon_name: Settings.search_icon_name
                 rounded: true
                 disabled: root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === ""
                 color: Settings.app_color_green_4
@@ -1708,7 +1710,7 @@ Item
             SmlButton {
                 text_kind: SmlText.TextKind.Header_2
                 text_value: "Results"
-                icon_name: Settings.start_icon_name
+                icon_name: Settings.results_icon_name
                 rounded: true
                 disabled: !root.hf_results_available
                 color: Settings.app_color_green_4
@@ -1722,6 +1724,24 @@ Item
                     root.go_hf_results()
                 }
             }
+
+            SmlButton {
+                text_kind: SmlText.TextKind.Header_2
+                text_value: "Comparisons"
+                icon_name: Settings.comparisons_icon_name
+                rounded: true
+                disabled: root.hf_comparisons_count === 0
+                color: Settings.app_color_green_4
+                color_pressed: Settings.app_color_green_1
+                color_text: Settings.app_color_green_3
+                nightmode_color: Settings.app_color_green_2
+                nightmode_color_pressed: Settings.app_color_green_3
+                nightmode_color_text: Settings.app_color_green_1
+                onClicked: {
+                    hf_choice_popup.close()
+                    root.go_hf_comparisons()
+                }
+            }
         }
     }
 
@@ -1729,7 +1749,7 @@ Item
     SmlButton
     {
         id: submit_button
-        icon_name: Settings.submit_icon_name
+        icon_name: Settings.check_icon_name
         text_kind: SmlText.TextKind.Header_3
         text_value: "Submit"
         disabled: root.__refreshing || root.__initializing ||
@@ -1753,7 +1773,6 @@ Item
         onClicked:
         {
             focus = true
-            root.results_available = true
             root.prepare_task()
         }
     }
@@ -1762,7 +1781,7 @@ Item
     SmlButton
     {
         id: clear_all_button
-        icon_name: Settings.submit_icon_name
+        icon_name: Settings.clear_icon_name
         text_kind: SmlText.TextKind.Header_3
         text_value: "Clear all"
         rounded: true
@@ -1810,11 +1829,13 @@ Item
         root.__num_outputs = 1
         root.__model_selected = ""
         root.__model_selected_copy = ""
-        root.__dataset_description = ""
-        root.__dataset_topic = ""
-        root.__dataset_profile = ""
-        root.__dataset_keywords = ""
-        root.__dataset_applications = ""
+        // __dataset_description/topic/profile/keywords/applications are NOT reset
+        // here directly - they're one-way bound FROM main_window.dataset_description
+        // etc., and a direct assignment would permanently sever that binding (any
+        // dataset uploaded afterward would update main_window's copy but never
+        // reach this screen again). clear_all_clicked(), emitted at the end of this
+        // function, resets the true source in main.qml instead, which flows back
+        // down through the still-intact binding.
 
         // Reset visible widgets explicitly
         problem_short_description_input.text = ""

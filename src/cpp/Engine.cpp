@@ -1379,3 +1379,387 @@ void Engine::response_for_cancel(
         }
     }
 }
+
+void Engine::request_saved_files_list()
+{
+    QJsonObject empty_json;
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::saved_files_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::REQUEST_SAVED_FILES,
+        empty_json);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::saved_files_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    QVariantList names;
+    if (!json_obj.empty() && json_obj.contains("names"))
+    {
+        for (const QJsonValue& value : json_obj["names"].toArray())
+        {
+            names.append(value.toString());
+        }
+    }
+    emit saved_files_available(names);
+
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::save_current_tasks(
+        QString name)
+{
+    QJsonArray task_array;
+    for (const auto& task_id : received_task_ids)
+    {
+        int problem_id = static_cast<int>(task_id.problem_id());
+        QJsonObject task_json;
+        task_json["problem_id"] = problem_id;
+        task_json["iteration_id"] = static_cast<int>(task_id.iteration_id());
+        task_json["display_name"] = saved_display_names_.value(problem_id);
+        task_array.append(task_json);
+    }
+    QJsonObject json_obj;
+    json_obj["name"] = name;
+    json_obj["tasks"] = task_array;
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::save_tasks_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::SAVE_TASKS,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::save_tasks_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    QString path = json_obj.value("path").toString();
+    if (!path.isEmpty())
+    {
+        emit update_log(QString("Saved current results to ") + path);
+    }
+    else
+    {
+        emit update_log(QString("Saved current results."));
+    }
+
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::delete_saved_file(
+        QString name)
+{
+    QJsonObject json_obj;
+    json_obj["name"] = name;
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::delete_saved_file_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::DELETE_SAVED_FILE,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::delete_saved_file_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    Q_UNUSED(json_obj);
+
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::load_saved_tasks(
+        QString name)
+{
+    QJsonObject json_obj;
+    json_obj["name"] = name;
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::load_tasks_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::LOAD_TASKS,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::replay_loaded_tasks(
+        const QJsonArray& tasks_array)
+{
+    for (const QJsonValue& value : tasks_array)
+    {
+        QJsonObject task = value.toObject();
+        int problem_id = task["problem_id"].toInt();
+        int iteration_id = task["iteration_id"].toInt();
+        QString display_name = task["display_name"].toString();
+
+        if (!display_name.isEmpty())
+        {
+            saved_display_names_[problem_id] = display_name;
+        }
+
+        types::TaskId task_id(problem_id, iteration_id);
+        received_task_ids.push_back(task_id);
+        // Replay through the existing results path: this fires the same per-node
+        // requests/signals a live task already uses, so the Results screen tab
+        // creation logic needs no separate code path for loaded tasks. The backend
+        // already assigned problem_id fresh, so this can never collide with an
+        // existing tab or a task created later in this session.
+        request_results(task_id, sustainml::NodeID::MAX);
+    }
+}
+
+void Engine::load_tasks_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    if (!json_obj.empty() && json_obj.contains("tasks"))
+    {
+        replay_loaded_tasks(json_obj["tasks"].toArray());
+    }
+
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::persist_task_display_name(
+        int problem_id,
+        QString display_name)
+{
+    saved_display_names_[problem_id] = display_name;
+}
+
+QString Engine::saved_display_name(
+        int problem_id) const
+{
+    return saved_display_names_.value(problem_id);
+}
+
+void Engine::forget_task(
+        int problem_id)
+{
+    for (auto it = received_task_ids.begin(); it != received_task_ids.end(); )
+    {
+        if (static_cast<int>(it->problem_id()) == problem_id)
+        {
+            it = received_task_ids.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+    saved_display_names_.remove(problem_id);
+}
+
+void Engine::clear_saved_data()
+{
+    QJsonObject empty_json;
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::wipe_database_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::WIPE_DATABASE,
+        empty_json);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::wipe_database_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    Q_UNUSED(json_obj);
+    saved_display_names_.clear();
+    emit update_log(QString("All save files deleted."));
+
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::save_all(
+        QString name,
+        const QVariantList& hf_searches,
+        const QVariantList& hf_comparisons)
+{
+    QJsonArray task_array;
+    for (const auto& task_id : received_task_ids)
+    {
+        int problem_id = static_cast<int>(task_id.problem_id());
+        QJsonObject task_json;
+        task_json["problem_id"] = problem_id;
+        task_json["iteration_id"] = static_cast<int>(task_id.iteration_id());
+        task_json["display_name"] = saved_display_names_.value(problem_id);
+        task_array.append(task_json);
+    }
+
+    QJsonObject json_obj;
+    json_obj["name"] = name;
+    json_obj["tasks"] = task_array;
+    json_obj["hf_searches"] = QJsonArray::fromVariantList(hf_searches);
+    json_obj["hf_comparisons"] = QJsonArray::fromVariantList(hf_comparisons);
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::save_all_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::SAVE_ALL,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::save_all_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    QString path = json_obj.value("path").toString();
+    if (!path.isEmpty())
+    {
+        emit update_log(QString("Saved everything to ") + path);
+    }
+    else
+    {
+        emit update_log(QString("Saved everything."));
+    }
+
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}
+
+void Engine::load_all(
+        QString name)
+{
+    QJsonObject json_obj;
+    json_obj["name"] = name;
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::load_all_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::LOAD_ALL,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::load_all_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    if (!json_obj.empty() && json_obj.contains("tasks"))
+    {
+        replay_loaded_tasks(json_obj["tasks"].toArray());
+    }
+
+    QVariantList hf_searches;
+    QVariantList hf_comparisons;
+    if (!json_obj.empty())
+    {
+        hf_searches = json_obj.value("hf_searches").toArray().toVariantList();
+        hf_comparisons = json_obj.value("hf_comparisons").toArray().toVariantList();
+    }
+    emit hf_state_loaded(hf_searches, hf_comparisons);
+
+    // Remove REST requester from queue
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}

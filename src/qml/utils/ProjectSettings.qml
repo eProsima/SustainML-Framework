@@ -58,7 +58,6 @@ QtObject {
     readonly property string home_icon_name:            "home"
     readonly property string start_icon_name:           "leaf"
     readonly property string settings_icon_name:        "gear"
-    readonly property string submit_icon_name:          "leaf"
     readonly property string arrow_down_icon_name:      "down"
     readonly property string add_tab_icon_name:         "plus"
     readonly property string close_tab_icon_name:       "cross"
@@ -66,6 +65,17 @@ QtObject {
     readonly property string stop_icon_name:            "square"
     readonly property string rename_icon_name:          "pencil"
     readonly property string delete_icon_name:          "trash"
+    readonly property string save_icon_name:            "save"
+    readonly property string load_icon_name:            "load"
+    readonly property string compare_icon_name:         "scale"
+    readonly property string comparisons_icon_name:     "history"
+    readonly property string clear_icon_name:            "mop"
+    readonly property string analyze_icon_name:          "chart"
+    readonly property string results_icon_name:          "checklist"
+    readonly property string upload_icon_name:           "upload"
+    readonly property string check_icon_name:            "check"
+    readonly property string search_icon_name:           "search"
+    readonly property string browse_icon_name:           "folder"
 
     // ICON SIZES
     readonly property int button_icon_size:         20

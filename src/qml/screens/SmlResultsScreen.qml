@@ -48,10 +48,27 @@ Item
 
     // Private properties
     property var list_of_problems: []
+    // Tracks, per problem_id, which of the 6 node types have reported at least once -
+    // Save is only enabled once a problem is here, i.e. fully complete, not just started.
+    property var list_of_ready_problems: []
+    property var __completed_nodes: ({})
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __tab_view_width: 1000
     readonly property int __tab_view_height: 600
     property bool tasking: false
+
+    function __mark_node_complete(problem_id, node_key)
+    {
+        var seen = root.__completed_nodes[problem_id] || {}
+        if (seen[node_key]) return
+        seen[node_key] = true
+        root.__completed_nodes[problem_id] = seen
+
+        if (Object.keys(seen).length >= 6 && !root.list_of_ready_problems.includes(problem_id))
+        {
+            root.list_of_ready_problems = root.list_of_ready_problems.concat([problem_id])
+        }
+    }
 
     Connections
     {
@@ -65,15 +82,16 @@ Item
             {
                 tab_view.update_stack_id(problem_id, 0)
                 tab_view.update_problem_id(problem_id, -1)
-                tab_view.update_tab_name("Problem " + problem_id, problem_id)
-                list_of_problems.push(problem_id)
+                tab_view.update_tab_name(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id)
+                list_of_problems = list_of_problems.concat([problem_id])
             }
             else if (!list_of_problems.includes(problem_id))
             {
-                list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
+                list_of_problems = list_of_problems.concat([problem_id])
+                tab_view.create_new_tab(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+            root.__mark_node_complete(problem_id, "app_requirements")
         }
 
         function onNew_hw_constraints_node_output(problem_id, iteration_id, hw_required, max_memory_footprint)
@@ -84,15 +102,16 @@ Item
             {
                 tab_view.update_stack_id(problem_id, 0)
                 tab_view.update_problem_id(problem_id, -1)
-                tab_view.update_tab_name("Problem " + problem_id, problem_id)
-                list_of_problems.push(problem_id)
+                tab_view.update_tab_name(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id)
+                list_of_problems = list_of_problems.concat([problem_id])
             }
             else if (!list_of_problems.includes(problem_id))
             {
-                list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
+                list_of_problems = list_of_problems.concat([problem_id])
+                tab_view.create_new_tab(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+            root.__mark_node_complete(problem_id, "hw_constraints")
         }
 
 
@@ -104,15 +123,16 @@ Item
             {
                 tab_view.update_stack_id(problem_id, 0)
                 tab_view.update_problem_id(problem_id, -1)
-                tab_view.update_tab_name("Problem " + problem_id, problem_id)
-                list_of_problems.push(problem_id)
+                tab_view.update_tab_name(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id)
+                list_of_problems = list_of_problems.concat([problem_id])
             }
             else if (!list_of_problems.includes(problem_id))
             {
-                list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
+                list_of_problems = list_of_problems.concat([problem_id])
+                tab_view.create_new_tab(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+            root.__mark_node_complete(problem_id, "ml_model_metadata")
 
             if (keywords === "Error" && !errorDialog.visible) {
                 errorMessage = "Error in node ML Model Metadata. Please check the logs for more details."
@@ -128,15 +148,16 @@ Item
             {
                 tab_view.update_stack_id(problem_id, 0)
                 tab_view.update_problem_id(problem_id, -1)
-                tab_view.update_tab_name("Problem " + problem_id, problem_id)
-                list_of_problems.push(problem_id)
+                tab_view.update_tab_name(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id)
+                list_of_problems = list_of_problems.concat([problem_id])
             }
             else if (!list_of_problems.includes(problem_id))
             {
-                list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
+                list_of_problems = list_of_problems.concat([problem_id])
+                tab_view.create_new_tab(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+            root.__mark_node_complete(problem_id, "ml_model")
 
             var key = problem_id + ":" + iteration_id
             var modelFailed = (model === "Error" || model === "NO_MODEL")
@@ -160,15 +181,16 @@ Item
             {
                 tab_view.update_stack_id(problem_id, 0)
                 tab_view.update_problem_id(problem_id, -1)
-                tab_view.update_tab_name("Problem " + problem_id, problem_id)
-                list_of_problems.push(problem_id)
+                tab_view.update_tab_name(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id)
+                list_of_problems = list_of_problems.concat([problem_id])
             }
             else if (!list_of_problems.includes(problem_id))
             {
-                list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
+                list_of_problems = list_of_problems.concat([problem_id])
+                tab_view.create_new_tab(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+            root.__mark_node_complete(problem_id, "hw_resources")
 
             var key = problem_id + ":" + iteration_id
             var hwIsError = (typeof hw_description === "string") &&
@@ -194,15 +216,16 @@ Item
             {
                 tab_view.update_stack_id(problem_id, 0)
                 tab_view.update_problem_id(problem_id, -1)
-                tab_view.update_tab_name("Problem " + problem_id, problem_id)
-                list_of_problems.push(problem_id)
+                tab_view.update_tab_name(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id)
+                list_of_problems = list_of_problems.concat([problem_id])
             }
             else if (!list_of_problems.includes(problem_id))
             {
-                list_of_problems.push(problem_id)
-                tab_view.create_new_tab("Problem " + problem_id, problem_id, problem_id, "problem_view")
+                list_of_problems = list_of_problems.concat([problem_id])
+                tab_view.create_new_tab(engine.saved_display_name(problem_id) || ("Problem " + problem_id), problem_id, problem_id, "problem_view")
             }
             tab_view.focus(problem_id, problem_id)
+            root.__mark_node_complete(problem_id, "carbon_footprint")
 
             if (carbon_intensity === 0 && !errorDialog.visible) {
                 errorMessage = "Error in node Carbon Footprint. Please check the logs for more details."
@@ -327,6 +350,55 @@ Item
         }
     }
 
+    // Button to save currently open results into a named file
+    SmlButton
+    {
+        id: save_results_button
+        icon_name: Settings.save_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: "Save"
+        disabled: list_of_ready_problems.length === 0
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Save currently open results into a named file"
+        anchors
+        {
+            top: go_home_button.top
+            left: stop_button.right
+            leftMargin: Settings.spacing_small
+        }
+        onClicked: save_load_dialogs.open_save()
+    }
+
+    // Button to load results from a previously saved file
+    SmlButton
+    {
+        id: load_results_button
+        icon_name: Settings.load_icon_name
+        text_kind: SmlText.TextKind.Header_2
+        text_value: "Load"
+        rounded: true
+        color: Settings.app_color_green_4
+        color_pressed: Settings.app_color_green_1
+        color_text: Settings.app_color_green_3
+        nightmode_color: Settings.app_color_green_2
+        nightmode_color_pressed: Settings.app_color_green_3
+        nightmode_color_text: Settings.app_color_green_1
+        tooltip_text: "Load results from a previously saved file"
+        anchors
+        {
+            top: go_home_button.top
+            left: save_results_button.right
+            leftMargin: Settings.spacing_small
+        }
+        onClicked: save_load_dialogs.open_load()
+    }
+
     // Tasking status text
     SmlText
     {
@@ -335,8 +407,9 @@ Item
         text_kind: SmlText.TextKind.Header_3
         font.pixelSize: 25
         text_value: "Working on task, please wait"
+        // Center when there's room, but never let it overlap the button row on narrow windows
+        x: Math.max((parent.width - width) / 2, load_results_button.x + load_results_button.width + Settings.spacing_big)
         anchors {
-            horizontalCenter: parent.horizontalCenter
             top: parent.top
             topMargin: Settings.spacing_normal
         }
@@ -391,7 +464,7 @@ Item
 
         allowed_stack_components: {"problem_view": "qrc:/qml/fragments/SmlProblemFragment.qml"}
         default_stack_component: "problem_view"
-        allow_close_tabs: false
+        allow_close_tabs: true
         reduced_tabs: true
         allow_tab_rename: true
 
@@ -399,10 +472,27 @@ Item
         {
             root.results_screen_loaded()
         }
+        onTab_renamed:
+        {
+            // stack_id === problem_id once a tab's first result has arrived
+            engine.persist_task_display_name(stack_id, new_title)
+        }
+        onTabClosed:
+        {
+            // stack_id_closed === problem_id, per the same convention as rename above
+            root.list_of_problems = root.list_of_problems.filter(function(id) { return id !== stack_id_closed })
+            root.list_of_ready_problems = root.list_of_ready_problems.filter(function(id) { return id !== stack_id_closed })
+            delete root.__completed_nodes[stack_id_closed]
+            engine.forget_task(stack_id_closed)
+        }
         onRetrieve_default_data:
         {
-            tab_view.create_new_tab("Problem " + current_problem_id, -1, current_problem_id, "problem_view")
-            tab_view.focus(current_problem_id, current_problem_id)
+            // All tabs were closed - show a neutral empty placeholder rather than
+            // relabeling it with whatever problem_id was last active (which read as a
+            // real, but uncloseable, "Problem N" tab).
+            root.current_problem_id = -1
+            tab_view.create_new_tab("New Tab", -1, -1, "problem_view")
+            tab_view.focus(-1, -1)
             engine.request_current_data(true)
         }
     }
@@ -424,6 +514,17 @@ SmlDialog
         errorMessage = ""
         __showNextError()
     }
+}
+
+SmlSaveLoadDialogs
+{
+    id: save_load_dialogs
+    anchors.fill: parent
+    save_title: "Save Results"
+    load_title: "Load Results"
+    no_files_text: "No saved files yet."
+    onSave_requested: engine.save_current_tasks(name)
+    onLoad_requested: engine.load_saved_tasks(name)
 }
 
 }

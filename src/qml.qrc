@@ -14,6 +14,7 @@
         <file>qml/components/SmlText.qml</file>
         <file>qml/components/SmlTextNoSelectable.qml</file>
         <file>qml/components/SmlDialog.qml</file>
+        <file>qml/components/SmlSaveLoadDialogs.qml</file>
         <file>qml/fragments/SmlComparisonFragment.qml</file>
         <file>qml/fragments/SmlGeneralFragment.qml</file>
         <file>qml/fragments/SmlIterationFragment.qml</file>
