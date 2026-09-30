@@ -95,6 +95,17 @@ public:
     Q_INVOKABLE QString unet_models_info_url() const;
 
     /**
+     * @brief Write the self-contained U-Net visualizer page (from the qrc template) to a temporary
+     *        file, with the models info and the selected model embedded in it.
+     * @param models_json JSON array with the entries of unet_models_info.jsonl
+     * @param selected_model Model to show first, e.g. "unet_model_000"
+     * @return file:// URL of the written page, or empty string on error
+     */
+    Q_INVOKABLE QString write_unet_visualizer(
+            const QString& models_json,
+            const QString& selected_model);
+
+    /**
      * @brief Ask backend to build a comparison report from the /hf_models_info payload
      * @param models List of model info objects returned by request_hf_models_info()
      */

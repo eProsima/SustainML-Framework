@@ -24,5 +24,6 @@
         <file>qml/screens/SmlLoadDatasetScreen.qml</file>
         <file>qml/screens/SmlResultsScreen.qml</file>
         <file>qml/screens/SmlSettingsScreen.qml</file>
+        <file>html/unet_visualizer.html</file>
     </qresource>
 </RCC>

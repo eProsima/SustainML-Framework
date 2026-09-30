@@ -473,6 +473,20 @@ Window {
             flops + " MFLOPs, " + params + " M parameters."
     }
 
+    // Open the architecture visualization of a U-Net model in the system browser
+    function openUnetVisualizer(modelName) {
+        var models = []
+        for (var name in unetInfoMap)
+            models.push(unetInfoMap[name])
+        if (models.length === 0) {
+            console.log("[UnetInfo] Models info not loaded, cannot open visualizer for", modelName)
+            return
+        }
+        var url = engine.write_unet_visualizer(JSON.stringify(models), modelName)
+        if (url)
+            Qt.openUrlExternally(url)
+    }
+
     function open_hf_analyze(modelObj) {
         if (!modelObj) return
 
@@ -1277,29 +1291,48 @@ Window {
                                     }
                                 }
 
-                                // One row per model
+                                // One row per model, click to open its architecture visualization
                                 Repeater {
                                     model: main_window.model_list
-                                    delegate: Row {
+                                    delegate: Rectangle {
+                                        id: unetRow
                                         width: parent.width
-                                        spacing: Settings.spacing_big
+                                        height: unetRowContent.implicitHeight + Settings.spacing_small
+                                        radius: 6
+                                        color: unetRowMouse.containsMouse ? Settings.app_color_light : "transparent"
 
-                                        // LEFT COLUMN: model name
-                                        Text {
-                                            text: modelData
-                                            font.pixelSize: 13
-                                            color: Settings.app_color_green_4
-                                            elide: Text.ElideRight
-                                            width: parent.width * 0.2
+                                        Row {
+                                            id: unetRowContent
+                                            width: parent.width
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            spacing: Settings.spacing_big
+
+                                            // LEFT COLUMN: model name
+                                            Text {
+                                                text: modelData
+                                                font.pixelSize: 13
+                                                font.underline: unetRowMouse.containsMouse
+                                                color: Settings.app_color_green_4
+                                                elide: Text.ElideRight
+                                                width: parent.width * 0.2
+                                            }
+
+                                            // RIGHT COLUMN: description
+                                            Text {
+                                                text: getUnetDescription(modelData)
+                                                font.pixelSize: 13
+                                                color: Settings.app_color_green_1
+                                                wrapMode: Text.WordWrap
+                                                width: parent.width * 0.75
+                                            }
                                         }
 
-                                        // RIGHT COLUMN: description
-                                        Text {
-                                            text: getUnetDescription(modelData)
-                                            font.pixelSize: 13
-                                            color: Settings.app_color_green_1
-                                            wrapMode: Text.WordWrap
-                                            width: parent.width * 0.75
+                                        MouseArea {
+                                            id: unetRowMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: main_window.openUnetVisualizer(modelData)
                                         }
                                     }
                                 }

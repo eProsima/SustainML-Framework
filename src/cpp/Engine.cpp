@@ -25,8 +25,12 @@
 #include <QNetworkReply>
 #include <QProcess>
 #include <QQmlApplicationEngine>
+#include <QRegularExpression>
+#include <QStandardPaths>
 #include <qqmlcontext.h>
+#include <QDir>
 #include <QEventLoop>
+#include <QFile>
 #include <QString>
 #include <QUrl>
 
@@ -347,6 +351,59 @@ QString Engine::unet_models_info_url() const
     {
         return QString();
     }
+    return QUrl::fromLocalFile(path).toString();
+}
+
+QString Engine::write_unet_visualizer(
+        const QString& models_json,
+        const QString& selected_model)
+{
+    QFile tmpl(":/html/unet_visualizer.html");
+    if (!tmpl.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        emit update_log("Error: U-Net visualizer template not found in resources");
+        return QString();
+    }
+    QString page = QString::fromUtf8(tmpl.readAll());
+    tmpl.close();
+
+    QJsonParseError err;
+    QJsonDocument models_doc = QJsonDocument::fromJson(models_json.toUtf8(), &err);
+    if (err.error != QJsonParseError::NoError || !models_doc.isArray())
+    {
+        emit update_log(QString("Error: invalid U-Net models info: ") + err.errorString());
+        return QString();
+    }
+
+    QJsonObject data;
+    data["models"] = models_doc.array();
+    data["selected"] = selected_model;
+
+    // Embedded inside a <script> element, so "</" must not appear literally
+    QString data_str = QString::fromUtf8(QJsonDocument(data).toJson(QJsonDocument::Compact));
+    data_str.replace("</", "<\\/");
+    page.replace("/*__UNET_DATA__*/null", data_str);
+
+    // One file per model, so several models can stay open in different browser tabs
+    QString safe_name = selected_model;
+    safe_name.replace(QRegularExpression("[^A-Za-z0-9_-]"), "_");
+    QDir dir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+    if (!dir.mkpath("sustainml"))
+    {
+        emit update_log("Error: cannot create temporary directory for the U-Net visualizer");
+        return QString();
+    }
+    QString path = dir.filePath("sustainml/unet_visualizer_" + safe_name + ".html");
+
+    QFile out(path);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+    {
+        emit update_log(QString("Error: cannot write U-Net visualizer to ") + path);
+        return QString();
+    }
+    out.write(page.toUtf8());
+    out.close();
+
     return QUrl::fromLocalFile(path).toString();
 }
 
