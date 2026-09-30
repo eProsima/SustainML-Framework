@@ -103,6 +103,19 @@ Item
     )
 
     signal clear_all_clicked()
+    // Reiterating a past problem needs to update main_window.dataset_description
+    // (and siblings) - the true source __dataset_description etc. below are
+    // one-way bound FROM - rather than assign root.__dataset_description
+    // directly, which would permanently sever that binding (any subsequent
+    // dataset upload would then update main_window's copy but never reach this
+    // screen again). Same reasoning as clear_all_clicked() above.
+    signal dataset_metadata_reiterated(
+        string description,
+        string topic,
+        string profile,
+        string keywords,
+        string applications
+    )
     signal refresh()
     signal ask_metrics(
         string metric_req_type,
@@ -140,11 +153,8 @@ Item
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
-            root.__dataset_description = dataset_metadata_description
-            root.__dataset_topic = dataset_metadata_topic
-            root.__dataset_profile = dataset_metadata_profile
-            root.__dataset_keywords = dataset_metadata_keywords
-            root.__dataset_applications = dataset_metadata_applications
+            root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
+                    dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
             root.__minimum_samples = minimum_samples
             root.__maximum_samples = maximum_samples
             root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
@@ -153,6 +163,16 @@ Item
             root.__geo_location_continent = geo_location_continent
             root.__geo_location_region = geo_location_region
             root.__goal = goal
+            // Not carried by this signal at all (no model_selected parameter above),
+            // so there's nothing to restore it to - but it must still be reset to ""
+            // here, otherwise a model chosen via the CNN+FPGA direct-model-selection
+            // path (see required_hardware_input above) stays stuck non-empty forever,
+            // permanently disabling every field gated by "__model_selected !== \"\""
+            // (min/max samples, num_outputs, etc.) even after going back to submit a
+            // different model. The goal-driven path never sets this in the first
+            // place, which is why only the CNN+FPGA flow showed this symptom.
+            root.__model_selected = ""
+            root.__model_selected_copy = ""
             // root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
             root.__previous_iteration = 0
@@ -710,6 +730,10 @@ Item
             id: minimum_samples_input
             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
+            // Not IntValidator: it's locale-aware and treats the locale's group
+            // separator (a comma, in many locales) as acceptable input. A plain
+            // digit-only pattern has no such leniency.
+            validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: "Min samples required (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
@@ -763,6 +787,7 @@ Item
             id: maximum_samples_input
             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
+            validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: "Max samples required (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
@@ -816,7 +841,13 @@ Item
             activeFocusOnTab: true
             focus: true
             id: goal_input
-            disabled: root.__reiterate || root.__model_selected !== ""
+            // Expressed fully declaratively (rather than toggled imperatively from
+            // required_hardware_input.onText_changed below) so this can never get
+            // permanently stuck: a direct "goal_input.disabled = ..." assignment
+            // would sever this binding for good, the same way direct assignments to
+            // the dataset-metadata properties elsewhere in this file used to.
+            disabled: root.__reiterate || root.__model_selected !== "" ||
+                (root.__types.toLowerCase() === "cnns" && root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)")
             displayText: root.__goal
             placeholder_text: displayText !== "" ? "" : "Select your model goal"
             model: root.__goal_list
@@ -922,19 +953,14 @@ Item
                 if (root.__types.toLowerCase() === "cnns" &&
                     text === "FPGA (xczu19eg-ffvb1517-2-i)") {
 
-                    // Disable goal selection
-                    goal_input.disabled = true
-
-                    // Clear goal if set
+                    // Clear goal if set (goal_input.disabled reacts on its own,
+                    // declaratively, to __types/__hardware_required above)
                     root.__goal = ""
 
                     // Ask backend for U-Net models directly
                     // The backend already supports this string
                     var cfg = "U_NET_MODELS, " + text + ", " + root.__types
                     root.ask_models(cfg)
-                } else {
-                    // Otherwise, re-enable the goal selection
-                    goal_input.disabled = false
                 }
             }
             onModelChanged:
@@ -1057,6 +1083,7 @@ Item
             id: num_outputs_input
             disabled: root.__reiterate || root.__model_selected !== ""
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
+            validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
@@ -1802,11 +1829,13 @@ Item
         root.__num_outputs = 1
         root.__model_selected = ""
         root.__model_selected_copy = ""
-        root.__dataset_description = ""
-        root.__dataset_topic = ""
-        root.__dataset_profile = ""
-        root.__dataset_keywords = ""
-        root.__dataset_applications = ""
+        // __dataset_description/topic/profile/keywords/applications are NOT reset
+        // here directly - they're one-way bound FROM main_window.dataset_description
+        // etc., and a direct assignment would permanently sever that binding (any
+        // dataset uploaded afterward would update main_window's copy but never
+        // reach this screen again). clear_all_clicked(), emitted at the end of this
+        // function, resets the true source in main.qml instead, which flows back
+        // down through the still-intact binding.
 
         // Reset visible widgets explicitly
         problem_short_description_input.text = ""

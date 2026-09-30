@@ -169,8 +169,75 @@ Item {
                 }
             }
 
+            // Measures candidate strings against tab_title_display's font, so the
+            // truncation below can tell exactly how many trailing characters fit.
+            // A pure function call (advanceWidth), not a mutable property like
+            // TextMetrics.text - writing to another item's property from inside
+            // tab_title_display's own "text" binding evaluation is what caused
+            // Qt to (falsely) detect a binding loop on "text" itself.
+            FontMetrics {
+                id: tab_title_metrics
+                font: tab_title_display.font
+            }
+
+            // Read-only display label. TextEdit (below) has no "elide" support at all
+            // (it wraps or overflows instead) - so with many tabs open and each one
+            // squeezed narrow, its WrapAnywhere text used to spill onto a second line
+            // and collide with the close icon. This truncates from the FRONT (keeping
+            // the more useful trailing part, e.g. "...oblem 12"), and simply renders
+            // nothing once the tab is too narrow for any text at all, leaving just the
+            // close icon visible - no special-casing needed for that.
+            //
+            // Built manually with literal "..." instead of Qt's own "elide: Text.ElideLeft"
+            // - that inserts a single Unicode ellipsis glyph (U+2026) using this item's
+            // own font, and title_font (Arima Madurai) renders that specific glyph as an
+            // unclear pair of cramped dots rather than a recognizable ellipsis. Three
+            // literal "." characters render correctly in this font, so build the elided
+            // string ourselves instead of relying on Qt's automatic substitution.
+            Text {
+                id: tab_title_display
+                visible: !tab_title.editing
+                horizontalAlignment: Qt.AlignLeft; verticalAlignment: Qt.AlignVCenter
+                anchors.left: parent.left
+                anchors.leftMargin: __tabs_margins
+                anchors.right: close_icon.visible ? close_icon.left : parent.right
+                anchors.rightMargin: __tabs_margins
+                anchors.verticalCenter: parent.verticalCenter
+                text: __elide_left(title, width)
+                clip: true
+                font.bold: true
+                font.family: SustainMLFont.title_font
+                font.pixelSize: Settings.body_font_size
+                color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
+
+                function __elide_left(str, availWidth) {
+                    if (availWidth <= 0)
+                        return ""
+
+                    if (tab_title_metrics.advanceWidth(str) <= availWidth)
+                        return str
+
+                    var prefix = "..."
+                    if (tab_title_metrics.advanceWidth(prefix) >= availWidth)
+                        return ""
+
+                    // Longest trailing slice of str that still fits alongside the prefix.
+                    var lo = 0, hi = str.length
+                    while (lo < hi) {
+                        var mid = Math.ceil((lo + hi) / 2)
+                        var candidate = prefix + str.substr(str.length - mid)
+                        if (tab_title_metrics.advanceWidth(candidate) <= availWidth)
+                            lo = mid
+                        else
+                            hi = mid - 1
+                    }
+                    return lo > 0 ? prefix + str.substr(str.length - lo) : ""
+                }
+            }
+
             TextEdit {
                 id: tab_title
+                visible: editing
                 horizontalAlignment: Qt.AlignLeft; verticalAlignment: Qt.AlignVCenter
                 anchors.left: parent.left
                 anchors.leftMargin: __tabs_margins
@@ -183,7 +250,8 @@ Item {
                 font.family: SustainMLFont.title_font
                 font.pixelSize: Settings.body_font_size
                 color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
-                wrapMode: TextEdit.WrapAnywhere
+                wrapMode: TextEdit.NoWrap
+                clip: true
                 selectByKeyboard: true
                 selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
                 readOnly: !sustainml_custom_tabview.allow_tab_rename

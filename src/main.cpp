@@ -53,6 +53,16 @@ int main(
 {
     qInstallMessageHandler(filtered_message_handler);
 
+    // QtQuick.Dialogs 1.x's fallback (non-native) FileDialog - used by the dataset
+    // Browse button whenever no native/portal file picker is available - lists a
+    // directory's contents internally via a local file:// XMLHttpRequest GET. Qt
+    // 5.15 disables that by default as a hardening step (aimed at browser-like
+    // contexts fetching arbitrary local files; moot here, since this is a trusted
+    // desktop app only ever browsing what the OS file dialog already exposes), so
+    // without this the fallback dialog's file listing silently returns nothing and
+    // Browse never shows any files to pick.
+    qputenv("QML_XHR_ALLOW_FILE_READ", "1");
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif // if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

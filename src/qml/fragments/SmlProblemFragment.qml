@@ -104,18 +104,14 @@ Item
                     break
                 }
             }
-
-            console.log("Current __comparison_values_list content: " + JSON.stringify(sustainml_fragment_problem.__comparison_values_list));
         }
         onLoaded_item_signal:
         {
-            console.log("Signal received: " + component + " " + signal_kind + " " + iteration_id)
             if (component === "general_view")
             {
                 if (signal_kind === "add_to_compare")
                 {
                     sustainml_fragment_problem.__comparison_interation_ids_list.push(iteration_id)
-                    console.log("Added iteration id " + iteration_id + " to comparison list: " + sustainml_fragment_problem.__comparison_interation_ids_list)
                     problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
                     sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                 }
@@ -126,8 +122,6 @@ Item
                     if (index !== -1) {
                         sustainml_fragment_problem.__comparison_interation_ids_list.splice(index, 1);
                     }
-                    console.log("Get rid of iteration id " + iteration_id + " from comparison list: " + sustainml_fragment_problem.__comparison_interation_ids_list)
-
                     if (sustainml_fragment_problem.__comparison_interation_ids_list.length < 2)
                     {
                         for (var i = 0; i < sustainml_fragment_problem.__comparison_values_list.length; i++)
@@ -151,8 +145,6 @@ Item
             {
                 if (signal_kind === "add_to_compare")
                 {
-                    console.log("Content of __comparison_values_list: " + JSON.stringify(sustainml_fragment_problem.__comparison_values_list))
-                    console.log("Adding iteration id " + iteration_id + " to comparison list")
                     var already = sustainml_fragment_problem.__comparison_values_list.some(function(e){ return e.title === iteration_id })
                     if (!already)
                     {
@@ -164,11 +156,6 @@ Item
                         sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                         problem_fragment_view.focus(newStackId, problem_id)
                     }
-                    else
-                    {
-                        console.log("The comparison " + iteration_id + " already in comparison list: " + sustainml_fragment_problem.__comparison_values_list.map(function(e) { return e.id + ": " + e.title }).join(", "))
-                    }
-
                 }
             }
             else if (component === "comparison_view")

@@ -177,12 +177,29 @@ Window {
             main_window.refreshing = false
         }
 
+        // The LLM-generated "keywords"/"applications" fields are meant to be
+        // arrays, but the prompt template describes them as plain quoted
+        // strings (like every other field) - so the model (llama3) sometimes
+        // returns a string instead of an array for these two, depending on
+        // the dataset. array.join(", ") throws on a string (no such method),
+        // which used to abort this whole handler mid-way - silently leaving
+        // every field below it (and the screen navigation/tasking reset)
+        // never applied. Accept either shape instead of assuming one.
+        function __to_joined_string(value)
+        {
+            if (Array.isArray(value))
+                return value.join(", ")
+            if (typeof value === "string")
+                return value
+            return ""
+        }
+
         function onDataset_metadata_available(dataset_metadata)
         {
             main_window.dataset_description = dataset_metadata.description ?? ""
             main_window.dataset_topic = dataset_metadata.topic ?? ""
-            main_window.dataset_keywords = dataset_metadata.keywords.join(", ") ?? ""
-            main_window.dataset_applications = dataset_metadata.applications.join(", ") ?? ""
+            main_window.dataset_keywords = __to_joined_string(dataset_metadata.keywords)
+            main_window.dataset_applications = __to_joined_string(dataset_metadata.applications)
             main_window.dataset_profile = dataset_metadata.profile ?? ""
             main_window.load_screen(ScreenManager.Screens.Definition)
             main_window.refreshing = false
@@ -835,6 +852,14 @@ Window {
                     if (ds) {
                         ds.dataset_path_text = ""
                     }
+                }
+
+                onDataset_metadata_reiterated: {
+                    main_window.dataset_description = description
+                    main_window.dataset_topic = topic
+                    main_window.dataset_profile = profile
+                    main_window.dataset_keywords = keywords
+                    main_window.dataset_applications = applications
                 }
 
                 onSend_task: {
