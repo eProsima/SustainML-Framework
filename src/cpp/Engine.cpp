@@ -367,6 +367,18 @@ QString Engine::write_unet_visualizer(
     QString page = QString::fromUtf8(tmpl.readAll());
     tmpl.close();
 
+    // Model structure logic shared with the in-app U-Net graph (QML-only pragma removed)
+    QFile model_js(":/qml/utils/UnetModel.js");
+    if (!model_js.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        emit update_log("Error: U-Net model script not found in resources");
+        return QString();
+    }
+    QString model_js_str = QString::fromUtf8(model_js.readAll());
+    model_js.close();
+    model_js_str.remove(QRegularExpression("^\\s*\\.pragma library\\s*$", QRegularExpression::MultilineOption));
+    page.replace("/*__UNET_MODEL_JS__*/", model_js_str);
+
     QJsonParseError err;
     QJsonDocument models_doc = QJsonDocument::fromJson(models_json.toUtf8(), &err);
     if (err.error != QJsonParseError::NoError || !models_doc.isArray())

@@ -12,18 +12,8 @@
     and the model selected in the GUI, writes the result to a temporary file and
     the GUI opens it in the system browser. The page is fully self-contained.
 
-    The layer structure is derived from the jsonl fields with the rule below,
-    which was verified against the ONNX graphs of all 217 models (every Conv /
-    ConvTranspose weight shape and the total parameter count match):
-
-      encoder level i (1..depth): 2 x [Conv k_i, ReLU], C*2^i channels, then MaxPool 2x2
-      bottleneck:                 2 x [Conv k_depth, ReLU], C*2^depth channels
-      decoder level i (depth..1): ConvTranspose 2x2 s2 (C*2^i -> C*2^i),
-                                  Concat with encoder level i,
-                                  2 x [Conv k_i, ReLU], C*2^(i-1) channels
-      output:                     Conv 1x1 -> 1 channel (no activation)
-
-    where C = initial_channels and k = kernel_sizes. All convs use "same" padding.
+    The layer structure is derived from the jsonl fields by src/qml/utils/UnetModel.js
+    (shared with the in-app U-Net graph), see the rule documented there.
 -->
 <style>
 :root {
@@ -49,6 +39,7 @@
 
     --op-k3: #09487e;
     --op-k5: #c26a00;
+    --diff: #3d8a1f;
     --op-pool: #b3261e;
     --op-up: #3d8a1f;
     --op-skip: #9aa39a;
@@ -80,6 +71,7 @@
 
         --op-k3: #6fa8e0;
         --op-k5: #f0a040;
+        --diff: #9fd97e;
         --op-pool: #ef6f66;
         --op-up: #7cc257;
         --op-skip: #6f7a6f;
@@ -109,6 +101,7 @@
     --bottleneck-fill: #4b7a36;
     --op-k3: #6fa8e0;
     --op-k5: #f0a040;
+    --diff: #9fd97e;
     --op-pool: #ef6f66;
     --op-up: #7cc257;
     --op-skip: #6f7a6f;
@@ -191,9 +184,9 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
 th { color: var(--text-muted); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-tr.stage td { background: var(--surface-2); font-weight: 700; color: var(--accent); }
+tr.stage td { background: var(--surface-2); font-weight: 700; color: var(--diff); }
 .table-scroll { overflow-x: auto; }
-.diff { color: var(--op-k5); font-weight: 700; }
+.diff { color: var(--diff); font-weight: 700; }
 
 details summary { cursor: pointer; font-weight: 800; font-size: 18px; list-style: none; }
 details summary::-webkit-details-marker { display: none; }
@@ -205,8 +198,6 @@ details[open] summary { margin-bottom: 12px; }
 .explain ul { margin: 0 0 10px; padding-left: 20px; }
 .explain li { margin-bottom: 6px; }
 .here { background: var(--lime); color: #263026; border-radius: 4px; padding: 0 5px; font-weight: 700; white-space: nowrap; }
-.callout { border-left: 4px solid var(--accent-2); background: var(--surface-2); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 14px; margin-top: 8px; }
-.ok { color: var(--accent-2); font-weight: 700; }
 .warn { color: var(--op-pool); font-weight: 700; }
 footer { color: var(--text-muted); font-size: 12px; margin-top: 24px; }
 footer a { color: var(--accent-2); }
@@ -240,127 +231,13 @@ footer a { color: var(--accent-2); }
 // Replaced by Engine::write_unet_visualizer() with {"models": [...], "selected": "unet_model_XXX"}
 const DATA = /*__UNET_DATA__*/null;
 
-// Original U-Net (Ronneberger et al., 2015, Fig. 1). Parameter count computed from the figure's layer sizes.
-const ORIGINAL = {
-    input: "572×572×1",
-    output: "388×388×2",
-    levels: 4,
-    kernels: "3×3 everywhere",
-    channels: "64 → 128 → 256 → 512",
-    bottleneck: "1024 (doubled)",
-    params: 31030658
-};
+// Model structure helpers (ORIGINAL, buildModel, fmtCount, fmtBytes, kx, shapeStr, ...).
+// Engine::write_unet_visualizer() inlines src/qml/utils/UnetModel.js here, the same file the
+// in-app U-Net graph uses, so both always show identical numbers.
+/*__UNET_MODEL_JS__*/
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
-
-function fmtCount(n) {
-    if (n >= 1e9) return (n / 1e9).toFixed(2) + " G";
-    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e8 ? 0 : 2) + " M";
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + " k";
-    return String(n);
-}
-function fmtBytes(b) {
-    if (b >= 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + " MB";
-    if (b >= 1024) return (b / 1024).toFixed(1) + " kB";
-    return b + " B";
-}
-const kx = k => k + "×" + k;
-const shapeStr = (c, s) => c + " × " + s + " × " + s;
-
-// ---------------------------------------------------------------------------
-// Build the full layer list of one model from its metadata.
-// ---------------------------------------------------------------------------
-function buildModel(info) {
-    const d = info.depth, C = info.initial_channels, S = info.input_size, K = info.kernel_sizes;
-    const inC = info.input_channels;
-    const ops = [];     // every ONNX-level operation, in order
-    const maps = [];    // feature maps to draw
-    let stage = "";
-
-    function conv(cin, cout, k, res, level, role) {
-        const params = cout * cin * k * k + cout;
-        const macs = cout * res * res * cin * k * k;
-        ops.push({ stage, op: "Conv " + kx(k) + (role === "output" ? "" : " + ReLU"), k, cin, cout, res, params, macs });
-        return { params, macs };
-    }
-
-    // Input
-    maps.push({ kind: "input", level: 0, ch: inC, res: S, title: "Input image", op: "RGB input tile" });
-
-    // Encoder
-    let cin = inC;
-    for (let i = 1; i <= d; i++) {
-        stage = "Encoder level " + i;
-        const res = S >> (i - 1), ch = C << i, k = K[i - 1];
-        for (let j = 0; j < 2; j++) {
-            const c = conv(j ? ch : cin, ch, k, res, i - 1);
-            maps.push({ kind: "enc", level: i - 1, ch, res, k, stage, title: stage + ", conv " + (j + 1), op: "Conv " + kx(k) + " + ReLU", ...c });
-        }
-        cin = ch;
-        ops.push({ stage, op: "MaxPool 2×2, stride 2", k: 2, cin: ch, cout: ch, res: res >> 1, params: 0, macs: 0 });
-    }
-
-    // Bottleneck
-    stage = "Bottleneck";
-    {
-        const res = S >> d, ch = C << d, k = K[d];
-        for (let j = 0; j < 2; j++) {
-            const c = conv(ch, ch, k, res, d);
-            maps.push({ kind: "bottleneck", level: d, ch, res, k, stage, title: "Bottleneck, conv " + (j + 1), op: "Conv " + kx(k) + " + ReLU", ...c });
-        }
-    }
-
-    // Decoder
-    for (let i = d; i >= 1; i--) {
-        stage = "Decoder level " + i;
-        const res = S >> (i - 1), up = C << i, skip = C << i, out = C << (i - 1), k = K[i - 1];
-        const upParams = up * up * 4 + up, upMacs = up * up * 4 * (res >> 1) * (res >> 1);
-        ops.push({ stage, op: "ConvTranspose 2×2, stride 2", k: 2, cin: up, cout: up, res, params: upParams, macs: upMacs });
-        ops.push({ stage, op: "Concat with encoder level " + i, k: 0, cin: up + skip, cout: up + skip, res, params: 0, macs: 0 });
-        maps.push({
-            kind: "concat", level: i - 1, ch: up + skip, upCh: up, skipCh: skip, res, stage,
-            title: stage + ", upsample + skip", op: "ConvTranspose 2×2 (" + up + " ch) + copy of encoder level " + i + " (" + skip + " ch)",
-            params: upParams, macs: upMacs
-        });
-        for (let j = 0; j < 2; j++) {
-            const c = conv(j ? out : up + skip, out, k, res, i - 1);
-            maps.push({ kind: "dec", level: i - 1, ch: out, res, k, stage, title: stage + ", conv " + (j + 1), op: "Conv " + kx(k) + " + ReLU", ...c });
-        }
-    }
-
-    // Output
-    stage = "Output";
-    {
-        const c = conv(C, 1, 1, S, 0, "output");
-        maps.push({ kind: "output", level: 0, ch: 1, res: S, stage, title: "Output mask", op: "Conv 1×1, no activation (raw scores)", ...c });
-    }
-
-    const params = ops.reduce((a, o) => a + o.params, 0);
-    const macs = ops.reduce((a, o) => a + o.macs, 0);
-    const convCount = ops.filter(o => o.op.startsWith("Conv ")).length;
-
-    // Theoretical receptive field along the deepest path (input -> bottleneck -> output).
-    // Conv k: rf += (k-1)*jump. MaxPool 2/2: rf += jump, jump *= 2.
-    // ConvTranspose 2/2 with stride == kernel maps each output pixel to one input pixel: jump /= 2.
-    let rf = 1, jump = 1;
-    for (let i = 1; i <= d; i++) { rf += 2 * (K[i - 1] - 1) * jump; rf += jump; jump *= 2; }
-    rf += 2 * (K[d] - 1) * jump;
-    for (let i = d; i >= 1; i--) { jump /= 2; rf += 2 * (K[i - 1] - 1) * jump; }
-
-    // Largest single activation tensor (float32)
-    const peak = Math.max(...maps.map(m => m.ch * m.res * m.res)) * 4;
-
-    // Compute share per stage
-    const stages = [];
-    for (const o of ops) {
-        let s = stages.find(x => x.name === o.stage);
-        if (!s) { s = { name: o.stage, macs: 0, params: 0 }; stages.push(s); }
-        s.macs += o.macs; s.params += o.params;
-    }
-
-    return { info, ops, maps, params, macs, convCount, rf, peak, stages };
-}
 
 // ---------------------------------------------------------------------------
 // U-shaped SVG diagram
@@ -570,7 +447,7 @@ function renderPage(models, selectedName) {
 
     <div class="tiles">
         <div class="tile"><div class="label">Parameters</div><div class="value">${fmtCount(m.params)}</div>
-            <div class="note">${m.params.toLocaleString()} · ${paramsMatch ? '<span class="ok">matches metadata</span>' : `<span class="warn">metadata says ${info.Mparams} M</span>`}</div></div>
+            <div class="note">${m.params.toLocaleString()}${paramsMatch ? "" : ` · <span class="warn">metadata says ${info.Mparams} M: this model may not follow the standard layout, so the graph may be inaccurate</span>`}</div></div>
         <div class="tile"><div class="label">Compute (MACs)</div><div class="value">${fmtCount(m.macs)}</div>
             <div class="note">Metadata: ${info.Mflops.toFixed(1)} MFLOPs*</div></div>
         <div class="tile"><div class="label">Receptive field</div><div class="value">${m.rf}×${m.rf} px</div>
@@ -622,7 +499,6 @@ function renderPage(models, selectedName) {
             <li><b>Initial channels</b> (${hl(true, String(C))}): the width of the network, i.e. its capacity. Doubling it roughly quadruples both parameters and compute. The first encoder level already uses ${C << 1} channels. <i>initial_channels</i> only appears at the last decoder level.</li>
             <li><b>Kernel sizes</b> (${hl(true, "[" + K.join(", ") + "]")}): one per encoder level plus the bottleneck. The decoder reuses the kernel of the matching encoder level. A 5×5 kernel sees more context than 3×3, but costs about 2.8× as much per layer.</li>
         </ul>
-        <div class="callout">These models come with architecture metadata only: no training task, dataset or accuracy. Their weights look like untrained, randomly initialised values (they match PyTorch's default initialisation in every layer), so they describe network <i>shapes</i> for hardware latency and energy estimation rather than ready-to-use segmenters. This page therefore does not claim what each one is best at. It shows the structure and what follows from it. Together, the 217 models cover combinations of input size (64 to 512), depth (1 to 3), initial channels (8 to 64) and kernel sizes (3 or 5).</div>
     </section>
 
     <details class="card">
