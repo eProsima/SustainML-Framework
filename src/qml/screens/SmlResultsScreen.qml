@@ -490,9 +490,19 @@ Item
             // All tabs were closed - show a neutral empty placeholder rather than
             // relabeling it with whatever problem_id was last active (which read as a
             // real, but uncloseable, "Problem N" tab).
+            //
+            // stack_id is 0, not -1: the six onNew_*_node_output handlers below convert
+            // this placeholder into the first real tab in place (via update_stack_id/
+            // update_problem_id) whenever list_of_problems is still empty, and that
+            // conversion looks specifically for a tab whose stack_id is 0 (matching the
+            // very first placeholder SmlTabView itself creates on startup). Using -1
+            // here instead used to mean that conversion silently found no match after a
+            // close-all-tabs cycle: the stale "New Tab" entry was left behind forever,
+            // and the first loaded/live task after it was hijacked into its content slot
+            // instead of getting its own correctly labeled tab.
             root.current_problem_id = -1
-            tab_view.create_new_tab("New Tab", -1, -1, "problem_view")
-            tab_view.focus(-1, -1)
+            tab_view.create_new_tab("New Tab", 0, -1, "problem_view")
+            tab_view.focus(0, -1)
             engine.request_current_data(true)
         }
     }
