@@ -235,7 +235,7 @@ Item
         visible: !root.__reiterate
         icon_name: Settings.upload_icon_name
         text_kind: SmlText.TextKind.Header_2
-        text_value: "Upload Dataset"
+        text_value: "Upload dataset"
         rounded: true
         color: Settings.app_color_green_4
         color_pressed: Settings.app_color_green_1
@@ -827,7 +827,7 @@ Item
         {
             id: goal_header
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Model Goal"
+            text_value: "Model goal"
             color: goal_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1174,7 +1174,7 @@ Item
             id: dataset_metadata_topic_header
             visible: root.__dataset_topic !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Topic"
+            text_value: "Dataset topic"
             color: dataset_metadata_topic_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1225,7 +1225,7 @@ Item
             id: dataset_metadata_keywords_header
             visible: root.__dataset_keywords !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Keywords"
+            text_value: "Dataset keywords"
             color: dataset_metadata_keywords_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1276,7 +1276,7 @@ Item
             id: dataset_metadata_applications_header
             visible: root.__dataset_applications !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Applications"
+            text_value: "Dataset applications"
             color: dataset_metadata_applications_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1327,7 +1327,7 @@ Item
             id: dataset_metadata_profile_header
             visible: root.__dataset_profile !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Profile"
+            text_value: "Dataset profile"
             color: dataset_metadata_profile_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {

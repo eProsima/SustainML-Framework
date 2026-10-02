@@ -228,6 +228,7 @@ Window {
         function onModels_available(list_models)
         {
             main_window.model_list = list_models || []
+            main_window.unetListContentY = 0    // new list: start from the top
             main_window.refreshing = false
         }
 
@@ -417,6 +418,11 @@ Window {
 
     // Load JSONL file with per-model info
     function loadUnetInfo() {
+        // Static data shipped with the app: load it once (retried only while empty).
+        // Reloading on every visit replaced the objects the U-Net graph is bound to,
+        // which rebuilt and scrolled the graph screen during the transition back.
+        if (Object.keys(unetInfoMap).length > 0)
+            return
         var url = engine.unet_models_info_url()
         if (!url)
             return
@@ -471,6 +477,56 @@ Window {
             "depth " + depth + ", initial " + initCh + " feature channels; " +
             "kernel sizes [" + ks + "]; " +
             flops + " MFLOPs, " + params + " M parameters."
+    }
+
+    // U-Net graph screen: one card per opened model, kept here so the cards survive navigation
+    property var unetOpenModels: []
+    property string unetActiveModel: ""
+    // Settings "Save" button is disabled when Settings was opened from the start screen
+    property bool settings_save_enabled: true
+
+    // Scroll position of the U-Net models list, restored when coming back to it
+    // (that screen is recreated every time it is shown)
+    property real unetListContentY: 0
+
+    // Open (or focus) the card of a model and show the U-Net graph screen
+    function openUnetGraph(modelName) {
+        if (!modelName)
+            return
+        if (unetOpenModels.indexOf(modelName) < 0)
+            unetOpenModels = unetOpenModels.concat([modelName])
+        unetActiveModel = modelName
+        load_screen(ScreenManager.Screens.UNetGraph)
+    }
+
+    function selectUnetCard(modelName) {
+        unetActiveModel = modelName
+    }
+
+    // Called from a card's own delegate: it must stay the last statement of that handler,
+    // because reassigning unetOpenModels destroys the delegate
+    function closeUnetCard(modelName) {
+        var idx = unetOpenModels.indexOf(modelName)
+        if (idx < 0)
+            return
+        var remaining = unetOpenModels.filter(function(name) { return name !== modelName })
+        if (unetActiveModel === modelName)
+            unetActiveModel = remaining.length > 0 ? remaining[Math.min(idx, remaining.length - 1)] : ""
+        unetOpenModels = remaining
+    }
+
+    // Open the architecture visualization of a U-Net model in the system browser
+    function openUnetVisualizer(modelName) {
+        var models = []
+        for (var name in unetInfoMap)
+            models.push(unetInfoMap[name])
+        if (models.length === 0) {
+            console.log("[UnetInfo] Models info not loaded, cannot open visualizer for", modelName)
+            return
+        }
+        var url = engine.write_unet_visualizer(JSON.stringify(models), modelName)
+        if (url)
+            Qt.openUrlExternally(url)
     }
 
     function open_hf_analyze(modelObj) {
@@ -787,10 +843,9 @@ Window {
     {
         id: stack_view
         anchors.fill: parent
-        // Shown once, on launch, bypassing load_screen()/its _screenInst cache on
-        // purpose: it's a one-shot splash, not a destination - once you leave it
-        // (via its own Start button, below), nothing ever navigates back to it,
-        // since load_screen() treats Screens.Home as an alias for Definition.
+        // Shown on launch, bypassing load_screen()/its _screenInst cache. Home buttons never
+        // lead back to it (load_screen() treats Screens.Home as an alias for Definition), but
+        // it has its own Screens.Start identity so Back from the gear (Settings) returns here.
         initialItem: home_screen
 
         // START SCREEN (shown once, at launch, only)
@@ -801,6 +856,10 @@ Window {
             SmlHomeScreen
             {
                 id: home_screen_component
+
+                // Registers the splash as the current screen, so a screen opened from it
+                // (the gear) can come back here instead of to the Definition screen
+                Component.onCompleted: ScreenManager.current_screen = ScreenManager.Screens.Start
 
                 onGo_problem_definition: main_window.load_screen(ScreenManager.Screens.Definition)
             }
@@ -1132,6 +1191,7 @@ Window {
                 metadata: main_window.ml_model_metadata_node_last_status
                 hf_saved_searches: main_window.hf_saved_searches
                 hf_compare_history: main_window.hf_compare_history
+                save_enabled: main_window.settings_save_enabled
 
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_back: main_window.go_back()
@@ -1214,6 +1274,31 @@ Window {
                     onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
                 }
 
+                // U-NET GRAPHS: the cards opened so far
+                SmlButton
+                {
+                    id: unet_go_graphs_button
+                    icon_name: Settings.analyze_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "U-Net graphs"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: main_window.unetOpenModels.length > 0
+                                  ? "Go to the U-Net graphs screen (" + main_window.unetOpenModels.length + " open)"
+                                  : "Go to the U-Net graphs screen (click a model below to open its graph)"
+                    anchors {
+                        top: unet_go_home_button.top
+                        left: unet_go_back_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.UNetGraph)
+                }
+
                 // MAIN CONTENT – two columns with shared vertical scroll
                 Rectangle {
                     id: unet_content
@@ -1247,6 +1332,39 @@ Window {
                             anchors.margins: Settings.spacing_big
                             clip: true
 
+                            // Restore the previous scroll position as soon as the rows are laid out
+                            // (contentHeight grows after creation), and only start recording after that
+                            property bool __restored: false
+                            onContentYChanged: if (__restored) main_window.unetListContentY = contentY
+                            onContentHeightChanged: __try_restore()
+                            Component.onCompleted: {
+                                __try_restore()
+                                unetListRestoreFallback.start()
+                            }
+                            function __try_restore() {
+                                if (__restored)
+                                    return
+                                var target = main_window.unetListContentY
+                                if (target <= 0) {
+                                    __restored = true
+                                } else if (contentHeight - height >= target) {
+                                    contentY = target
+                                    __restored = true
+                                }
+                            }
+                            // List shorter than before: go as far as it allows
+                            Timer {
+                                id: unetListRestoreFallback
+                                interval: 500
+                                onTriggered: {
+                                    if (!unetList.__restored) {
+                                        unetList.contentY = Math.max(0, Math.min(main_window.unetListContentY,
+                                                                                 unetList.contentHeight - unetList.height))
+                                        unetList.__restored = true
+                                    }
+                                }
+                            }
+
                             contentWidth: width
                             contentHeight: modelsColumn.implicitHeight + Settings.spacing_big
 
@@ -1277,29 +1395,85 @@ Window {
                                     }
                                 }
 
-                                // One row per model
+                                // One row per model, click to open its architecture visualization
                                 Repeater {
                                     model: main_window.model_list
-                                    delegate: Row {
+                                    delegate: Rectangle {
+                                        id: unetRow
                                         width: parent.width
-                                        spacing: Settings.spacing_big
+                                        height: unetRowContent.implicitHeight + Settings.spacing_small
+                                        radius: 6
+                                        color: unetRowMouse.pressed || unetRow.__flash
+                                               ? Qt.rgba(Settings.app_color_green_4.r, Settings.app_color_green_4.g, Settings.app_color_green_4.b, 0.35)
+                                               : unetRowMouse.containsMouse ? Settings.app_color_light
+                                               // Transparent light gray, not "transparent" (black), so the fade never passes through dark gray
+                                               : Qt.rgba(Settings.app_color_light.r, Settings.app_color_light.g, Settings.app_color_light.b, 0)
+                                        Behavior on color { ColorAnimation { duration: 50 } }
 
-                                        // LEFT COLUMN: model name
-                                        Text {
-                                            text: modelData
-                                            font.pixelSize: 13
-                                            color: Settings.app_color_green_4
-                                            elide: Text.ElideRight
-                                            width: parent.width * 0.2
+                                        // Keeps the "clicked" color visible briefly, even for a quick click
+                                        property bool __flash: false
+                                        Timer {
+                                            id: unetRowFlashTimer
+                                            interval: 100
+                                            onTriggered: unetRow.__flash = false
                                         }
 
-                                        // RIGHT COLUMN: description
-                                        Text {
-                                            text: getUnetDescription(modelData)
-                                            font.pixelSize: 13
-                                            color: Settings.app_color_green_1
-                                            wrapMode: Text.WordWrap
-                                            width: parent.width * 0.75
+                                        Row {
+                                            id: unetRowContent
+                                            width: parent.width
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            spacing: Settings.spacing_big
+
+                                            // LEFT COLUMN: model name
+                                            Text {
+                                                text: modelData
+                                                font.pixelSize: 13
+                                                font.underline: unetRowMouse.containsMouse
+                                                color: Settings.app_color_green_4
+                                                elide: Text.ElideRight
+                                                width: parent.width * 0.2
+                                            }
+
+                                            // RIGHT COLUMN: description
+                                            Text {
+                                                text: getUnetDescription(modelData)
+                                                font.pixelSize: 13
+                                                color: Settings.app_color_green_1
+                                                wrapMode: Text.WordWrap
+                                                width: parent.width * 0.75
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            id: unetRowMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                unetRow.__flash = true
+                                                main_window.openUnetGraph(modelData)
+                                                unetRowFlashTimer.restart()
+                                            }
+                                        }
+
+                                        Controls2.ToolTip {
+                                            id: unetRowTooltip
+                                            visible: unetRowMouse.containsMouse && !unetRowMouse.pressed && !unetRow.__flash
+                                            text: "Click to open the architecture graph of " + modelData
+                                            delay: 150
+                                            x: unetRowMouse.mouseX + 12
+                                            y: unetRowMouse.mouseY + 18
+
+                                            background: Rectangle {
+                                                color: Qt.rgba(0.18, 0.18, 0.18, 0.75)
+                                                radius: 6
+                                            }
+                                            contentItem: Text {
+                                                text: unetRowTooltip.text
+                                                color: "white"
+                                                font.pixelSize: 12
+                                                padding: 8
+                                            }
                                         }
                                     }
                                 }
@@ -1323,6 +1497,258 @@ Window {
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+        // U-Net graph screen: one card per opened U-Net model with its architecture graph
+        Component
+        {
+            id: uNetGraph_screen
+            Rectangle
+            {
+                id: unetGraphScreen
+                color: "transparent"
+
+                readonly property color __card_color: ScreenManager.night_mode ? "#303030" : "white"
+
+                // Front-truncated text with literal "..." (as SmlTabView does: the title font's
+                // ellipsis glyph renders badly), or nothing when not even that fits
+                function __elide_left(str, metrics, avail_width) {
+                    if (avail_width <= 0)
+                        return ""
+                    if (metrics.advanceWidth(str) <= avail_width)
+                        return str
+                    for (var i = 1; i < str.length; i++) {
+                        var candidate = "..." + str.substring(i)
+                        if (metrics.advanceWidth(candidate) <= avail_width)
+                            return candidate
+                    }
+                    return ""
+                }
+
+                // HOME BUTTON
+                SmlButton
+                {
+                    id: unet_graph_home_button
+                    icon_name: Settings.home_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Home"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Go to Home screen"
+                    anchors {
+                        top: parent.top
+                        topMargin: Settings.spacing_normal
+                        left: parent.left
+                        leftMargin: Settings.spacing_normal
+                    }
+                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                }
+
+                // BACK ARROW
+                SmlButton
+                {
+                    id: unet_graph_back_button
+                    icon_name: Settings.back_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: ""
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Back to U-Net models"
+                    anchors {
+                        top: unet_graph_home_button.top
+                        left: unet_graph_home_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: main_window.go_back()
+                }
+
+                // CARDS: one per opened model, styled like the Results screen tabs (SmlTabView)
+                ListView {
+                    id: unetCards
+                    orientation: ListView.Horizontal
+                    spacing: 0
+                    clip: true
+                    interactive: false
+                    height: 36
+                    anchors {
+                        top: unet_graph_back_button.bottom
+                        topMargin: Settings.spacing_normal
+                        left: parent.left
+                        right: parent.right
+                    }
+                    model: main_window.unetOpenModels
+
+                    delegate: Rectangle {
+                        id: unetCard
+                        required property var modelData
+                        required property int index
+                        readonly property bool active: unetCard.modelData === main_window.unetActiveModel
+                        readonly property bool next_active: main_window.unetOpenModels[unetCard.index + 1] === main_window.unetActiveModel
+                        readonly property color shadow_color: active
+                                ? (ScreenManager.night_mode ? "#707070" : "#c0c0c0")
+                                : (ScreenManager.night_mode ? "black" : "#d0d0d0")
+
+                        // share the bar like SmlTabView: at most 200 px, narrower as more cards open
+                        width: Math.min(200, unetCards.width / Math.max(1, unetCards.count))
+                        height: 36
+                        radius: Settings.input_default_rounded_radius
+                        color: active ? unetGraphScreen.__card_color
+                             : ScreenManager.night_mode ? Settings.app_color_dark : Settings.app_color_light
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: unetCard.index === 0 || unetCard.active ? unetCard.color : unetCard.shadow_color }
+                            GradientStop { position: 0.04; color: unetCard.color }
+                            GradientStop { position: 0.96; color: unetCard.color }
+                            GradientStop { position: 1.0; color: unetCard.next_active ? unetCard.shadow_color : unetCard.color }
+                        }
+
+                        // square bottom half, so the card joins the content below
+                        Rectangle {
+                            width: parent.width
+                            height: parent.height / 2
+                            anchors.bottom: parent.bottom
+                            gradient: Gradient {
+                                orientation: Gradient.Horizontal
+                                GradientStop { position: 0.0; color: unetCard.index === 0 || unetCard.active ? unetCard.color : unetCard.shadow_color }
+                                GradientStop { position: 0.04; color: unetCard.color }
+                                GradientStop { position: 0.96; color: unetCard.color }
+                                GradientStop { position: 1.0; color: unetCard.next_active ? unetCard.shadow_color : unetCard.color }
+                            }
+                        }
+
+                        MouseArea {
+                            id: unetCardMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: main_window.selectUnetCard(unetCard.modelData)
+                        }
+
+                        FontMetrics {
+                            id: unetCardMetrics
+                            font: unetCardTitle.font
+                        }
+
+                        Text {
+                            id: unetCardTitle
+                            anchors { left: parent.left; leftMargin: Math.min(15, unetCard.width * 0.08)
+                                      right: unetCardClose.left; rightMargin: Math.min(15, unetCard.width * 0.08)
+                                      verticalCenter: parent.verticalCenter }
+                            // keeps the end of the name (the model number) when space is short
+                            text: unetGraphScreen.__elide_left(unetCard.modelData, unetCardMetrics, width)
+                            clip: true
+                            font.bold: true
+                            font.family: SustainMLFont.title_font
+                            font.pixelSize: Settings.body_font_size
+                            color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
+                        }
+
+                        SmlIcon {
+                            id: unetCardClose
+                            anchors { right: parent.right; rightMargin: Math.min(15, unetCard.width * 0.08); verticalCenter: parent.verticalCenter }
+                            name: Settings.close_tab_icon_name
+                            size: 16
+                            color: Settings.app_color_dark
+                            nightmode_color: Settings.app_color_light
+
+                            MouseArea {
+                                anchors.fill: parent
+                                anchors.margins: -6
+                                cursorShape: Qt.PointingHandCursor
+                                // must stay the only statement: it destroys this delegate
+                                onClicked: main_window.closeUnetCard(unetCard.modelData)
+                            }
+                        }
+                    }
+
+                    // keep the active card in view
+                    Connections {
+                        target: main_window
+                        function onUnetActiveModelChanged() {
+                            var i = main_window.unetOpenModels.indexOf(main_window.unetActiveModel)
+                            if (i >= 0)
+                                Qt.callLater(function() { unetCards.positionViewAtIndex(i, ListView.Contain) })
+                        }
+                    }
+                    Component.onCompleted: {
+                        var i = main_window.unetOpenModels.indexOf(main_window.unetActiveModel)
+                        if (i >= 0)
+                            positionViewAtIndex(i, ListView.Contain)
+                    }
+                }
+
+                // CONTENT: graph of the active card (full width, like the Results screen)
+                Rectangle {
+                    id: unet_graph_content
+                    anchors {
+                        top: unetCards.bottom
+                        left: parent.left
+                        right: parent.right
+                        bottom: parent.bottom
+                    }
+                    color: unetGraphScreen.__card_color
+                    clip: true
+
+                    Flickable {
+                        id: unetGraphFlick
+                        anchors.fill: parent
+                        anchors.margins: Settings.spacing_big
+                        clip: true
+                        visible: main_window.unetActiveModel !== ""
+                        contentWidth: width
+                        contentHeight: unetGraph.implicitHeight
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        SmlUnetGraph {
+                            id: unetGraph
+                            width: unetGraphFlick.width - 14   // room for the scroll bar
+                            info: main_window.unetInfoMap[main_window.unetActiveModel] || null
+                            onOpen_in_browser: main_window.openUnetVisualizer(model_name)
+                        }
+
+                        Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                            policy: unetGraphFlick.contentHeight > unetGraphFlick.height
+                                    ? Controls2.ScrollBar.AlwaysOn : Controls2.ScrollBar.AlwaysOff
+                            width: 8
+                            contentItem: Rectangle {
+                                radius: 4
+                                color: Settings.app_color_green_4
+                            }
+                            background: Rectangle {
+                                color: "transparent"
+                            }
+                        }
+                    }
+
+                    // A different model starts at the top of its graph
+                    Connections {
+                        target: main_window
+                        function onUnetActiveModelChanged() { unetGraphFlick.contentY = 0 }
+                    }
+
+                    // No card open
+                    Text {
+                        visible: main_window.unetActiveModel === ""
+                        anchors.centerIn: parent
+                        width: parent.width - 2 * Settings.spacing_big
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        text: "No U-Net model open. Go back to the U-Net models list and click a model to open its graph here."
+                        font.family: SustainMLFont.body_font
+                        font.pixelSize: Settings.body_font_size
+                        color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
                     }
                 }
             }
@@ -2873,7 +3299,12 @@ Window {
             main_window.height - 2 * Settings.spacing_big :
             Settings.spacing_big
 
-        onClicked: main_window.load_screen(ScreenManager.Screens.Log);
+        onClicked: {
+            // Nothing to save yet when Settings is opened from the start screen
+            if (ScreenManager.current_screen !== ScreenManager.Screens.Log)
+                main_window.settings_save_enabled = ScreenManager.current_screen !== ScreenManager.Screens.Start
+            main_window.load_screen(ScreenManager.Screens.Log);
+        }
     }
 
     // Screen loader plus background animation trigger. is_back is true only when
@@ -2895,9 +3326,22 @@ Window {
         // Check if actual change is required
         if (ScreenManager.current_screen !== screen)
         {
+            // The start screen is only a Back destination for the gear (Settings) opened
+            // from it: leaving it any other way (its Start button), or moving on from that
+            // Settings screen, is one-way, as before
             if (!is_back)
             {
-                main_window.screen_history.push(ScreenManager.current_screen)
+                if (screen !== ScreenManager.Screens.Log)
+                {
+                    main_window.screen_history = main_window.screen_history.filter(function(s) {
+                        return s !== ScreenManager.Screens.Start
+                    })
+                }
+                if (!(ScreenManager.current_screen === ScreenManager.Screens.Start &&
+                      screen !== ScreenManager.Screens.Log))
+                {
+                    main_window.screen_history.push(ScreenManager.current_screen)
+                }
             }
 
             // Always hide tooltip before starting a transition
@@ -2936,6 +3380,12 @@ Window {
                     break
                 case ScreenManager.Screens.HFresults:
                     screen_to_be_loaded = huggingFace_results_screen
+                    break
+                case ScreenManager.Screens.UNetGraph:
+                    screen_to_be_loaded = uNetGraph_screen
+                    break
+                case ScreenManager.Screens.Start:
+                    screen_to_be_loaded = home_screen
                     break
                 default:
                     screen_to_be_loaded = definition_screen
@@ -3003,6 +3453,7 @@ Window {
                 movement[3] = Settings.app_height * 5
                 break
             case ScreenManager.Screens.Results:
+            case ScreenManager.Screens.UNetGraph:
                 movement[0] = Settings.background_x_final
                 movement[1] = Settings.background_y_final
                 movement[2] = Settings.app_width * 5
@@ -3053,6 +3504,7 @@ Window {
                 break
             default:
             case ScreenManager.Screens.Home:
+            case ScreenManager.Screens.Start:
                 movement[0] = Settings.background_x_initial
                 movement[1] = Settings.background_y_initial
                 movement[2] = Settings.app_width * 5

@@ -18,7 +18,9 @@ Item
         UNet,
         HFsearch,
         Compare,
-        HFresults
+        HFresults,
+        UNetGraph,
+        Start           // launch splash (Start button + gear); Home is an alias for Definition
     }
 
     // Variables that user might change during the app execution
