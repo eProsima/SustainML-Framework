@@ -1163,6 +1163,9 @@ Window {
                     main_window.load_screen(ScreenManager.Screens.Definition)
                 }
                 onGo_back_previous_input: {
+                    var defInstance = _screenInst[ScreenManager.Screens.Definition];
+                    if (defInstance)
+                        defInstance.unlock_for_back();
                     engine.request_orchestrator(parseInt(main_window.current_problem_id), 1, false)
                     main_window.load_screen(ScreenManager.Screens.Definition)
                 }

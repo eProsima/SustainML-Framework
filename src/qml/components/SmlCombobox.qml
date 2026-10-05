@@ -30,6 +30,7 @@ ComboBox {
     // Internal properties
     property bool __edited: false
     property string __search_text: ""
+    property bool __index_changed: false   // set by onCurrentIndexChanged, consumed by onActivated
 
     // External signal
     signal text_changed(string text)
@@ -83,8 +84,19 @@ ComboBox {
     }
     onCurrentIndexChanged:
     {
+        sustainml_custom_combobox.__index_changed = true
         sustainml_custom_combobox.text_changed(sustainml_custom_combobox.model[sustainml_custom_combobox.currentIndex])
         sustainml_custom_combobox.__edited = false
+    }
+    // A pick from the list must always reach the screen. When the screen changed the shown
+    // value itself (e.g. restoring inputs), currentIndex can still point at the user's old
+    // pick, so choosing that same item does not change the index and the handler above
+    // never runs. Qt emits activated() after currentIndexChanged for every pick.
+    onActivated:
+    {
+        if (!sustainml_custom_combobox.__index_changed)
+            sustainml_custom_combobox.text_changed(sustainml_custom_combobox.model[index])
+        sustainml_custom_combobox.__index_changed = false
     }
 
     // Combobox background
@@ -185,6 +197,7 @@ ComboBox {
         padding: 10
 
         onOpened: {
+            sustainml_custom_combobox.__index_changed = false
             sustainml_custom_combobox.__search_text = ""
             if (sustainml_custom_combobox.searchable)
                 popupSearchInput.forceActiveFocus()
