@@ -44,6 +44,11 @@ cd "build/sustainml_modules/lib/sustainml_modules"
 
 pids=()
 
+# Hide only the "pynvml package is deprecated" FutureWarning: carbontracker (and torch)
+# import the old pynvml name, whose v13 package is just a wrapper over the already
+# installed nvidia-ml-py that warns on every import. Other warnings are still shown.
+export PYTHONWARNINGS="${PYTHONWARNINGS:+$PYTHONWARNINGS,}ignore:The pynvml package is deprecated:FutureWarning"
+
 start_node() {
     echo "▶️  Running: $*"
     "$@" &
