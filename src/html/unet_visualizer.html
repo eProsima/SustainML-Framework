@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U-Net Model Viewer</title>
+<!--
+    SustainML U-Net model viewer.
+
+    This file is a template. Engine::write_unet_visualizer() replaces the
+    __UNET_DATA__ placeholder below with the contents of unet_models_info.jsonl
+    and the model selected in the GUI, writes the result to a temporary file and
+    the GUI opens it in the system browser. The page is fully self-contained.
+
+    The layer structure is derived from the jsonl fields by src/qml/utils/UnetModel.js
+    (shared with the in-app U-Net graph), see the rule documented there.
+-->
+<style>
+:root {
+    --bg: #f4f6f3;
+    --surface: #ffffff;
+    --surface-2: #eaeeea;
+    --text: #263026;
+    --text-muted: #5d6b5d;
+    --border: #d3dbd2;
+    --accent: #3f6a2b;
+    --accent-2: #62a343;
+    --accent-3: #64c537;
+    --lime: #cbee19;
+
+    --map-fill: #d7ecc9;
+    --map-stroke: #3f6a2b;
+    --copy-fill: #ffffff;
+    --input-fill: #dfe4ea;
+    --input-stroke: #5b6b7d;
+    --output-fill: #cbee19;
+    --output-stroke: #394039;
+    --bottleneck-fill: #a9d68f;
+
+    --op-k3: #09487e;
+    --op-k5: #c26a00;
+    --diff: #3d8a1f;
+    --op-pool: #b3261e;
+    --op-up: #3d8a1f;
+    --op-skip: #9aa39a;
+    --op-1x1: #0f7c7c;
+
+    --bar: #62a343;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 4px 16px rgba(0, 0, 0, .05);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #1d221d;
+        --surface: #262d26;
+        --surface-2: #2f372f;
+        --text: #e6ebe5;
+        --text-muted: #a3b0a2;
+        --border: #3c463c;
+        --accent: #9fd97e;
+        --accent-2: #7cc257;
+        --accent-3: #64c537;
+
+        --map-fill: #34512a;
+        --map-stroke: #9fd97e;
+        --copy-fill: #262d26;
+        --input-fill: #3a4450;
+        --input-stroke: #a8b6c6;
+        --output-fill: #b6d816;
+        --output-stroke: #e6ebe5;
+        --bottleneck-fill: #4b7a36;
+
+        --op-k3: #6fa8e0;
+        --op-k5: #f0a040;
+        --diff: #9fd97e;
+        --op-pool: #ef6f66;
+        --op-up: #7cc257;
+        --op-skip: #6f7a6f;
+        --op-1x1: #4fc4c4;
+
+        --bar: #7cc257;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+    }
+}
+:root[data-theme="dark"] {
+    --bg: #1d221d;
+    --surface: #262d26;
+    --surface-2: #2f372f;
+    --text: #e6ebe5;
+    --text-muted: #a3b0a2;
+    --border: #3c463c;
+    --accent: #9fd97e;
+    --accent-2: #7cc257;
+    --accent-3: #64c537;
+    --map-fill: #34512a;
+    --map-stroke: #9fd97e;
+    --copy-fill: #262d26;
+    --input-fill: #3a4450;
+    --input-stroke: #a8b6c6;
+    --output-fill: #b6d816;
+    --output-stroke: #e6ebe5;
+    --bottleneck-fill: #4b7a36;
+    --op-k3: #6fa8e0;
+    --op-k5: #f0a040;
+    --diff: #9fd97e;
+    --op-pool: #ef6f66;
+    --op-up: #7cc257;
+    --op-skip: #6f7a6f;
+    --op-1x1: #4fc4c4;
+    --bar: #7cc257;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 16px rgba(0, 0, 0, .25);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Lato, "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; }
+
+header.top {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+    gap: 16px; margin-bottom: 20px;
+}
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-2); font-weight: 700; }
+h1 { margin: 2px 0 6px; font-size: 28px; line-height: 1.2; font-weight: 800; }
+h2 { margin: 0 0 12px; font-size: 18px; font-weight: 800; }
+h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px;
+    padding: 2px 10px; font-size: 13px; color: var(--text-muted); white-space: nowrap;
+}
+.chip b { color: var(--text); font-weight: 700; }
+
+.picker { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.picker select, .picker button {
+    font: inherit; font-size: 14px; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+}
+.picker button { cursor: pointer; min-width: 36px; }
+.picker button:hover { border-color: var(--accent-2); }
+.picker select:focus-visible, .picker button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+
+.card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 18px;
+}
+.card .sub { color: var(--text-muted); font-size: 13px; margin: -6px 0 12px; }
+
+#diagram { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+#diagram text { font-family: inherit; fill: var(--text-muted); }
+#diagram .ch { font-size: 11px; font-weight: 700; fill: var(--text); }
+#diagram .res { font-size: 11px; }
+#diagram .klabel { font-size: 11px; font-weight: 700; }
+#diagram .fmap { cursor: default; transition: opacity .15s; }
+#diagram .fmap:hover rect { stroke-width: 2.5; }
+#diagram.fade { animation: fadein .25s ease-out; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--text-muted); margin-top: 10px; justify-content: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { flex: none; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
+.tile .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.tile .value { font-size: 24px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.tile .note { font-size: 12px; color: var(--text-muted); }
+
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+.grid2 > .card { margin-bottom: 0; }
+
+.bars { display: grid; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 130px 1fr 92px; gap: 10px; align-items: center; font-size: 13px; }
+.bar-track { background: var(--surface-2); border-radius: 4px; height: 14px; overflow: hidden; }
+.bar-fill { background: var(--bar); height: 100%; border-radius: 4px; }
+.bar-row .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-muted); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--text-muted); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.stage td { background: var(--surface-2); font-weight: 700; color: var(--diff); }
+.table-scroll { overflow-x: auto; }
+.diff { color: var(--diff); font-weight: 700; }
+
+details summary { cursor: pointer; font-weight: 800; font-size: 18px; list-style: none; }
+details summary::-webkit-details-marker { display: none; }
+details summary::before { content: "\25B8"; display: inline-block; width: 18px; color: var(--accent-2); transition: transform .15s; }
+details[open] summary::before { transform: rotate(90deg); }
+details[open] summary { margin-bottom: 12px; }
+
+.explain p { margin: 0 0 10px; }
+.explain ul { margin: 0 0 10px; padding-left: 20px; }
+.explain li { margin-bottom: 6px; }
+.here { background: var(--lime); color: #263026; border-radius: 4px; padding: 0 5px; font-weight: 700; white-space: nowrap; }
+.warn { color: var(--op-pool); font-weight: 700; }
+footer { color: var(--text-muted); font-size: 12px; margin-top: 24px; }
+footer a { color: var(--accent-2); }
+
+#tip {
+    position: fixed; pointer-events: none; z-index: 10; opacity: 0; transition: opacity .1s;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: var(--shadow); padding: 10px 12px; font-size: 13px; min-width: 200px; max-width: 280px;
+}
+#tip.show { opacity: 1; }
+#tip .t { font-weight: 800; margin-bottom: 4px; }
+#tip .r { display: flex; justify-content: space-between; gap: 12px; }
+#tip .r span:first-child { color: var(--text-muted); }
+#tip .r span:last-child { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.empty { text-align: center; padding: 80px 16px; color: var(--text-muted); }
+
+@media (max-width: 600px) {
+    h1 { font-size: 22px; }
+    .bar-row { grid-template-columns: 96px 1fr 70px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+"use strict";
+
+// Replaced by Engine::write_unet_visualizer() with {"models": [...], "selected": "unet_model_XXX"}
+const DATA = /*__UNET_DATA__*/null;
+
+// Model structure helpers (ORIGINAL, buildModel, fmtCount, fmtBytes, kx, shapeStr, ...).
+// Engine::write_unet_visualizer() inlines src/qml/utils/UnetModel.js here, the same file the
+// in-app U-Net graph uses, so both always show identical numbers.
+/*__UNET_MODEL_JS__*/
+
+const $ = (sel, el = document) => el.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
+
+// ---------------------------------------------------------------------------
+// U-shaped SVG diagram
+// ---------------------------------------------------------------------------
+function renderDiagram(m) {
+    const d = m.info.depth, S = m.info.input_size;
+    const GAP = 34, PAD_L = 40, PAD_R = 40, PAD_T = 34, LEVEL_GAP = 46;
+
+    // Block height is log-scaled with resolution so 8x8 and 512x512 both stay readable.
+    const hOf = res => Math.round(26 + 22 * Math.log2(res / 4));
+    const wOf = ch => Math.round(6 + 5.2 * Math.log2(Math.max(ch, 1)));
+
+    const levelH = [], levelY = [];
+    let y = PAD_T;
+    for (let l = 0; l <= d; l++) {
+        levelH[l] = hOf(S >> l);
+        levelY[l] = y + levelH[l] / 2; // centre line
+        y += levelH[l] + LEVEL_GAP;
+    }
+    const height = y - LEVEL_GAP + 34;
+
+    // Assign x positions sequentially (like the original paper's figure)
+    let x = PAD_L;
+    for (const b of m.maps) {
+        b.w = b.kind === "concat" ? wOf(b.skipCh) + wOf(b.upCh) : wOf(b.ch);
+        b.h = hOf(b.res);
+        b.x = x;
+        b.y = levelY[b.level] - b.h / 2;
+        x += b.w + GAP;
+    }
+    const width = x - GAP + PAD_R;
+
+    const cssVar = name => "var(--" + name + ")";
+    const kColor = k => k === 5 ? cssVar("op-k5") : k === 1 ? cssVar("op-1x1") : cssVar("op-k3");
+    const parts = [];
+
+    parts.push(`<defs>${["k3", "k5", "pool", "up", "skip", "1x1"].map(n =>
+        `<marker id="ah-${n}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="${cssVar("op-" + n)}"/></marker>`).join("")}</defs>`);
+
+    const arrow = (path, name, dashed) =>
+        `<path d="${path}" fill="none" stroke="${cssVar("op-" + name)}" stroke-width="2"${dashed ? ' stroke-dasharray="5 4"' : ""} marker-end="url(#ah-${name})"/>`;
+
+    const maps = m.maps;
+    const encLast = {}; // level -> last encoder (or input-level) block, for skip arrows
+    for (let i = 0; i < maps.length; i++) {
+        const b = maps[i];
+        if (b.kind === "enc" && (!maps[i + 1] || maps[i + 1].kind !== "enc" || maps[i + 1].level !== b.level)) encLast[b.level] = b;
+    }
+
+    // Connections
+    for (let i = 1; i < maps.length; i++) {
+        const a = maps[i - 1], b = maps[i];
+        const ax = a.x + a.w, ay = levelY[a.level];
+        if (b.level === a.level) {
+            // same level: conv (or 1x1) arrow
+            const name = b.kind === "output" ? "1x1" : (b.k === 5 ? "k5" : "k3");
+            if (b.kind === "concat") continue; // not reachable: concat always comes from the level below
+            parts.push(arrow(`M${ax + 2},${ay} L${b.x - 3},${ay}`, name));
+            const label = b.kind === "output" ? "1×1" : kx(b.k);
+            parts.push(`<text class="klabel" x="${(ax + b.x) / 2}" y="${ay - 6}" text-anchor="middle" style="fill:${kColor(b.kind === "output" ? 1 : b.k)}">${label}</text>`);
+        } else if (b.level > a.level) {
+            // going down: max-pool
+            const sx = a.x + a.w / 2, sy = a.y + a.h;
+            const ty = levelY[b.level];
+            parts.push(arrow(`M${sx},${sy + 3} L${sx},${ty} L${b.x - 3},${ty}`, "pool"));
+            // the conv into b also happens here; label its kernel on the horizontal leg
+            parts.push(`<text class="klabel" x="${(sx + b.x) / 2 + 4}" y="${ty - 6}" text-anchor="middle" style="fill:${kColor(b.k)}">${kx(b.k)}</text>`);
+        } else {
+            // going up: transposed conv into the concat block
+            const tx = b.x + b.w - wOf(b.upCh) / 2, ty = b.y + b.h;
+            parts.push(arrow(`M${ax + 2},${ay} L${tx},${ay} L${tx},${ty + 3}`, "up"));
+        }
+    }
+
+    // Skip connections (copy)
+    for (const b of maps) {
+        if (b.kind !== "concat") continue;
+        const src = encLast[b.level];
+        if (!src) continue;
+        const yy = levelY[b.level];
+        parts.push(arrow(`M${src.x + src.w + 4},${yy} L${b.x - 3},${yy}`, "skip", true));
+    }
+
+    // Feature maps
+    maps.forEach((b, idx) => {
+        const g = [];
+        if (b.kind === "concat") {
+            const ws = wOf(b.skipCh), wu = wOf(b.upCh);
+            g.push(`<rect x="${b.x}" y="${b.y}" width="${ws}" height="${b.h}" rx="2" fill="${cssVar("copy-fill")}" stroke="${cssVar("map-stroke")}" stroke-width="1.5" stroke-dasharray="3 2"/>`);
+            g.push(`<rect x="${b.x + ws}" y="${b.y}" width="${wu}" height="${b.h}" rx="2" fill="${cssVar("map-fill")}" stroke="${cssVar("map-stroke")}" stroke-width="1.5"/>`);
+        } else {
+            const fill = { input: "input-fill", output: "output-fill", bottleneck: "bottleneck-fill" }[b.kind] || "map-fill";
+            const stroke = { input: "input-stroke", output: "output-stroke" }[b.kind] || "map-stroke";
+            g.push(`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${cssVar(fill)}" stroke="${cssVar(stroke)}" stroke-width="1.5"/>`);
+        }
+        g.push(`<text class="ch" x="${b.x + b.w / 2}" y="${b.y - 6}" text-anchor="middle">${b.ch}</text>`);
+        parts.push(`<g class="fmap" data-i="${idx}" tabindex="0">${g.join("")}</g>`);
+    });
+
+    // Resolution labels, once per level under its first feature map
+    for (let l = 0; l <= d; l++) {
+        const first = maps.find(b => b.level === l);
+        const r = S >> l;
+        parts.push(`<text class="res" x="${first.x + first.w / 2}" y="${first.y + first.h + 15}" text-anchor="middle">${r}×${r}</text>`);
+    }
+
+    const svg = $("#diagram");
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("width", Math.round(width * 1.15));
+    svg.innerHTML = parts.join("");
+    svg.classList.remove("fade"); void svg.getBoundingClientRect(); svg.classList.add("fade");
+
+    // Tooltips
+    const tip = $("#tip");
+    const show = (b, ev) => {
+        const rows = [
+            ["Shape (C×H×W)", shapeStr(b.ch, b.res)],
+            ["Memory (float32)", fmtBytes(b.ch * b.res * b.res * 4)]
+        ];
+        if (b.kind === "concat") rows.unshift(["Copied + upsampled", b.skipCh + " + " + b.upCh + " ch"]);
+        if (b.params !== undefined) rows.push(["Parameters", b.params.toLocaleString()], ["MACs", fmtCount(b.macs)]);
+        tip.innerHTML = `<div class="t">${esc(b.title)}</div><div style="color:var(--text-muted);margin-bottom:6px">${esc(b.op)}</div>` +
+            rows.map(r => `<div class="r"><span>${r[0]}</span><span>${r[1]}</span></div>`).join("");
+        tip.classList.add("show");
+        move(ev);
+    };
+    const move = ev => {
+        let px, py;
+        if (ev && ev.clientX !== undefined) { px = ev.clientX; py = ev.clientY; }
+        else { const r = ev.target.getBoundingClientRect(); px = r.right; py = r.top; }
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        let lx = px + 14, ly = py + 14;
+        if (lx + tw > window.innerWidth - 8) lx = px - tw - 14;
+        if (ly + th > window.innerHeight - 8) ly = py - th - 14;
+        tip.style.left = Math.max(8, lx) + "px"; tip.style.top = Math.max(8, ly) + "px";
+    };
+    svg.querySelectorAll(".fmap").forEach(el => {
+        const b = maps[+el.dataset.i];
+        el.addEventListener("mouseenter", ev => show(b, ev));
+        el.addEventListener("mousemove", move);
+        el.addEventListener("mouseleave", () => tip.classList.remove("show"));
+        el.addEventListener("focus", ev => show(b, { target: el }));
+        el.addEventListener("blur", () => tip.classList.remove("show"));
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Page sections
+// ---------------------------------------------------------------------------
+function legendItem(color, label, dashed, box) {
+    const sw = box
+        ? `<svg width="16" height="14"><rect x="1" y="1" width="14" height="12" rx="2" fill="${color}" stroke="var(--map-stroke)" stroke-width="1.5"${dashed ? ' stroke-dasharray="3 2"' : ""}/></svg>`
+        : `<svg width="26" height="10"><line x1="1" y1="5" x2="20" y2="5" stroke="${color}" stroke-width="2"${dashed ? ' stroke-dasharray="5 4"' : ""}/><path d="M18,1 L25,5 L18,9 z" fill="${color}"/></svg>`;
+    return `<span>${sw}${label}</span>`;
+}
+
+function renderPage(models, selectedName) {
+    const app = $("#app");
+    const info = models.find(x => x.name === selectedName) || models[0];
+    const m = buildModel(info);
+    const d = info.depth, S = info.input_size, C = info.initial_channels, K = info.kernel_sizes;
+    const paramsMatch = Math.abs(m.params / 1e6 - info.Mparams) < 1e-6;
+    const idx = models.indexOf(info);
+
+    document.title = info.name + " - U-Net Model Viewer";
+
+    const encCh = Array.from({ length: d }, (_, i) => C << (i + 1));
+    const rfPct = Math.min(100, Math.round(100 * m.rf / S));
+
+    const hl = (cond, text) => cond ? `<span class="here">${text}</span>` : text;
+
+    app.innerHTML = `
+    <header class="top">
+        <div>
+            <div class="eyebrow">SustainML · U-Net model</div>
+            <h1>${esc(info.name)}</h1>
+            <div class="chips">
+                <span class="chip">Input <b>${S}×${S}×${info.input_channels}</b></span>
+                <span class="chip">Depth <b>${d}</b></span>
+                <span class="chip">Initial channels <b>${C}</b></span>
+                <span class="chip">Kernels <b>[${K.join(", ")}]</b></span>
+            </div>
+        </div>
+        <div class="picker">
+            <button id="prev" title="Previous model" aria-label="Previous model">←</button>
+            <select id="sel" aria-label="Select model">${models.map(x => `<option${x === info ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>
+            <button id="next" title="Next model" aria-label="Next model">→</button>
+        </div>
+    </header>
+
+    <section class="card">
+        <h2>Architecture</h2>
+        <p class="sub">Each box is a feature map: its height follows the spatial resolution (log scale), its width the number of channels (log scale, exact count above it). Hover a box for details.</p>
+        <div><svg id="diagram" role="img" aria-label="U-Net architecture diagram of ${esc(info.name)}"></svg></div>
+        <div class="legend">
+            ${legendItem("var(--op-k3)", "Conv 3×3 + ReLU")}
+            ${legendItem("var(--op-k5)", "Conv 5×5 + ReLU")}
+            ${legendItem("var(--op-pool)", "Max-pool 2×2")}
+            ${legendItem("var(--op-up)", "Transposed conv 2×2")}
+            ${legendItem("var(--op-skip)", "Skip connection (copy)", true)}
+            ${legendItem("var(--op-1x1)", "Conv 1×1")}
+            ${legendItem("var(--copy-fill)", "Copied feature map", true, true)}
+            ${legendItem("var(--output-fill)", "Output mask", false, true)}
+        </div>
+    </section>
+
+    <div class="tiles">
+        <div class="tile"><div class="label">Parameters</div><div class="value">${fmtCount(m.params)}</div>
+            <div class="note">${m.params.toLocaleString()}${paramsMatch ? "" : ` · <span class="warn">metadata says ${info.Mparams} M: this model may not follow the standard layout, so the graph may be inaccurate</span>`}</div></div>
+        <div class="tile"><div class="label">Compute (MACs)</div><div class="value">${fmtCount(m.macs)}</div>
+            <div class="note">Metadata: ${info.Mflops.toFixed(1)} MFLOPs*</div></div>
+        <div class="tile"><div class="label">Receptive field</div><div class="value">${m.rf}×${m.rf} px</div>
+            <div class="note">${rfPct >= 100 ? "covers the whole input tile" : rfPct + "% of the input width"}</div></div>
+        <div class="tile"><div class="label">Largest feature map</div><div class="value">${fmtBytes(m.peak)}</div>
+            <div class="note">float32, single image</div></div>
+        <div class="tile"><div class="label">Layers</div><div class="value">${m.convCount} conv</div>
+            <div class="note">${d} max-pool, ${d} transposed conv</div></div>
+    </div>
+
+    <div class="grid2">
+        <section class="card">
+            <h2>Where the compute goes</h2>
+            <p class="sub">Share of multiply-accumulate operations per stage. High-resolution stages usually dominate.</p>
+            <div class="bars">${m.stages.map(s => {
+                const pct = 100 * s.macs / m.macs;
+                return `<div class="bar-row"><span>${esc(s.name)}</span><div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div><span class="num">${pct > 0 && pct < 0.1 ? "&lt;0.1" : pct.toFixed(1)}%</span></div>`;
+            }).join("")}</div>
+        </section>
+
+        <section class="card">
+            <h2>Compared with the original U-Net</h2>
+            <p class="sub">Ronneberger et al., 2015 (Fig. 1). <span class="diff">Highlighted</span> rows differ.</p>
+            <div class="table-scroll"><table>
+                <thead><tr><th></th><th>Original</th><th>This model</th></tr></thead>
+                <tbody>
+                    <tr><td>Input</td><td>${ORIGINAL.input}</td><td class="diff">${S}×${S}×${info.input_channels}</td></tr>
+                    <tr><td>Output</td><td>${ORIGINAL.output}</td><td class="diff">${S}×${S}×1</td></tr>
+                    <tr><td>Padding</td><td>none, maps shrink and skips are cropped</td><td class="diff">"same", no cropping</td></tr>
+                    <tr><td>Kernels</td><td>${ORIGINAL.kernels}</td><td${K.every(k => k === 3) ? "" : ' class="diff"'}>[${K.join(", ")}] per level</td></tr>
+                    <tr><td>Pooling steps</td><td>${ORIGINAL.levels}</td><td${d === 4 ? "" : ' class="diff"'}>${d}</td></tr>
+                    <tr><td>Encoder channels</td><td>${ORIGINAL.channels}</td><td class="diff">${encCh.join(" → ")}</td></tr>
+                    <tr><td>Bottleneck</td><td>${ORIGINAL.bottleneck}</td><td class="diff">${C << d} (not doubled)</td></tr>
+                    <tr><td>Upsampling</td><td>2×2 up-conv halves channels</td><td class="diff">2×2 up-conv keeps channels</td></tr>
+                    <tr><td>Conv layers</td><td>23</td><td class="diff">${m.convCount}</td></tr>
+                    <tr><td>Parameters</td><td>${fmtCount(ORIGINAL.params)}</td><td class="diff">${fmtCount(m.params)} (${(100 * m.params / ORIGINAL.params).toFixed(2)}%)</td></tr>
+                </tbody>
+            </table></div>
+        </section>
+    </div>
+
+    <section class="card explain" style="margin-top:18px">
+        <h2>What this model is for, and what its settings mean</h2>
+        <p>A U-Net labels <b>every pixel</b> of an image (semantic segmentation). The encoder, on the left, shrinks the image to gather context. The decoder, on the right, grows it back to full resolution. The skip connections carry fine detail across, so object borders stay sharp. The design comes from biomedical image segmentation and is now common for medical scans, satellite imagery, industrial defect inspection and similar tasks.</p>
+        <p>This model ends in a single output channel, so it produces <b>one value per pixel</b>. For a U-Net this is typically a binary mask (foreground vs. background), although one channel could also hold a per-pixel regression. The graph has no final activation and returns raw scores. For a mask, a sigmoid and a threshold are applied afterwards.</p>
+        <ul>
+            <li><b>Input size</b> (${hl(true, S + "×" + S)}): the tile the model processes at once. Doubling it quadruples the compute, because every layer is a convolution. Larger tiles keep finer detail per image.</li>
+            <li><b>Depth</b> (${hl(true, d + (d === 1 ? " level" : " levels"))}): each extra level halves the resolution once more. This widens how far each pixel can "see" (here ${m.rf}×${m.rf} px), which helps with large objects. A new level has a quarter of the pixels but twice the channels of the level above it, so it costs about as much compute as the other levels and adds many more parameters. Among these models, one extra level multiplies compute by 1.2 to 3 and parameters by 2.6 to 8.</li>
+            <li><b>Initial channels</b> (${hl(true, String(C))}): the width of the network, i.e. its capacity. Doubling it roughly quadruples both parameters and compute. The first encoder level already uses ${C << 1} channels. <i>initial_channels</i> only appears at the last decoder level.</li>
+            <li><b>Kernel sizes</b> (${hl(true, "[" + K.join(", ") + "]")}): one per encoder level plus the bottleneck. The decoder reuses the kernel of the matching encoder level. A 5×5 kernel sees more context than 3×3, but costs about 2.8× as much per layer.</li>
+        </ul>
+    </section>
+
+    <details class="card">
+        <summary>All layers</summary>
+        <div class="table-scroll"><table>
+            <thead><tr><th>Operation</th><th class="num">In ch</th><th class="num">Out ch</th><th class="num">Output H×W</th><th class="num">Parameters</th><th class="num">MACs</th></tr></thead>
+            <tbody>${(() => {
+                let last = "", rows = [];
+                rows.push(`<tr class="stage"><td colspan="6">Input</td></tr><tr><td>RGB image</td><td class="num"></td><td class="num">${info.input_channels}</td><td class="num">${S}×${S}</td><td class="num"></td><td class="num"></td></tr>`);
+                for (const o of m.ops) {
+                    if (o.stage !== last) { rows.push(`<tr class="stage"><td colspan="6">${esc(o.stage)}</td></tr>`); last = o.stage; }
+                    rows.push(`<tr><td>${esc(o.op)}</td><td class="num">${o.cin}</td><td class="num">${o.cout}</td><td class="num">${o.res}×${o.res}</td><td class="num">${o.params ? o.params.toLocaleString() : ""}</td><td class="num">${o.macs ? fmtCount(o.macs) : ""}</td></tr>`);
+                }
+                rows.push(`<tr class="stage"><td>Total</td><td></td><td></td><td></td><td class="num">${m.params.toLocaleString()}</td><td class="num">${fmtCount(m.macs)}</td></tr>`);
+                return rows.join("");
+            })()}</tbody>
+        </table></div>
+    </details>
+
+    <footer>
+        * <i>Mflops</i> and <i>Mparams</i> come from unet_models_info.jsonl. The metadata's FLOP figure counts one operation per multiply-accumulate, counts each transposed convolution per output pixel (4× its actual multiply-accumulates here), and adds the ReLU and max-pool operations. That is why it is slightly higher than the MAC count above, and not 2× MACs as in some other FLOP conventions.
+        The layer structure is derived from the metadata and matches the ONNX graphs of all 217 models.
+        Reference: O. Ronneberger, P. Fischer, T. Brox, <a href="https://arxiv.org/abs/1505.04597" target="_blank" rel="noopener">U-Net: Convolutional Networks for Biomedical Image Segmentation</a>, MICCAI 2015.
+        Model ${idx + 1} of ${models.length}.
+    </footer>`;
+
+    renderDiagram(m);
+
+    const go = name => {
+        try { history.replaceState(null, "", "#" + name); } catch (e) { /* file:// may refuse */ }
+        renderPage(models, name);
+        window.scrollTo({ top: 0 });
+    };
+    $("#sel").addEventListener("change", e => go(e.target.value));
+    $("#prev").addEventListener("click", () => go(models[(idx - 1 + models.length) % models.length].name));
+    $("#next").addEventListener("click", () => go(models[(idx + 1) % models.length].name));
+}
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+(function () {
+    const valid = x => x && typeof x.model_file === "string" && Array.isArray(x.kernel_sizes) &&
+        x.kernel_sizes.length === x.depth + 1 && x.input_size > 0 && x.initial_channels > 0;
+    const models = ((DATA && DATA.models) || []).filter(valid)
+        .map(x => ({ ...x, name: x.model_file.replace(/\.onnx$/, "") }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (!models.length) {
+        $("#app").innerHTML = '<div class="empty"><h1>No U-Net models</h1><p>This page is opened from the SustainML U-Net models screen.</p></div>';
+        return;
+    }
+    let selected = (DATA && DATA.selected) || "";
+    const hash = decodeURIComponent(location.hash.slice(1));
+    if (hash && models.some(x => x.name === hash)) selected = hash;
+    renderPage(models, selected);
+})();
+</script>
+</body>
+</html>

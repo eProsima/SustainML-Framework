@@ -162,7 +162,10 @@ Item
             root.__desired_carbon_footprint = desired_carbon_footprint
             root.__geo_location_continent = geo_location_continent
             root.__geo_location_region = geo_location_region
-            root.__goal = goal
+            // Back from Results (is_reiteration false) must always land on an editable
+            // form: a restored Model goal would disable the problem description fields,
+            // so it is left empty. Re-iterating keeps the original goal.
+            root.__goal = is_reiteration ? goal : ""
             // Not carried by this signal at all (no model_selected parameter above),
             // so there's nothing to restore it to - but it must still be reset to ""
             // here, otherwise a model chosen via the CNN+FPGA direct-model-selection
@@ -173,7 +176,11 @@ Item
             // place, which is why only the CNN+FPGA flow showed this symptom.
             root.__model_selected = ""
             root.__model_selected_copy = ""
-            // root.__hardware_required = hardware_required
+            // Restore the hardware on Back (after __types above, whose change resets the
+            // hardware to the type's default), if it is valid for the restored type
+            if (!is_reiteration && hardware_required !== "" &&
+                    root.filteredHardwareList().indexOf(hardware_required) !== -1)
+                root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
             root.__previous_iteration = 0
             root.__previous_problem_id = 0
@@ -235,7 +242,7 @@ Item
         visible: !root.__reiterate
         icon_name: Settings.upload_icon_name
         text_kind: SmlText.TextKind.Header_2
-        text_value: "Upload Dataset"
+        text_value: "Upload dataset"
         rounded: true
         color: Settings.app_color_green_4
         color_pressed: Settings.app_color_green_1
@@ -585,21 +592,26 @@ Item
             {
                 root.__types = text
 
+                // A model chosen for the previous type (e.g. a U-Net for CNNs) does not apply
+                // to the new one, and while set it disables the goal and description fields
+                if (text !== "") {
+                    root.__model_selected = ""
+                    root.__model_selected_copy = ""
+                    model_select_input.currentIndex = -1
+                }
+
                 if (text.toLowerCase() === "cnns") {
                     // Default hardware to FPGA when CNNs are selected
                     root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
                     required_hardware_input.currentIndex = -1    // use displayText
 
-                    // CNN + FPGA → U-NET fast path: disable goal & request models
-                    goal_input.disabled = true
+                    // CNN + FPGA → U-NET fast path: clear goal & request models
+                    // (goal_input.disabled follows from __types/__hardware_required declaratively)
                     root.__goal = ""
 
                     var cfg = "U_NET_MODELS, " +
                             root.__hardware_required + ", " + text
                     root.ask_models(cfg)
-                } else {
-                    // For non-CNN types keep normal behaviour
-                    goal_input.disabled = false
                 }
             }
             onFocusChanged: {
@@ -827,7 +839,7 @@ Item
         {
             id: goal_header
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Model Goal"
+            text_value: "Model goal"
             color: goal_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1081,7 +1093,7 @@ Item
         SmlInput
         {
             id: num_outputs_input
-            disabled: root.__reiterate || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
             validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
@@ -1174,7 +1186,7 @@ Item
             id: dataset_metadata_topic_header
             visible: root.__dataset_topic !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Topic"
+            text_value: "Dataset topic"
             color: dataset_metadata_topic_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1225,7 +1237,7 @@ Item
             id: dataset_metadata_keywords_header
             visible: root.__dataset_keywords !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Keywords"
+            text_value: "Dataset keywords"
             color: dataset_metadata_keywords_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1276,7 +1288,7 @@ Item
             id: dataset_metadata_applications_header
             visible: root.__dataset_applications !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Applications"
+            text_value: "Dataset applications"
             color: dataset_metadata_applications_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1327,7 +1339,7 @@ Item
             id: dataset_metadata_profile_header
             visible: root.__dataset_profile !== ""
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset Profile"
+            text_value: "Dataset profile"
             color: dataset_metadata_profile_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
@@ -1892,6 +1904,14 @@ Item
     }
 
     // Remove FPGA from transformers hardware list and keep only FPGA for CNNs
+    // Back from Results: leave the form editable straight away (the restored inputs
+    // arrive asynchronously and onReiterate_user_inputs keeps the goal empty too)
+    function unlock_for_back() {
+        root.__goal = ""
+        root.__model_selected = ""
+        root.__model_selected_copy = ""
+    }
+
     function filteredHardwareList() {
         if (root.__types && root.__types.toLowerCase() === "transformers") {
             return (root.__hardware_list || []).filter(function(h) {

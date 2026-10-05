@@ -253,7 +253,6 @@ Rectangle
                 text_value: "Iteration " + infoPopup.iteration
                 text_kind: SmlText.TextKind.Header_3
                 font.bold: true
-                font.pointSize: 13
 
             }
 
@@ -292,77 +291,65 @@ Rectangle
                         SmlText {
                             text_value: "Node ML_MODEL"
                             font.bold: true
-                            font.pointSize: 13
                         }
                         SmlText {
                             text_value: JSON.stringify(infoPopup.jsonData.ML_MODEL, null, 2)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
-                            font.pointSize: 10
                         }
 
                         SmlText {
                             text_value: "Node CARBON_FOOTPRINT"
                             font.bold: true
-                            font.pointSize: 13
                         }
                         SmlText {
                             text_value: JSON.stringify(infoPopup.jsonData.CARBON_FOOTPRINT, null, 2)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
-                            font.pointSize: 10
                         }
 
                         SmlText {
                             text_value: "Node APP_REQUIREMENTS"
                             font.bold: true
-                            font.pointSize: 13
                         }
 
                         SmlText {
                             text_value: JSON.stringify(infoPopup.jsonData.APP_REQUIREMENTS, null, 2)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
-                            font.pointSize: 10
                         }
 
                         SmlText {
                             text_value: "Node HW_CONSTRAINTS"
                             font.bold: true
-                            font.pointSize: 13
                         }
 
                         SmlText {
                             text_value: JSON.stringify(infoPopup.jsonData.HW_CONSTRAINTS, null, 2)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
-                            font.pointSize: 10
                         }
 
                         SmlText {
                             text_value: "Node HW_RESOURCES"
                             font.bold: true
-                            font.pointSize: 13
                         }
 
                         SmlText {
                             text_value: JSON.stringify(infoPopup.jsonData.HW_RESOURCES, null, 2)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
-                            font.pointSize: 10
                         }
 
                         SmlText {
                             text_value: "Node ML_MODEL_METADATA"
                             font.bold: true
-                            font.pointSize: 13
                         }
 
                         SmlText {
                             text_value: JSON.stringify(infoPopup.jsonData.ML_MODEL_METADATA, null, 2)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
-                            font.pointSize: 10
                         }
                     }
                 }

@@ -27,6 +27,8 @@ Item
     // hand to engine.save_all() below, this screen never reads/displays it itself.
     property var hf_saved_searches: []
     property var hf_compare_history: []
+    // false when opened from the start screen, where there is nothing to save yet
+    property bool save_enabled: true
 
     // Internal properties
     readonly property int __margin: Settings.spacing_big * 2
@@ -350,6 +352,7 @@ Item
             color_pressed: Settings.app_color_green_1
             nightmode_color: Settings.app_color_green_1
             nightmode_color_pressed: Settings.app_color_green_3
+            disabled: !root.save_enabled
             tooltip_text: "Save current results, HF searches, and comparisons into a named file"
             anchors
             {
@@ -388,7 +391,7 @@ Item
             id: clear_saved_data_button
             icon_name: Settings.delete_icon_name
             text_kind: SmlText.TextKind.Header_2
-            text_value: "Clear Saved Data"
+            text_value: "Clear saved data"
             rounded: true
             color: Settings.app_color_green_3
             color_pressed: Settings.app_color_green_1
@@ -430,7 +433,7 @@ Item
 
                 SmlText
                 {
-                    text_value: "Clear Saved Data"
+                    text_value: "Clear saved data"
                     text_kind: SmlText.TextKind.Header_2
                     width: 320
                     horizontalAlignment: Text.AlignHCenter

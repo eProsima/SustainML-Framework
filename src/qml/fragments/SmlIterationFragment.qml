@@ -40,6 +40,26 @@ Rectangle {
         return total;
     }
     property var columnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185]
+
+    // Width of both tables, from the visible columns' widths. Set explicitly by
+    // relayout_tables() rather than bound to the tables' own contentItem.childrenRect:
+    // that binding made each table's width depend on its own laid-out cells, so every
+    // relayout (e.g. hiding a column) changed the width it was computed from, a binding loop.
+    property real __tables_width: __visible_columns_width() + 1
+
+    function __visible_columns_width() {
+        var w = 0
+        for (var i = 0; i < visibleColumns.length; i++)
+            w += columnWidths[visibleColumns[i]]
+        return w
+    }
+
+    // Relayout both tables, then size them (columnWidthProvider may update columnWidths)
+    function relayout_tables() {
+        general_header_table.forceLayout()
+        general_table.forceLayout()
+        __tables_width = __visible_columns_width() + 1
+    }
     property var jsonList : []
     readonly property int fixedColumnWidth: 150
     readonly property int __margin: Settings.spacing_big * 2
@@ -108,7 +128,7 @@ Rectangle {
 
             jsonList = newList;
             table_model.rows = newRows;
-            general_table.forceLayout();
+            root.relayout_tables();
         }
     }
 
@@ -149,8 +169,7 @@ Rectangle {
                 // detector was flagging. Qt.callLater breaks the reentrant chain.
                 onWidthChanged: {
                     Qt.callLater(function() {
-                        general_header_table.forceLayout();
-                        general_table.forceLayout();
+                        root.relayout_tables();
                     })
                 }
 
@@ -200,8 +219,8 @@ Rectangle {
                             return currentWidth;
                         }
                     }
-                    width: contentItem.childrenRect.width + 1
-                    contentWidth: contentItem.childrenRect.width + 1
+                    width: root.__tables_width
+                    contentWidth: root.__tables_width
                     // onWidthChanged: forceLayout()
                     // columnWidthProvider: getColumnWidth(column)
 
@@ -344,8 +363,7 @@ Rectangle {
                                 var newWidth = Math.max(minColumnWidths[index], initialWidth + delta);
                                 if (Math.abs(newWidth - columnWidths[index]) > 1) {
                                     columnWidths[index] = newWidth;
-                                    general_header_table.forceLayout();
-                                    general_table.forceLayout();
+                                    root.relayout_tables();
                                 }
                             }
                         }
@@ -375,8 +393,7 @@ Rectangle {
                     // this width mirrors headerRect.width, so it fires in the same instant.
                     onWidthChanged: {
                         Qt.callLater(function() {
-                            general_header_table.forceLayout();
-                            general_table.forceLayout();
+                            root.relayout_tables();
                         })
                     }
 
@@ -425,8 +442,8 @@ Rectangle {
                                 return currentWidth;
                             }
                         }
-                        width: contentItem.childrenRect.width + 1
-                        contentWidth: contentItem.childrenRect.width + 1
+                        width: root.__tables_width
+                        contentWidth: root.__tables_width
 
                         delegate: Rectangle {
                             color: "transparent"
@@ -587,8 +604,7 @@ Rectangle {
                                     var newWidth = Math.max(minColumnWidths[column], initialWidth + delta);
                                     if (Math.abs(newWidth - columnWidths[column]) > 1) {
                                         columnWidths[column] = newWidth;
-                                        general_header_table.forceLayout();
-                                        general_table.forceLayout();
+                                        root.relayout_tables();
                                     }
                                 }
                             }
@@ -643,8 +659,7 @@ Rectangle {
                                 } else {
                                     visibleColumns = visibleColumns.filter(function(item) { return item !== modelData; });
                                 }
-                                general_header_table.forceLayout();
-                                general_table.forceLayout();
+                                root.relayout_tables();
                             }
                         }
                         Text {
@@ -751,7 +766,6 @@ Rectangle {
                 text_value: "Iteration " + infoPopup.iteration
                 text_kind: SmlText.TextKind.Header_3
                 font.bold: true
-                font.pointSize: 13
 
             }
 
