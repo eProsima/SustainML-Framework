@@ -48,8 +48,6 @@ QtObject {
     readonly property string ku_nightmode_logo:         "qrc:/images/logos/ku_w.png"
     readonly property string rptu_logo:                 "qrc:/images/logos/rptu.png"
     readonly property string rptu_nightmode_logo:       "qrc:/images/logos/rptu_w.png"
-    readonly property string upmem_logo:                "qrc:/images/logos/upmem.jpeg"
-    readonly property string upmem_nightmode_logo:      "qrc:/images/logos/upmem.jpeg"
     readonly property int logo_height:                  30
 
     // ICONS
