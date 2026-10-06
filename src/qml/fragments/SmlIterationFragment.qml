@@ -119,7 +119,8 @@ Rectangle {
                     "Problem kind": json.ML_MODEL_METADATA.metadata,
                     "Suggested model": json.ML_MODEL.model,
                     "Suggested hardware": json.HW_RESOURCES.hw_description,
-                    "Latency": formatNumber(json.HW_RESOURCES.latency),
+                    // the nodes exchange the latency in hours: shown in seconds
+                    "Latency": formatNumber(json.HW_RESOURCES.latency * 3600),
                     "Power consumption": formatNumber(json.HW_RESOURCES.power_consumption),
                     "Carbon footprint": formatNumber(json.CARBON_FOOTPRINT.carbon_footprint),
                     "Carbon intensity": formatNumber(json.CARBON_FOOTPRINT.carbon_intensity),
@@ -245,7 +246,7 @@ Rectangle {
                             "Problem kind" : "Problem",
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
-                            "Latency" : "Latency",
+                            "Latency" : "Latency [s]",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [gCO2e]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
@@ -882,12 +883,12 @@ Rectangle {
         y: (parent.height - height)/2
         property string metricName: ""
         property var metricDescriptions: ({
-            "latency": "Time it takes for a complete inference of the model in the suggested hardware (ms).",
+            "latency": "Time it takes for a complete inference of the model in the suggested hardware (s).",
             "power consumption": "Instantaneous power consumed during execution of the model on the hardware (W).",
             "carbon footprint": "Total CO2e emissions from the use of the model on the suggested hardware (gCO2e).",
             "carbon intensity": "Emissions per unit of energy consumed (gCO2/kW).",
             "energy consumption": "Total energy used by the execution (kWh).",
-            "memory footprint": "Memory needed to hold the model weights, as loaded on the hardware (MB)."
+            "memory footprint": "Memory the model needs: its weights plus the working memory to process the longest input it accepts (MB)."
         })
 
         function descriptionFor(name) {

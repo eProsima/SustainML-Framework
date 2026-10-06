@@ -45,6 +45,9 @@ Item
     property string load_title: "Load"
     property string save_prompt: "Name this save, or pick an existing one below to overwrite it:"
     property string no_files_text: "No saved files yet."
+    // If set ("tasks", "searches" or "comparisons"), the Load picker only lists the files
+    // holding data of that part
+    property string load_part: ""
 
     signal save_requested(string name)
     signal load_requested(string name)
@@ -66,7 +69,7 @@ Item
     {
         root.__opening_save_dialog = false
         root.__awaiting_files_list = true
-        engine.request_saved_files_list()
+        engine.request_saved_files_list(root.load_part)
     }
 
     Connections

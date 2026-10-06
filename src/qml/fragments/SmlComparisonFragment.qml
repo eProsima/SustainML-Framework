@@ -106,8 +106,9 @@ Rectangle
                 for (var i = 0; i < root.values_list.length; i++) {
                     var value = values_list[i];
                     switch (value.toString()) {
-                        case "Latency":
-                            valuesArray.push(data.HW_RESOURCES.latency);
+                        // the nodes exchange the latency in hours: shown in seconds, as in the iteration table
+                        case "Latency [s]":
+                            valuesArray.push(data.HW_RESOURCES.latency * 3600);
                             break;
                         case "Memory Footprint [MB]":
                             valuesArray.push(data.HW_RESOURCES.memory_footprint_of_ml_model);

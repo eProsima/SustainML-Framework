@@ -165,8 +165,33 @@ public:
     /**
      * @brief Ask the backend for the list of save file names, e.g. to populate a Load
      *        picker. Result is reported via saved_files_available().
+     * @param part if not empty ("tasks", "searches" or "comparisons"), only the files
+     *        holding data of that part
      */
-    Q_INVOKABLE void request_saved_files_list();
+    Q_INVOKABLE void request_saved_files_list(
+            const QString& part = QString());
+
+    /**
+     * @brief Save only one part of the HF history into a named file, leaving its tasks
+     *        and the other part as they are
+     * @param name name of the save file
+     * @param part "searches" or "comparisons"
+     * @param data the HF search or comparison history entries to save
+     */
+    Q_INVOKABLE void save_hf(
+            QString name,
+            QString part,
+            const QVariantList& data);
+
+    /**
+     * @brief Load only one part of the HF history from a named file. The entries are
+     *        reported via hf_part_loaded() for the caller to merge into its own list.
+     * @param name name of the save file
+     * @param part "searches" or "comparisons"
+     */
+    Q_INVOKABLE void load_hf(
+            QString name,
+            QString part);
 
     /**
      * @brief Delete a single named save file from the backend
@@ -767,6 +792,15 @@ signals:
             const QVariantList& hf_searches,
             const QVariantList& hf_comparisons);
 
+    /**
+     * @brief Emitted after load_hf(), with the entries of the part found in the save file
+     * @param part "searches" or "comparisons"
+     * @param data HF search or comparison history entries
+     */
+    void hf_part_loaded(
+            const QString& part,
+            const QVariantList& data);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -877,6 +911,25 @@ private:
 
     //! Receive loaded tasks and HF search/comparison history from a load_all() request
     void load_all_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Remove a REST requester that got its response from the queue, and delete it
+    void remove_requester(
+            const REST_requester* requester);
+
+    //! Whether another iteration follows the one whose carbon footprint extra_data is given:
+    //! the next output model, or the auto carbon footprint optimization trying another model
+    bool iteration_follows(
+            const QJsonObject& carbon_extra_data) const;
+
+    //! Receive the response to a save_hf() request
+    void save_hf_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive the HF search or comparison history from a load_hf() request
+    void load_hf_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
 

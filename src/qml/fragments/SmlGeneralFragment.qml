@@ -77,8 +77,9 @@ Rectangle
     readonly property int __memory_footprint_column: 9
 
     // Ranking of the iterations when the problem has a desired carbon footprint (Manual/Auto
-    // optimization) or a max memory footprint: the models within the limits first, then by
-    // lowest carbon footprint. __summary names the best one, or the closest if none fits.
+    // optimization) or a max memory footprint: the models within the limits first (lowest carbon
+    // footprint first), then the rest by how far over the limits they are. __summary names the
+    // best one, or the closest if none fits.
     property string __summary: ""
     // Limits of the latest submission of this problem (requested per iteration, see onProblem_limits)
     property int __limits_iteration: -1
@@ -126,90 +127,32 @@ Rectangle
         function onNew_ml_model_metadata_node_output(problem_id, iteration_id, metadata, keywords)
         {
             if (problem_id === root.problem_id)
-            {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : keywords,
-                            "Suggested model" : "",
-                            "Suggested hardware" : "",
-                            "Power consumption" : "",
-                            "Carbon footprint" : "",
-                            "Carbon intensity" : "",
-                            "Memory footprint" : ""
-                        }
-                    )
-                }
-            }
-            Qt.callLater(root.relayout_tables)
+                root.__set_cells(iteration_id, {"Problem kind": keywords}, false)
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
         {
             if (problem_id === root.problem_id)
-            {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : "",
-                            "Suggested model" : model,
-                            "Suggested hardware" : "",
-                            "Power consumption" : "",
-                            "Carbon footprint" : "",
-                            "Carbon intensity" : "",
-                            "Memory footprint" : ""
-                        }
-                    )
-                }
-            }
-            Qt.callLater(root.relayout_tables)
+                root.__set_cells(iteration_id, {"Suggested model": model}, false)
         }
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
         {
             if (problem_id === root.problem_id)
+                root.__set_cells(iteration_id, {
+                        "Suggested hardware": hw_description,
+                        "Power consumption": power_consumption,
+                        "Memory footprint": root.__memory_text(memory_footprint_of_ml_model)
+                    }, false)
+        }
+
+        function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
+        {
+            if (problem_id === root.problem_id)
             {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __hw_description_column), "display", hw_description)
-                    table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
-                    table_model.setData(table_model.index(row, __memory_footprint_column), "display", root.__memory_text(memory_footprint_of_ml_model))
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : "",
-                            "Suggested model" : "",
-                            "Suggested hardware" : hw_description,
-                            "Power consumption" : power_consumption,
-                            "Carbon footprint" : "",
-                            "Carbon intensity" : "",
-                            "Memory footprint" : root.__memory_text(memory_footprint_of_ml_model)
-                        }
-                    )
-                }
+                root.__set_cells(iteration_id, {"Carbon footprint": carbon_footprint, "Carbon intensity": carbon_intensity}, false)
+                engine.request_problem_limits(problem_id, iteration_id)
             }
-            Qt.callLater(root.relayout_tables)
         }
 
         function onProblem_iteration_results(problem_id, iteration_id, results)
@@ -230,37 +173,41 @@ Rectangle
             }
             root.__update_ranking()
         }
+    }
 
-        function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
+    // Column of each value of a row
+    readonly property var __columns: ({
+        "Problem kind": __problem_kind_column,
+        "Suggested model": __suggested_model_column,
+        "Suggested hardware": __hw_description_column,
+        "Power consumption": __power_consumption_column,
+        "Carbon footprint": __carbon_footprint_column,
+        "Carbon intensity": __carbon_intensity_column,
+        "Memory footprint": __memory_footprint_column
+    })
+
+    // Write values ({column name: text}) into the row of an iteration, adding the row if it is
+    // not there yet. With only_empty, cells that already have a value keep it.
+    function __set_cells(iteration_id, values, only_empty)
+    {
+        var row = table_model.contains(iteration_id)
+        if (row < 0)
         {
-            if (problem_id === root.problem_id)
-            {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
-                    table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : "",
-                            "Suggested model" : "",
-                            "Suggested hardware" : "",
-                            "Power consumption" : "",
-                            "Carbon footprint" : carbon_footprint,
-                            "Carbon intensity" : carbon_intensity,
-                            "Memory footprint" : ""
-                        }
-                    )
-                }
-                engine.request_problem_limits(problem_id, iteration_id)
-            }
-            Qt.callLater(root.relayout_tables)
+            var new_row = {"Reiterate": "", "Checkbox": "false", "Iteration": iteration_id}
+            for (var column in __columns)
+                new_row[column] = values[column] !== undefined ? values[column] : ""
+            table_model.appendRow(new_row)
         }
+        else
+        {
+            var current = table_model.rows[row]
+            for (var key in values)
+            {
+                if (!only_empty || (current[key] === "" && values[key] !== ""))
+                    table_model.setData(table_model.index(row, __columns[key]), "display", values[key])
+            }
+        }
+        Qt.callLater(root.relayout_tables)
     }
 
     // Results that arrive before this view has its problem_id (the first results of a problem
@@ -292,33 +239,7 @@ Rectangle
             "Carbon intensity": number(carbon["carbon_intensity"]),
             "Memory footprint": root.__memory_text(number(hw["memory_footprint_of_ml_model"]))
         }
-        var columns = {
-            "Problem kind": __problem_kind_column,
-            "Suggested model": __suggested_model_column,
-            "Suggested hardware": __hw_description_column,
-            "Power consumption": __power_consumption_column,
-            "Carbon footprint": __carbon_footprint_column,
-            "Carbon intensity": __carbon_intensity_column,
-            "Memory footprint": __memory_footprint_column
-        }
-        var row = table_model.contains(iteration_id)
-        if (row < 0)
-        {
-            var new_row = {"Reiterate": "", "Checkbox": "false", "Iteration": iteration_id}
-            for (var key in values)
-                new_row[key] = values[key]
-            table_model.appendRow(new_row)
-        }
-        else
-        {
-            var current = table_model.rows[row]
-            for (var k in values)
-            {
-                if (current[k] === "" && values[k] !== "")
-                    table_model.setData(table_model.index(row, columns[k]), "display", values[k])
-            }
-        }
-        Qt.callLater(root.relayout_tables)
+        root.__set_cells(iteration_id, values, true)
         if (values["Carbon footprint"] !== "")
             engine.request_problem_limits(root.problem_id, iteration_id)
     }

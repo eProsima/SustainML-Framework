@@ -58,7 +58,9 @@ public:
         DELETE_SAVED_FILE,
         WIPE_DATABASE,
         SAVE_ALL,
-        LOAD_ALL
+        LOAD_ALL,
+        SAVE_HF,
+        LOAD_HF
     };
 
     //! Object performs a REST request and registers the functor for the response management
