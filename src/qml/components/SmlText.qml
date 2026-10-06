@@ -39,7 +39,7 @@ TextEdit
                                                                                                      ScreenManager.title_font_color
 
     // Text components set up
-    text: sustainml_custom_text.force_elide ? elided_text.text : sustainml_custom_text.text_value
+    text: sustainml_custom_text.force_elide ? elided_text.elidedText : sustainml_custom_text.text_value
     font.bold: sustainml_custom_text.text_kind === SmlText.TextKind.App_name
     font.family: sustainml_custom_text.__font_family
     font.pixelSize: sustainml_custom_text.force_size ? sustainml_custom_text.forced_size : sustainml_custom_text.__font_size
