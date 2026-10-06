@@ -606,6 +606,105 @@ QJsonObject Engine::request_specific_results(
     return specific_node_results_request(node_json_data);
 }
 
+void Engine::request_problem_limits(
+        const int problem_id,
+        const int iteration_id)
+{
+    QJsonObject task_json;
+    task_json["problem_id"] = problem_id;
+    task_json["iteration_id"] = iteration_id;
+
+    QJsonObject node_json_data;
+    node_json_data["node_id"] = static_cast<int>(sustainml::NodeID::ID_ORCHESTRATOR);
+    node_json_data["task_id"] = task_json;
+
+    REST_requester* requester = new REST_requester(
+        [this, problem_id, iteration_id](const REST_requester* requester, const QJsonObject& json_obj)
+        {
+            QJsonObject user_input = json_obj[Utils::node_name(sustainml::NodeID::ID_ORCHESTRATOR)].toObject();
+            if (!user_input.isEmpty())
+            {
+                QJsonObject extra_data = user_input["extra_data"].toObject();
+                emit problem_limits(
+                    problem_id,
+                    iteration_id,
+                    user_input["optimize_carbon_footprint_manual"].toBool() ||
+                    user_input["optimize_carbon_footprint_auto"].toBool(),
+                    user_input["desired_carbon_footprint"].toDouble(),
+                    extra_data["max_memory_footprint"].toDouble());
+            }
+            // Remove REST requester from queue
+            std::lock_guard<std::mutex> lock(requesters_mutex_);
+            for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+            {
+                if (*it == requester)
+                {
+                    auto ptr = *it;
+                    requesters_.erase(it);
+                    ptr->disconnect();
+                    ptr->deleteLater();
+                    break;
+                }
+            }
+        },
+        REST_requester::RequestType::REQUEST_RESULTS,
+        node_json_data);
+
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    requesters_.push_back(requester);
+}
+
+void Engine::request_problem_results(
+        const int problem_id)
+{
+    QSet<QString> requested;
+    for (const auto& task_id : received_task_ids)
+    {
+        if (static_cast<int>(task_id.problem_id()) != problem_id ||
+                requested.contains(Utils::task_string(task_id)))
+        {
+            continue;
+        }
+        requested.insert(Utils::task_string(task_id));
+        const int iteration_id = static_cast<int>(task_id.iteration_id());
+
+        QJsonObject task_json;
+        task_json["problem_id"] = problem_id;
+        task_json["iteration_id"] = iteration_id;
+
+        QJsonObject node_json_data;
+        node_json_data["node_id"] = 9;  // Request all information
+        node_json_data["task_id"] = task_json;
+
+        REST_requester* requester = new REST_requester(
+            [this, problem_id, iteration_id](const REST_requester* requester, const QJsonObject& json_obj)
+            {
+                if (json_obj.contains("task_id"))
+                {
+                    emit problem_iteration_results(problem_id, iteration_id, json_obj);
+                }
+                // Remove REST requester from queue
+                std::lock_guard<std::mutex> lock(requesters_mutex_);
+                for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+                {
+                    if (*it == requester)
+                    {
+                        auto ptr = *it;
+                        requesters_.erase(it);
+                        ptr->disconnect();
+                        ptr->deleteLater();
+                        break;
+                    }
+                }
+            },
+            REST_requester::RequestType::REQUEST_RESULTS,
+            node_json_data);
+
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
 void Engine::request_status()
 {
     node_status_request(QJsonObject());
@@ -890,7 +989,24 @@ void Engine::print_results(
         }
         case sustainml::NodeID::ID_CARBON_FOOTPRINT:
         {
-            if (!received_task_ids.empty() && (task_id == received_task_ids.back()))
+            // The submitted task is over with the carbon footprint of its last iteration: tasks
+            // replayed from a save file are already over, and no other iteration follows it
+            // (next output model, or the auto carbon footprint optimization trying another model)
+            types::TaskId last_live_task;
+            bool has_live_task = false;
+            for (auto it = received_task_ids.rbegin(); it != received_task_ids.rend(); ++it)
+            {
+                if (!replayed_task_ids_.contains(Utils::task_string(*it)))
+                {
+                    last_live_task = *it;
+                    has_live_task = true;
+                    break;
+                }
+            }
+            QJsonObject extra_data = node_json["extra_data"].toObject();
+            bool follows = !cancel_requested_.load() &&
+                    (extra_data["auto_reiterate"].toBool() || extra_data["num_outputs"].toInt() > 1);
+            if (has_live_task && task_id == last_live_task && !follows)
             {
                 emit task_end();
             }
@@ -1114,10 +1230,14 @@ void Engine::node_results_response(
             QJsonObject node_json = json_obj[Utils::node_name(id)].toObject();
             {
                 QJsonObject extra_data = node_json["extra_data"].toObject();
-                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 &&
-                        !cancel_requested_.load())
+                // Another iteration follows for the next output model, or for the auto carbon
+                // footprint optimization discarding this model
+                bool more_outputs = extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1;
+                bool auto_reiterate = extra_data["auto_reiterate"].toBool();
+                types::TaskId task_id = Utils::task_id(node_json);
+                bool replayed = replayed_task_ids_.contains(Utils::task_string(task_id));
+                if ((more_outputs || auto_reiterate) && !replayed && !cancel_requested_.load())
                 {
-                    types::TaskId task_id = Utils::task_id(node_json);
                     task_id = types::TaskId(task_id.problem_id(), task_id.iteration_id() + 1);
                     received_task_ids.push_back(task_id);
                     emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
@@ -1621,6 +1741,7 @@ void Engine::replay_loaded_tasks(
 
         types::TaskId task_id(problem_id, iteration_id);
         received_task_ids.push_back(task_id);
+        replayed_task_ids_.insert(Utils::task_string(task_id));
         // Replay through the existing results path: this fires the same per-node
         // requests/signals a live task already uses, so the Results screen tab
         // creation logic needs no separate code path for loaded tasks. The backend

@@ -32,6 +32,7 @@
 #include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
 #include <QQueue>
+#include <QSet>
 #include <QtCharts/QVXYModelMapper>
 #include <QThread>
 #include <QTimer>
@@ -280,6 +281,24 @@ public slots:
             const int iteration_id);
 
     /**
+     * @brief public method to request, without blocking, the carbon footprint and memory limits
+     *        of a task. The answer arrives through the problem_limits signal.
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     */
+    void request_problem_limits(
+            const int problem_id,
+            const int iteration_id);
+
+    /**
+     * @brief public method to request, without blocking, the results of every iteration of a
+     *        problem. Each one arrives through the problem_iteration_results signal.
+     * @param problem_id problem identifier
+     */
+    void request_problem_results(
+            const int problem_id);
+
+    /**
      * @brief public method to request status periodically
      *
      */
@@ -521,6 +540,34 @@ signals:
             const QString& carbon_intensity);
 
     /**
+     * @brief Limits a task was submitted with, answer to request_problem_limits
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param optimize whether a Manual or Auto carbon footprint optimization was chosen
+     * @param desired_carbon_footprint desired carbon footprint in gCO2e (0: none)
+     * @param max_memory_footprint max memory footprint in MB (0: no limit)
+     */
+    void problem_limits(
+            const int& problem_id,
+            const int& iteration_id,
+            const bool& optimize,
+            const double& desired_carbon_footprint,
+            const double& max_memory_footprint);
+
+    /**
+     * @brief Results of all nodes for one iteration, answer to request_problem_results
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param results results of every node, keyed by node name
+     */
+    void problem_iteration_results(
+            const int& problem_id,
+            const int& iteration_id,
+            const QJsonObject& results);
+
+    /**
      * @brief Signal to reiterate user inputs for task reiteration
      *
      * @param problem_id problem identifier
@@ -756,6 +803,9 @@ private:
             const QJsonObject& json_obj);
 
     std::vector<types::TaskId> received_task_ids;
+
+    //! Tasks replayed from a save file: finished, so no further iteration follows them
+    QSet<QString> replayed_task_ids_;
     QMap<int, QString> saved_display_names_;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;

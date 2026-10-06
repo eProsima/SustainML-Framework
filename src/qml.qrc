@@ -26,6 +26,7 @@
         <file>qml/screens/SmlSettingsScreen.qml</file>
         <file>html/unet_visualizer.html</file>
         <file>qml/utils/UnetModel.js</file>
+        <file>qml/utils/Countries.js</file>
         <file>qml/components/SmlUnetGraph.qml</file>
     </qresource>
 </RCC>

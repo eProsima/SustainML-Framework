@@ -149,7 +149,6 @@ Rectangle
             for (var i = 0; i < _barSets.length; i++) {
                 var barSet = _barSets[i];
                 for (var j = 0; j < barSet.values.length; j++) {
-                    console.log("barSet.values[" + j + "]: " + barSet.values[j]);
                     highest = Math.max(highest, barSet.values[j]);
                 }
             }
@@ -216,6 +215,9 @@ Rectangle
         background: Rectangle { color: "transparent" }
         property var iteration: ""
 
+        // Node results as text; empty until an iteration is chosen
+        function nodeText(node) { return node ? JSON.stringify(node, null, 2) : "" }
+
         Behavior on x {
             NumberAnimation { duration: 350; easing.type: Easing.OutQuad }
         }
@@ -277,8 +279,7 @@ Rectangle
 
                     visible: Object.keys(infoPopup.jsonData).length > 0
                     anchors {
-                        top: iterationTextHeader.bottom
-                        topMargin: Settings.spacing_small
+                        top: parent.top
                         left: parent.left
                         leftMargin: Settings.spacing_normal
                     }
@@ -293,7 +294,7 @@ Rectangle
                             font.bold: true
                         }
                         SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.ML_MODEL, null, 2)
+                            text_value: infoPopup.nodeText(infoPopup.jsonData.ML_MODEL)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
                         }
@@ -303,7 +304,7 @@ Rectangle
                             font.bold: true
                         }
                         SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.CARBON_FOOTPRINT, null, 2)
+                            text_value: infoPopup.nodeText(infoPopup.jsonData.CARBON_FOOTPRINT)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
                         }
@@ -314,7 +315,7 @@ Rectangle
                         }
 
                         SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.APP_REQUIREMENTS, null, 2)
+                            text_value: infoPopup.nodeText(infoPopup.jsonData.APP_REQUIREMENTS)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
                         }
@@ -325,7 +326,7 @@ Rectangle
                         }
 
                         SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.HW_CONSTRAINTS, null, 2)
+                            text_value: infoPopup.nodeText(infoPopup.jsonData.HW_CONSTRAINTS)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
                         }
@@ -336,7 +337,7 @@ Rectangle
                         }
 
                         SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.HW_RESOURCES, null, 2)
+                            text_value: infoPopup.nodeText(infoPopup.jsonData.HW_RESOURCES)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
                         }
@@ -347,7 +348,7 @@ Rectangle
                         }
 
                         SmlText {
-                            text_value: JSON.stringify(infoPopup.jsonData.ML_MODEL_METADATA, null, 2)
+                            text_value: infoPopup.nodeText(infoPopup.jsonData.ML_MODEL_METADATA)
                             font.family: "monospace"
                             wrapMode: Text.WordWrap
                         }
