@@ -288,7 +288,7 @@ Item
         nightmode_color: Settings.app_color_green_2
         nightmode_color_pressed: Settings.app_color_green_3
         nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "New Problem with Previous Input"
+        tooltip_text: "Back to the previous screen (Problem Definition keeps the previous input)"
         anchors
         {
             top: go_home_button.top
@@ -533,6 +533,7 @@ SmlSaveLoadDialogs
     save_title: "Save Results"
     load_title: "Load Results"
     no_files_text: "No saved files yet."
+    load_part: "tasks"
     onSave_requested: engine.save_current_tasks(name)
     onLoad_requested: engine.load_saved_tasks(name)
 }

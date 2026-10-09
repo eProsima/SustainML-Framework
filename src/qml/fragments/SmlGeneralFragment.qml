@@ -26,7 +26,7 @@ Rectangle
     // signal go_reiterate();
 
     // Private properties
-    property var minColumnWidths: [45, 45, 100, 160, 180, 160, 170, 170, 185]
+    property var minColumnWidths: [45, 45, 100, 160, 180, 160, 170, 170, 185, 185]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -34,9 +34,31 @@ Rectangle
         }
         return total;
     }
-    property var columnWidths: [45, 45, 100, 160, 180, 160, 170, 170, 185]
+    property var columnWidths: [45, 45, 100, 160, 180, 160, 170, 170, 185, 185]
+
+    // Width of both tables, from the columns' widths. Set explicitly by relayout_tables()
+    // rather than bound to the tables' own contentItem.childrenRect: that binding made each
+    // table's width depend on its own laid-out cells, so every relayout changed the width it
+    // was computed from, a binding loop.
+    property real __tables_width: __columns_width() + 1
+
+    function __columns_width() {
+        var w = 0
+        for (var i = 0; i < columnWidths.length; i++)
+            w += columnWidths[i]
+        return w
+    }
+
+    // Relayout both tables, then size them (columnWidthProvider may update columnWidths).
+    // Results call it through Qt.callLater, so a burst of them (e.g. loading a file) costs one
+    // relayout instead of a synchronous one per result.
+    function relayout_tables() {
+        general_header_table.forceLayout()
+        general_table.forceLayout()
+        __tables_width = __columns_width() + 1
+    }
     readonly property int __margin: Settings.spacing_big * 2
-    readonly property int __scroll_view_height: height
+    readonly property int __scroll_view_height: height - __summary_height
     readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 40
     readonly property int __data_height: __header_height * 1.5
@@ -52,6 +74,18 @@ Rectangle
     readonly property int __power_consumption_column: 6
     readonly property int __carbon_footprint_column: 7
     readonly property int __carbon_intensity_column: 8
+    readonly property int __memory_footprint_column: 9
+
+    // Ranking of the iterations when the problem has a desired carbon footprint (Manual/Auto
+    // optimization) or a max memory footprint: the models within the limits first (lowest carbon
+    // footprint first), then the rest by how far over the limits they are. __summary names the
+    // best one, or the closest if none fits.
+    property string __summary: ""
+    // Limits of the latest submission of this problem (requested per iteration, see onProblem_limits)
+    property int __limits_iteration: -1
+    property real __desired_carbon_footprint: 0
+    property real __max_memory_footprint: 0
+    readonly property int __summary_height: __summary === "" ? 0 : __header_height
 
 
     color: ScreenManager.night_mode ?  Settings.app_color_dark : Settings.app_color_light
@@ -67,6 +101,7 @@ Rectangle
         TableModelColumn {display: "Power consumption"}
         TableModelColumn {display: "Carbon footprint"}
         TableModelColumn {display: "Carbon intensity"}
+        TableModelColumn {display: "Memory footprint"}
 
         rows: []
 
@@ -92,121 +127,206 @@ Rectangle
         function onNew_ml_model_metadata_node_output(problem_id, iteration_id, metadata, keywords)
         {
             if (problem_id === root.problem_id)
-            {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __problem_kind_column), "display", keywords)
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : keywords,
-                            "Suggested model" : "",
-                            "Suggested hardware" : "",
-                            "Power consumption" : "",
-                            "Carbon footprint" : "",
-                            "Carbon intensity" : ""
-                        }
-                    )
-                }
-            }
-            general_table.forceLayout();
+                root.__set_cells(iteration_id, {"Problem kind": keywords}, false)
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
         {
             if (problem_id === root.problem_id)
-            {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __suggested_model_column), "display", model)
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : "",
-                            "Suggested model" : model,
-                            "Suggested hardware" : "",
-                            "Power consumption" : "",
-                            "Carbon footprint" : "",
-                            "Carbon intensity" : ""
-                        }
-                    )
-                }
-            }
-            general_table.forceLayout();
+                root.__set_cells(iteration_id, {"Suggested model": model}, false)
         }
 
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
         {
             if (problem_id === root.problem_id)
-            {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __hw_description_column), "display", hw_description)
-                    table_model.setData(table_model.index(row, __power_consumption_column), "display", power_consumption)
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : "",
-                            "Suggested model" : "",
-                            "Suggested hardware" : hw_description,
-                            "Power consumption" : power_consumption,
-                            "Carbon footprint" : "",
-                            "Carbon intensity" : ""
-                        }
-                    )
-                }
-            }
-            general_table.forceLayout();
+                root.__set_cells(iteration_id, {
+                        "Suggested hardware": hw_description,
+                        "Power consumption": power_consumption,
+                        "Memory footprint": root.__memory_text(memory_footprint_of_ml_model)
+                    }, false)
         }
 
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
         {
             if (problem_id === root.problem_id)
             {
-                var row = table_model.contains(iteration_id)
-                if(row >= 0)
-                {
-                    table_model.setData(table_model.index(row, __carbon_footprint_column), "display", carbon_footprint)
-                    table_model.setData(table_model.index(row, __carbon_intensity_column), "display", carbon_intensity)
-                }
-                else
-                {
-                    table_model.appendRow({
-                            "Reiterate" : "",
-                            "Checkbox" : "false",
-                            "Iteration" : iteration_id,
-                            "Problem kind" : "",
-                            "Suggested model" : "",
-                            "Suggested hardware" : "",
-                            "Power consumption" : "",
-                            "Carbon footprint" : carbon_footprint,
-                            "Carbon intensity" : carbon_intensity
-                        }
-                    )
-                }
+                root.__set_cells(iteration_id, {"Carbon footprint": carbon_footprint, "Carbon intensity": carbon_intensity}, false)
+                engine.request_problem_limits(problem_id, iteration_id)
             }
-            general_table.forceLayout();
         }
+
+        function onProblem_iteration_results(problem_id, iteration_id, results)
+        {
+            if (problem_id === root.problem_id)
+                root.__fill_row(iteration_id, results)
+        }
+
+        function onProblem_limits(problem_id, iteration_id, optimize, desired_carbon_footprint, max_memory_footprint)
+        {
+            if (problem_id !== root.problem_id)
+                return
+            if (iteration_id >= root.__limits_iteration)
+            {
+                root.__limits_iteration = iteration_id
+                root.__desired_carbon_footprint = optimize ? desired_carbon_footprint : 0
+                root.__max_memory_footprint = max_memory_footprint
+            }
+            root.__update_ranking()
+        }
+    }
+
+    // Column of each value of a row
+    readonly property var __columns: ({
+        "Problem kind": __problem_kind_column,
+        "Suggested model": __suggested_model_column,
+        "Suggested hardware": __hw_description_column,
+        "Power consumption": __power_consumption_column,
+        "Carbon footprint": __carbon_footprint_column,
+        "Carbon intensity": __carbon_intensity_column,
+        "Memory footprint": __memory_footprint_column
+    })
+
+    // Write values ({column name: text}) into the row of an iteration, adding the row if it is
+    // not there yet. With only_empty, cells that already have a value keep it.
+    function __set_cells(iteration_id, values, only_empty)
+    {
+        var row = table_model.contains(iteration_id)
+        if (row < 0)
+        {
+            var new_row = {"Reiterate": "", "Checkbox": "false", "Iteration": iteration_id}
+            for (var column in __columns)
+                new_row[column] = values[column] !== undefined ? values[column] : ""
+            table_model.appendRow(new_row)
+        }
+        else
+        {
+            var current = table_model.rows[row]
+            for (var key in values)
+            {
+                if (!only_empty || (current[key] === "" && values[key] !== ""))
+                    table_model.setData(table_model.index(row, __columns[key]), "display", values[key])
+            }
+        }
+        Qt.callLater(root.relayout_tables)
+    }
+
+    // Results that arrive before this view has its problem_id (the first results of a problem
+    // create its tab) never reach it, so once it has one, fetch the problem's results again
+    onProblem_idChanged: __fetch_results()
+    Component.onCompleted: __fetch_results()
+
+    function __fetch_results()
+    {
+        if (root.problem_id >= 0)
+            engine.request_problem_results(root.problem_id)
+    }
+
+    // Fill the cells of an iteration still empty with its results (all nodes, keyed by node name)
+    function __fill_row(iteration_id, results)
+    {
+        var metadata = results["ML_MODEL_METADATA"] || {}
+        var model = results["ML_MODEL"] || {}
+        var hw = results["HW_RESOURCES"] || {}
+        var carbon = results["CARBON_FOOTPRINT"] || {}
+        function text(v) { return (v === undefined || v === null) ? "" : String(v) }
+        function number(v) { return (v === undefined || v === null) ? "" : String(parseFloat(Number(v).toPrecision(6))) }
+        var values = {
+            "Problem kind": text(metadata["metadata"]),
+            "Suggested model": text(model["model"]),
+            "Suggested hardware": text(hw["hw_description"]),
+            "Power consumption": number(hw["power_consumption"]),
+            "Carbon footprint": number(carbon["carbon_footprint"]),
+            "Carbon intensity": number(carbon["carbon_intensity"]),
+            "Memory footprint": root.__memory_text(number(hw["memory_footprint_of_ml_model"]))
+        }
+        root.__set_cells(iteration_id, values, true)
+        if (values["Carbon footprint"] !== "")
+            engine.request_problem_limits(root.problem_id, iteration_id)
+    }
+
+    // 0 means unknown: saved before the memory was measured, or the model failed to load
+    function __memory_text(val)
+    {
+        return Number(val) > 0 ? val : ""
+    }
+
+    function __format_number(val)
+    {
+        var num = Number(val)
+        if (Math.abs(num) >= 1e5 || (Math.abs(num) > 0 && Math.abs(num) < 1e-3))
+            return num.toExponential(4)
+        return num.toFixed(4)
+    }
+
+    function __update_ranking()
+    {
+        var desired = root.__desired_carbon_footprint
+        var max_memory = root.__max_memory_footprint
+        if (desired <= 0 && max_memory <= 0)
+        {
+            root.__summary = ""
+            return
+        }
+
+        // Rows without a valid result (still running, no model, error) go last, in iteration order
+        function complete(r) { return r["Carbon footprint"] !== "" && Number(r["Carbon intensity"]) > 0 }
+        function meets(r) {
+            return (desired <= 0 || Number(r["Carbon footprint"]) <= desired) &&
+                   (max_memory <= 0 || Number(r["Memory footprint"]) <= max_memory)
+        }
+        // How far a row is over the limits, relative to each limit (0 when within them)
+        function excess(r) {
+            var e = 0
+            if (desired > 0) e += Math.max(0, Number(r["Carbon footprint"]) / desired - 1)
+            if (max_memory > 0) e += Math.max(0, Number(r["Memory footprint"]) / max_memory - 1)
+            return e
+        }
+        var rows = table_model.rows.slice()
+        rows.sort(function(a, b) {
+            if (complete(a) !== complete(b)) return complete(a) ? -1 : 1
+            if (!complete(a)) return a["Iteration"] - b["Iteration"]
+            // Within the limits first; the rest by how close they are to them
+            if (excess(a) !== excess(b)) return excess(a) - excess(b)
+            return Number(a["Carbon footprint"]) - Number(b["Carbon footprint"])
+        })
+        table_model.rows = rows
+
+        var limits = []
+        if (desired > 0) limits.push("carbon footprint up to " + desired + " gCO2e")
+        if (max_memory > 0) limits.push("memory up to " + max_memory + " MB")
+        if (rows.length === 0 || !complete(rows[0]))
+        {
+            root.__summary = "Limits: " + limits.join(", ") + "."
+            return
+        }
+        var best = rows[0]["Suggested model"] + " (iteration " + rows[0]["Iteration"] + "): " +
+                   root.__format_number(rows[0]["Carbon footprint"]) + " gCO2e" +
+                   (Number(rows[0]["Memory footprint"]) > 0 ? ", " + Number(rows[0]["Memory footprint"]).toFixed(2) + " MB" : "")
+        root.__summary = meets(rows[0])
+                ? "Best model within the limits (" + limits.join(", ") + "): " + best
+                : "No model has met the limits (" + limits.join(", ") + ") yet. Closest: " + best
+    }
+
+    SmlText {
+        id: summary_text
+        visible: root.__summary !== ""
+        anchors.top: parent.top
+        anchors.left: parent.left
+        width: root.width
+        height: root.__summary_height
+        verticalAlignment: Text.AlignVCenter
+        text_kind: SmlText.TextKind.Body
+        text_value: root.__summary
+        padding: __cell_padding
+        force_elide: true
     }
 
     Rectangle {
         id: splitRow
-        anchors.fill: parent
+        anchors.top: summary_text.bottom
+        anchors.left: parent.left
+        width: root.width
+        height: root.height - root.__summary_height
 
         SmlScrollView
         {
@@ -223,8 +343,7 @@ Rectangle
             scrollbar_background_nightmodel_color: Settings.app_color_dark
             interactive: false
             onWidthChanged: {
-                general_header_table.forceLayout(),
-                general_table.forceLayout();
+                Qt.callLater(root.relayout_tables)
             }
 
             // Header
@@ -236,8 +355,7 @@ Rectangle
                 height: __header_height
                 color: ScreenManager.night_mode ? __cell_background_nightmode_color : __cell_background_color
                 onWidthChanged: {
-                    general_header_table.forceLayout(),
-                    general_table.forceLayout();
+                    Qt.callLater(root.relayout_tables)
                 }
 
                 TableView
@@ -283,8 +401,8 @@ Rectangle
                             return currentWidth;
                         }
                     }
-                    width: contentItem.childrenRect.width + 1
-                    contentWidth: contentItem.childrenRect.width + 1
+                    width: root.__tables_width
+                    contentWidth: root.__tables_width
                     // onWidthChanged: forceLayout()
                     // columnWidthProvider: getColumnWidth(column)
 
@@ -298,6 +416,7 @@ Rectangle
                         TableModelColumn {display: "Power consumption"}
                         TableModelColumn {display: "Carbon footprint"}
                         TableModelColumn {display: "Carbon intensity"}
+                        TableModelColumn {display: "Memory footprint"}
 
                         rows: [
                             {"Reiterate" : "  ",
@@ -308,7 +427,8 @@ Rectangle
                             "Suggested hardware" : "Hardware",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [gCO2e]",
-                            "Carbon intensity" : "Carbon Intensity [gCO2/kW]"}
+                            "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
+                            "Memory footprint" : "Memory Footprint [MB]"}
                         ]
                     }
 
@@ -383,8 +503,7 @@ Rectangle
                                 var newWidth = Math.max(minColumnWidths[index], initialWidth + delta);
                                 if (Math.abs(newWidth - columnWidths[index]) > 1) {
                                     columnWidths[index] = newWidth;
-                                    general_header_table.forceLayout();
-                                    general_table.forceLayout();
+                                    root.relayout_tables();
                                 }
                             }
                         }
@@ -398,7 +517,7 @@ Rectangle
                 anchors.top: headerRect.bottom
                 anchors.left: headerRect.left
                 width: headerRect.width
-                height: root.height - headerRect.height
+                height: root.__scroll_view_height - headerRect.height
                 contentHeight: general_table.contentHeight + 20
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
                 scrollbar_background_color: Settings.app_color_light
@@ -411,8 +530,7 @@ Rectangle
                     height: general_table.contentHeight
                     color: "transparent"
                     onWidthChanged: {
-                        general_header_table.forceLayout(),
-                        general_table.forceLayout();
+                        Qt.callLater(root.relayout_tables)
                     }
 
                     TableView {
@@ -457,8 +575,8 @@ Rectangle
                                 return currentWidth;
                             }
                         }
-                        width: contentItem.childrenRect.width + 1
-                        contentWidth: contentItem.childrenRect.width + 1
+                        width: root.__tables_width
+                        contentWidth: root.__tables_width
 
                         delegate: Rectangle {
                             color: "transparent"
@@ -635,8 +753,7 @@ Rectangle
                                     var newWidth = Math.max(minColumnWidths[column], initialWidth + delta);
                                     if (Math.abs(newWidth - columnWidths[column]) > 1) {
                                         columnWidths[column] = newWidth;
-                                        general_header_table.forceLayout();
-                                        general_table.forceLayout();
+                                        root.relayout_tables();
                                     }
                                 }
                             }

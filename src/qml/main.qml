@@ -77,6 +77,29 @@ Window {
     property var hf_compare_obj: null
     property var hf_compare_last_request_ids: []   // Frozen ids for the last compare request
     property var hf_compare_history: []            // Saved comparisons
+
+    // Add loaded HF searches / comparisons to the current ones
+    function hf_merge_searches(hf_searches)
+    {
+        if (!hf_searches || hf_searches.length === 0)
+            return
+        var searches = main_window.hf_saved_searches.slice(0)
+        for (var i = 0; i < hf_searches.length; ++i)
+            searches.push(hf_searches[i])
+        main_window.hf_saved_searches = searches
+    }
+
+    function hf_merge_comparisons(hf_comparisons)
+    {
+        if (!hf_comparisons || hf_comparisons.length === 0)
+            return
+        var comparisons = main_window.hf_compare_history.slice(0)
+        for (var j = 0; j < hf_comparisons.length; ++j)
+            comparisons.push(hf_comparisons[j])
+        if (comparisons.length > main_window.hf_compare_history_max)
+            comparisons = comparisons.slice(0, main_window.hf_compare_history_max)
+        main_window.hf_compare_history = comparisons
+    }
     property int hf_compare_history_max: 10        // Maximum number of saved comparisons
     property int hf_open_compare_index: -1         // Index of the currently open saved comparison (-1 = none open)
     property int hf_renaming_index: -1             // Index of the saved comparison currently being renamed (-1 = none)
@@ -281,23 +304,17 @@ Window {
         // appearing as new tabs: nothing already open/shown is replaced or lost.
         function onHf_state_loaded(hf_searches, hf_comparisons)
         {
-            if (hf_searches && hf_searches.length > 0)
-            {
-                var searches = main_window.hf_saved_searches.slice(0)
-                for (var i = 0; i < hf_searches.length; ++i)
-                    searches.push(hf_searches[i])
-                main_window.hf_saved_searches = searches
-            }
+            main_window.hf_merge_searches(hf_searches)
+            main_window.hf_merge_comparisons(hf_comparisons)
+        }
 
-            if (hf_comparisons && hf_comparisons.length > 0)
-            {
-                var comparisons = main_window.hf_compare_history.slice(0)
-                for (var j = 0; j < hf_comparisons.length; ++j)
-                    comparisons.push(hf_comparisons[j])
-                if (comparisons.length > main_window.hf_compare_history_max)
-                    comparisons = comparisons.slice(0, main_window.hf_compare_history_max)
-                main_window.hf_compare_history = comparisons
-            }
+        // Only the searches or only the comparisons (from engine.load_hf()), merged the same way
+        function onHf_part_loaded(part, data)
+        {
+            if (part === "searches")
+                main_window.hf_merge_searches(data)
+            else if (part === "comparisons")
+                main_window.hf_merge_comparisons(data)
         }
 
         function onHf_model_tooltip_available(model_id, tooltip) {
@@ -565,6 +582,8 @@ Window {
         extraObj["model_restrains"] = [id]
         var extraJson = JSON.stringify(extraObj)
 
+        // The HF model is evaluated as a chosen model: once, with no search to optimize
+        // (as when a model is selected in the Problem Definition screen)
         engine.launch_task(
             def.__problem_short_description,
             def.__modality,
@@ -579,18 +598,18 @@ Window {
             def.__dataset_metadata_applications,
             def.__minimum_samples,
             def.__maximum_samples,
-            def.__optimize_carbon_footprint_auto,
+            false,
             main_window.hf_selected_goal,
-            def.__optimize_carbon_footprint_manual,
+            false,
             def.__previous_iteration,
-            def.__desired_carbon_footprint,
-            def.__max_memory_footprint,
+            0.0,
+            0,
             def.__hardware_required,
             def.__geo_location_continent,
             def.__geo_location_region,
             extraJson,
             def.__previous_problem_id,
-            def.__num_outputs,
+            1,
             id,
             def.__type
         )
@@ -1162,12 +1181,18 @@ Window {
                     }
                     main_window.load_screen(ScreenManager.Screens.Definition)
                 }
+                // Back to the screen shown before the results, e.g. the HF search after
+                // Analyze; when that is the Problem Definition, it gets the problem's inputs back
                 onGo_back_previous_input: {
-                    var defInstance = _screenInst[ScreenManager.Screens.Definition];
-                    if (defInstance)
-                        defInstance.unlock_for_back();
-                    engine.request_orchestrator(parseInt(main_window.current_problem_id), 1, false)
-                    main_window.load_screen(ScreenManager.Screens.Definition)
+                    var history = main_window.screen_history
+                    var previous = history.length > 0 ? history[history.length - 1] : ScreenManager.Screens.Definition
+                    if (previous === ScreenManager.Screens.Definition) {
+                        var defInstance = _screenInst[ScreenManager.Screens.Definition];
+                        if (defInstance)
+                            defInstance.unlock_for_back();
+                        engine.request_orchestrator(parseInt(main_window.current_problem_id), 1, false)
+                    }
+                    main_window.go_back()
                 }
                 onResults_screen_loaded: {
                     results_screen_component.current_problem_id = main_window.current_problem_id
@@ -2251,6 +2276,7 @@ Window {
 
                 // BACK BUTTON (to HF list)
                 SmlButton {
+                    id: compare_back_button
                     icon_name: Settings.back_icon_name
                     text_kind: SmlText.TextKind.Header_2
                     text_value: ""
@@ -2272,6 +2298,66 @@ Window {
                     onClicked: {
                         main_window.go_back()
                     }
+                }
+
+                // Save / Load only this screen's comparisons (Results: tasks only, Settings: everything)
+                SmlButton {
+                    id: compare_save_button
+                    z: 100000
+                    icon_name: Settings.save_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Save"
+                    rounded: true
+                    disabled: main_window.hf_compare_history.length === 0
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Save the comparisons into a file"
+                    anchors {
+                        top: compare_back_button.top
+                        left: compare_back_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: compare_save_load_dialogs.open_save()
+                }
+
+                SmlButton {
+                    id: compare_load_button
+                    z: 100000
+                    icon_name: Settings.load_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Load"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Load comparisons from a file, added to the current ones"
+                    anchors {
+                        top: compare_back_button.top
+                        left: compare_save_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: compare_save_load_dialogs.open_load()
+                }
+
+                SmlSaveLoadDialogs
+                {
+                    id: compare_save_load_dialogs
+                    anchors.fill: parent
+                    z: 200000
+                    save_title: "Save Comparisons"
+                    load_title: "Load Comparisons"
+                    save_prompt: "Name this save, or pick an existing one below to overwrite its comparisons. Its results and other HF history are kept."
+                    no_files_text: "No saved comparisons yet."
+                    load_part: "comparisons"
+                    onSave_requested: engine.save_hf(name, "comparisons", main_window.hf_compare_history)
+                    onLoad_requested: engine.load_hf(name, "comparisons")
                 }
 
                 Rectangle {
@@ -2847,6 +2933,66 @@ Window {
                         leftMargin: Settings.spacing_small
                     }
                     onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                }
+
+                // Save / Load only this screen's searches (Results: tasks only, Settings: everything)
+                SmlButton {
+                    id: hfr_save_button
+                    z: 100000
+                    icon_name: Settings.save_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Save"
+                    rounded: true
+                    disabled: main_window.hf_saved_searches.length === 0
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Save the searches into a file"
+                    anchors {
+                        top: hfr_back_button.top
+                        left: hfr_back_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: hfr_save_load_dialogs.open_save()
+                }
+
+                SmlButton {
+                    id: hfr_load_button
+                    z: 100000
+                    icon_name: Settings.load_icon_name
+                    text_kind: SmlText.TextKind.Header_2
+                    text_value: "Load"
+                    rounded: true
+                    color: Settings.app_color_green_4
+                    color_pressed: Settings.app_color_green_1
+                    color_text: Settings.app_color_green_3
+                    nightmode_color: Settings.app_color_green_2
+                    nightmode_color_pressed: Settings.app_color_green_3
+                    nightmode_color_text: Settings.app_color_green_1
+                    tooltip_text: "Load searches from a file, added to the current ones"
+                    anchors {
+                        top: hfr_back_button.top
+                        left: hfr_save_button.right
+                        leftMargin: Settings.spacing_small
+                    }
+                    onClicked: hfr_save_load_dialogs.open_load()
+                }
+
+                SmlSaveLoadDialogs
+                {
+                    id: hfr_save_load_dialogs
+                    anchors.fill: parent
+                    z: 200000
+                    save_title: "Save Searches"
+                    load_title: "Load Searches"
+                    save_prompt: "Name this save, or pick an existing one below to overwrite its searches. Its results and other HF history are kept."
+                    no_files_text: "No saved searches yet."
+                    load_part: "searches"
+                    onSave_requested: engine.save_hf(name, "searches", main_window.hf_saved_searches)
+                    onLoad_requested: engine.load_hf(name, "searches")
                 }
 
                 Rectangle {

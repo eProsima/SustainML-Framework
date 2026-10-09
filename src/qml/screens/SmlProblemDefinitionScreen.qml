@@ -10,6 +10,7 @@ import eProsima.SustainML.ScreenMan 1.0
 
 // Component imports
 import "../components"
+import "../utils/Countries.js" as Countries
 
 Item
 {
@@ -43,6 +44,20 @@ Item
     property int __previous_problem_id: 0
     property int __num_outputs: 1
     property string __model_selected: ""
+    // CNNs only run as a U-Net chosen by hand: the search, and so every field feeding it, is Transformers only
+    readonly property bool __cnn_mode: root.__types.toLowerCase() === "cnns"
+    on__Model_selectedChanged:
+    {
+        // A selected model skips the search, so its optimization fields no longer apply
+        if (root.__model_selected === "")
+            return
+        root.__optimize_carbon_footprint_auto = false
+        root.__optimize_carbon_footprint_manual = false
+        root.__desired_carbon_footprint = 0.0
+        root.__max_memory_footprint = 0
+        desired_carbon_footprint_input.text = ""
+        max_mem_footprint_input.text = ""
+    }
     property string __model_selected_copy: __model_selected
 
     property string notSupportProblemMessage: ""
@@ -182,6 +197,9 @@ Item
                     root.filteredHardwareList().indexOf(hardware_required) !== -1)
                 root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
+            // Set explicitly: Clear all assigns these texts, which removes their bindings
+            desired_carbon_footprint_input.text = desired_carbon_footprint === 0 ? "" : desired_carbon_footprint
+            max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
             root.__previous_problem_id = 0
             if (is_reiteration)
@@ -240,6 +258,8 @@ Item
     {
         id: dataset_path_button
         visible: !root.__reiterate
+        // The dataset metadata only feeds the Transformers search
+        disabled: root.__cnn_mode
         icon_name: Settings.upload_icon_name
         text_kind: SmlText.TextKind.Header_2
         text_value: "Upload dataset"
@@ -333,7 +353,7 @@ Item
         SmlInput
         {
             id: problem_short_description_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__problem_short_description
             placeholder_text: "Resume briefly the objective of the problem"
             border_color: Settings.app_color_green_4
@@ -381,7 +401,7 @@ Item
         SmlInput
         {
             id: problem_definition_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__problem_definition
             placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
             border_color: Settings.app_color_green_4
@@ -431,7 +451,7 @@ Item
             activeFocusOnTab: true
             focus: true
             id: modality_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             displayText: root.__modality
             placeholder_text: displayText !== "" ? "" : "Select the modality of the input data"
             model: root.__modality_list
@@ -502,7 +522,7 @@ Item
             focus: true
             id: metrics_input
             visible: root.__metrics.length > 0
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             displayText: root.__metric
             placeholder_text: displayText !== "" ? "" : "Select the metrics for the model"
             model: root.__metrics
@@ -644,7 +664,7 @@ Item
         SmlInput
         {
             id: inputs_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__inputs
             placeholder_text: "Describe a sequence of serialized batches of input data"
             border_color: Settings.app_color_green_4
@@ -692,7 +712,7 @@ Item
         SmlInput
         {
             id: outputs_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__outputs
             placeholder_text: "Describe a sequence of serialized batches of output data"
             border_color: Settings.app_color_green_4
@@ -740,7 +760,7 @@ Item
         SmlInput
         {
             id: minimum_samples_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
             // Not IntValidator: it's locale-aware and treats the locale's group
             // separator (a comma, in many locales) as acceptable input. A plain
@@ -797,7 +817,7 @@ Item
         SmlInput
         {
             id: maximum_samples_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
             validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: "Max samples required (only numbers)"
@@ -1026,7 +1046,7 @@ Item
                 !(root.__types && root.__types.toLowerCase() === "cnns" &&
                     root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)"))
             displayText: root.__model_selected
-            placeholder_text: displayText !== "" ? "" : "Select the ml model"
+            placeholder_text: displayText !== "" ? "" : (root.__cnn_mode ? "Select a U-Net model (required for CNNs)" : "Select the ml model")
             model: root.__model_list
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
@@ -1093,7 +1113,7 @@ Item
         SmlInput
         {
             id: num_outputs_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== ""
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__num_outputs === 0 ? "" : root.__num_outputs
             validator: RegExpValidator { regExp: /^[0-9]*$/ }
             placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
@@ -1148,7 +1168,8 @@ Item
         {
             id: dataset_metadata_description_input
             visible: root.__dataset_description !== ""
-            disabled: root.__reiterate
+            // Only used to infer the goal, so ignored once a goal or a model is chosen
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__dataset_description
             placeholder_text: "Dataset description"
             border_color: Settings.app_color_green_4
@@ -1200,7 +1221,8 @@ Item
         {
             id: dataset_metadata_topic_input
             visible: root.__dataset_topic !== ""
-            disabled: root.__reiterate
+            // Only used to infer the goal, so ignored once a goal or a model is chosen
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__dataset_topic
             placeholder_text: "Dataset description"
             border_color: Settings.app_color_green_4
@@ -1251,7 +1273,8 @@ Item
         {
             id: dataset_metadata_keywords_input
             visible: root.__dataset_keywords !== ""
-            disabled: root.__reiterate
+            // Only used to infer the goal, so ignored once a goal or a model is chosen
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__dataset_keywords
             placeholder_text: "Dataset keywords"
             border_color: Settings.app_color_green_4
@@ -1301,7 +1324,8 @@ Item
         {
             id: dataset_metadata_applications_input
             visible: root.__dataset_applications !== ""
-            disabled: root.__reiterate
+            // Only used to infer the goal, so ignored once a goal or a model is chosen
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__dataset_applications
             placeholder_text: "Dataset applications"
             border_color: Settings.app_color_green_4
@@ -1352,7 +1376,8 @@ Item
         {
             id: dataset_metadata_profile_input
             visible: root.__dataset_profile !== ""
-            disabled: root.__reiterate
+            // Only used to infer the goal, so ignored once a goal or a model is chosen
+            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
             text: root.__dataset_profile
             placeholder_text: "Dataset profile"
             border_color: Settings.app_color_green_4
@@ -1400,13 +1425,14 @@ Item
         }
         SmlCombobox
         {
-            disabled: true
             activeFocusOnTab: true
             focus: true
             id: optimize_carbon_input
+            // A selected model is used as is: there is no search to optimize
+            disabled: root.__model_selected !== "" || root.__cnn_mode
             displayText: root.__optimize_carbon_footprint_manual ? "Manual" : (root.__optimize_carbon_footprint_auto ? "Auto" : "")
             placeholder_text: displayText !== "" ? "" : "Select optimization iteration method"
-            model: ["Manual", "Auto"]
+            model: ["(empty)", "Manual", "Auto"]
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
@@ -1435,7 +1461,7 @@ Item
                     root.__optimize_carbon_footprint_auto = true
                     root.__optimize_carbon_footprint_manual = false
                 }
-                else
+                else if (text === "(empty)")
                 {
                     root.__optimize_carbon_footprint_auto = false
                     root.__optimize_carbon_footprint_manual = false
@@ -1443,6 +1469,7 @@ Item
             }
             onFocusChanged: {
                 if(focus === true){
+                    optimize_carbon_input.currentIndex = -1
                     optimize_carbon_input.open()
                     optimize_carbon_input.focus = true
                 }
@@ -1469,9 +1496,12 @@ Item
         SmlInput
         {
             id: desired_carbon_footprint_input
-            disabled: true
+            // Only meaningful as the target of a Manual or Auto optimization
+            disabled: root.__model_selected !== "" || root.__cnn_mode ||
+                      (!root.__optimize_carbon_footprint_manual && !root.__optimize_carbon_footprint_auto)
             text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
-            placeholder_text: "Optimization aimed value for carbon footprint"
+            validator: RegExpValidator { regExp: /^[0-9]*\.?[0-9]*$/ }
+            placeholder_text: disabled ? "Select an optimization method first" : "Target per inference in gCO2e (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
@@ -1489,7 +1519,8 @@ Item
             }
             onTextChanged:
             {
-                root.__desired_carbon_footprint = parseFloat(text)
+                var num = parseFloat(text)
+                root.__desired_carbon_footprint = isNaN(num) ? 0.0 : num
             }
             onFocusChanged:
             {
@@ -1517,9 +1548,10 @@ Item
         SmlInput
         {
             id: max_mem_footprint_input
-            disabled: true
+            disabled: root.__model_selected !== "" || root.__cnn_mode
             text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
-            placeholder_text: "Set maximum memory footprint allowed (only number)"
+            validator: RegExpValidator { regExp: /^[0-9]*$/ }
+            placeholder_text: "Maximum model memory in MB, empty for no limit (only numbers)"
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
@@ -1538,11 +1570,7 @@ Item
             onTextChanged:
             {
                 var num = parseInt(text)
-                if (!isNaN(num)) {
-                    root.__max_memory_footprint = num
-                } else {
-                    text = ""
-                }
+                root.__max_memory_footprint = isNaN(num) ? 0 : num
             }
             onFocusChanged:
             {
@@ -1559,7 +1587,7 @@ Item
             id: geo_location_continent_header
             text_kind: SmlText.TextKind.Header_3
             text_value: "Geo location: continent"
-            color: geo_location_continent_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            color: geo_location_continent_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: max_mem_footprint_input.bottom
@@ -1567,12 +1595,13 @@ Item
                 left: parent.left
             }
         }
-        SmlInput
+        SmlCombobox
         {
+            activeFocusOnTab: true
             id: geo_location_continent_input
-            disabled: true
-            text: root.__geo_location_continent
-            placeholder_text: "Set continent for the geo location" // TODO combobox
+            displayText: root.__geo_location_continent
+            placeholder_text: displayText !== "" ? "" : "Select continent where the model will run"
+            model: ["(empty)"].concat(Countries.continents)
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
@@ -1581,6 +1610,7 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
+            rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: geo_location_region_input
             anchors
             {
@@ -1588,26 +1618,38 @@ Item
                 topMargin: -Settings.spacing_small * 0.25
                 left: geo_location_continent_header.left
             }
-            onTextChanged:
+            onText_changed:
             {
-                root.__geo_location_continent = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
+                if (text === "(empty)")
                 {
-                    scroll_view.scroll_to(geo_location_continent_input.y - Settings.spacing_big)
+                    root.__geo_location_continent = ""
+                    root.__geo_location_region = ""
                 }
+                else if (Countries.continents.indexOf(text) !== -1 && text !== root.__geo_location_continent)
+                {
+                    root.__geo_location_continent = text
+                    root.__geo_location_region = ""
+                }
+            }
+            onFocusChanged: {
+                if(focus === true){
+                    geo_location_continent_input.currentIndex = -1
+                    geo_location_continent_input.open()
+                    geo_location_continent_input.focus = true
+                }
+            }
+            onTab_pressed: {
+                geo_location_region_input.focus = true
             }
         }
 
-        // Geo location: region
+        // Geo location: country. Stored as its ISO alpha-2 code, used for the grid carbon intensity
         SmlText
         {
             id: geo_location_region_header
             text_kind: SmlText.TextKind.Header_3
-            text_value: "Geo location: region"
-            color: geo_location_region_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
+            text_value: "Geo location: country"
+            color: geo_location_region_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
                 top: geo_location_continent_header.top
@@ -1615,12 +1657,15 @@ Item
                 leftMargin: Settings.spacing_big
             }
         }
-        SmlInput
+        SmlCombobox
         {
+            activeFocusOnTab: true
             id: geo_location_region_input
-            disabled: true
-            text: root.__geo_location_region
-            placeholder_text: "Set region for the geo location" // TODO combobox
+            disabled: root.__geo_location_continent === ""
+            searchable: true
+            displayText: Countries.name(root.__geo_location_continent, root.__geo_location_region)
+            placeholder_text: displayText !== "" ? "" : (disabled ? "Select a continent first" : "Select country where the model will run")
+            model: ["(empty)"].concat(Countries.names(root.__geo_location_continent))
             border_color: Settings.app_color_green_4
             border_editting_color: Settings.app_color_blue
             border_nightmode_color: Settings.app_color_green_1
@@ -1629,6 +1674,7 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
             height: root.__input_height
+            rounded_radius: Settings.input_default_rounded_radius
             KeyNavigation.tab: problem_short_description_input
             anchors
             {
@@ -1636,16 +1682,27 @@ Item
                 topMargin: -Settings.spacing_small * 0.25
                 left: geo_location_region_header.left
             }
-            onTextChanged:
+            onText_changed:
             {
-                root.__geo_location_region = text
+                if (text === "(empty)")
+                    root.__geo_location_region = ""
+                var code = Countries.code(root.__geo_location_continent, text)
+                if (code !== "")
+                    root.__geo_location_region = code
             }
-            onFocusChanged:
+            onModelChanged:
             {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(geo_location_region_input.y - Settings.spacing_big)
+                geo_location_region_input.currentIndex = -1
+            }
+            onFocusChanged: {
+                if(focus === true){
+                    geo_location_region_input.currentIndex = -1
+                    geo_location_region_input.open()
+                    geo_location_region_input.focus = true
                 }
+            }
+            onTab_pressed: {
+                problem_short_description_input.focus = true
             }
         }
     }
@@ -1702,7 +1759,7 @@ Item
                 text_value: "Search"
                 icon_name: Settings.search_icon_name
                 rounded: true
-                disabled: root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === ""
+                disabled: root.__cnn_mode || (root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === "")
                 color: Settings.app_color_green_4
                 color_pressed: Settings.app_color_green_1
                 color_text: Settings.app_color_green_3
@@ -1765,6 +1822,7 @@ Item
         text_kind: SmlText.TextKind.Header_3
         text_value: "Submit"
         disabled: root.__refreshing || root.__initializing ||
+            (root.__cnn_mode && root.__model_selected === "") ||
             (root.__problem_definition.trim() === "" &&
              root.__problem_short_description.trim() === "" &&
              root.__model_selected === "" &&
@@ -1858,6 +1916,8 @@ Item
         minimum_samples_input.text = ""
         maximum_samples_input.text = ""
         num_outputs_input.text = "1"
+        desired_carbon_footprint_input.text = ""
+        max_mem_footprint_input.text = ""
 
         // Reset combobox selections
         types_input.currentIndex = 0
@@ -1866,6 +1926,9 @@ Item
         goal_input.currentIndex = -1
         required_hardware_input.currentIndex = -1
         model_select_input.currentIndex = -1
+        optimize_carbon_input.currentIndex = -1
+        geo_location_continent_input.currentIndex = -1
+        geo_location_region_input.currentIndex = -1
 
         // Notify main.qml that we cleared everything
         root.clear_all_clicked()

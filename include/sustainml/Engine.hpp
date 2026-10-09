@@ -32,6 +32,7 @@
 #include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
 #include <QQueue>
+#include <QSet>
 #include <QtCharts/QVXYModelMapper>
 #include <QThread>
 #include <QTimer>
@@ -164,8 +165,33 @@ public:
     /**
      * @brief Ask the backend for the list of save file names, e.g. to populate a Load
      *        picker. Result is reported via saved_files_available().
+     * @param part if not empty ("tasks", "searches" or "comparisons"), only the files
+     *        holding data of that part
      */
-    Q_INVOKABLE void request_saved_files_list();
+    Q_INVOKABLE void request_saved_files_list(
+            const QString& part = QString());
+
+    /**
+     * @brief Save only one part of the HF history into a named file, leaving its tasks
+     *        and the other part as they are
+     * @param name name of the save file
+     * @param part "searches" or "comparisons"
+     * @param data the HF search or comparison history entries to save
+     */
+    Q_INVOKABLE void save_hf(
+            QString name,
+            QString part,
+            const QVariantList& data);
+
+    /**
+     * @brief Load only one part of the HF history from a named file. The entries are
+     *        reported via hf_part_loaded() for the caller to merge into its own list.
+     * @param name name of the save file
+     * @param part "searches" or "comparisons"
+     */
+    Q_INVOKABLE void load_hf(
+            QString name,
+            QString part);
 
     /**
      * @brief Delete a single named save file from the backend
@@ -278,6 +304,24 @@ public slots:
     QJsonObject request_specific_results(
             const int problem_id,
             const int iteration_id);
+
+    /**
+     * @brief public method to request, without blocking, the carbon footprint and memory limits
+     *        of a task. The answer arrives through the problem_limits signal.
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     */
+    void request_problem_limits(
+            const int problem_id,
+            const int iteration_id);
+
+    /**
+     * @brief public method to request, without blocking, the results of every iteration of a
+     *        problem. Each one arrives through the problem_iteration_results signal.
+     * @param problem_id problem identifier
+     */
+    void request_problem_results(
+            const int problem_id);
 
     /**
      * @brief public method to request status periodically
@@ -521,6 +565,34 @@ signals:
             const QString& carbon_intensity);
 
     /**
+     * @brief Limits a task was submitted with, answer to request_problem_limits
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param optimize whether a Manual or Auto carbon footprint optimization was chosen
+     * @param desired_carbon_footprint desired carbon footprint in gCO2e (0: none)
+     * @param max_memory_footprint max memory footprint in MB (0: no limit)
+     */
+    void problem_limits(
+            const int& problem_id,
+            const int& iteration_id,
+            const bool& optimize,
+            const double& desired_carbon_footprint,
+            const double& max_memory_footprint);
+
+    /**
+     * @brief Results of all nodes for one iteration, answer to request_problem_results
+     *
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
+     * @param results results of every node, keyed by node name
+     */
+    void problem_iteration_results(
+            const int& problem_id,
+            const int& iteration_id,
+            const QJsonObject& results);
+
+    /**
      * @brief Signal to reiterate user inputs for task reiteration
      *
      * @param problem_id problem identifier
@@ -720,6 +792,15 @@ signals:
             const QVariantList& hf_searches,
             const QVariantList& hf_comparisons);
 
+    /**
+     * @brief Emitted after load_hf(), with the entries of the part found in the save file
+     * @param part "searches" or "comparisons"
+     * @param data HF search or comparison history entries
+     */
+    void hf_part_loaded(
+            const QString& part,
+            const QVariantList& data);
+
 protected:
 
     //! Set to true if the engine is being enabled
@@ -756,6 +837,9 @@ private:
             const QJsonObject& json_obj);
 
     std::vector<types::TaskId> received_task_ids;
+
+    //! Tasks replayed from a save file: finished, so no further iteration follows them
+    QSet<QString> replayed_task_ids_;
     QMap<int, QString> saved_display_names_;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
@@ -827,6 +911,25 @@ private:
 
     //! Receive loaded tasks and HF search/comparison history from a load_all() request
     void load_all_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Remove a REST requester that got its response from the queue, and delete it
+    void remove_requester(
+            const REST_requester* requester);
+
+    //! Whether another iteration follows the one whose carbon footprint extra_data is given:
+    //! the next output model, or the auto carbon footprint optimization trying another model
+    bool iteration_follows(
+            const QJsonObject& carbon_extra_data) const;
+
+    //! Receive the response to a save_hf() request
+    void save_hf_response(
+            const REST_requester* requester,
+            const QJsonObject& json_obj);
+
+    //! Receive the HF search or comparison history from a load_hf() request
+    void load_hf_response(
             const REST_requester* requester,
             const QJsonObject& json_obj);
 

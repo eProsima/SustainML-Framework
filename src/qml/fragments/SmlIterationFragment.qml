@@ -30,8 +30,8 @@ Rectangle {
     signal component_signal(string viewType, string signal_kind, string id)
 
     // Property to decide the visibles columns
-    property var visibleColumns: [0,1,2,3,4,5,6,7,8]
-    property var minColumnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185]
+    property var visibleColumns: [0,1,2,3,4,5,6,7,8,9]
+    property var minColumnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185, 185]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -39,7 +39,7 @@ Rectangle {
         }
         return total;
     }
-    property var columnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185]
+    property var columnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185, 185]
 
     // Width of both tables, from the visible columns' widths. Set explicitly by
     // relayout_tables() rather than bound to the tables' own contentItem.childrenRect:
@@ -82,6 +82,7 @@ Rectangle {
         TableModelColumn { display: "Carbon footprint"}
         TableModelColumn { display: "Carbon intensity" }
         TableModelColumn { display: "Energy Consumption" }
+        TableModelColumn { display: "Memory footprint" }
 
         rows: []
     }
@@ -118,11 +119,15 @@ Rectangle {
                     "Problem kind": json.ML_MODEL_METADATA.metadata,
                     "Suggested model": json.ML_MODEL.model,
                     "Suggested hardware": json.HW_RESOURCES.hw_description,
-                    "Latency": formatNumber(json.HW_RESOURCES.latency),
+                    // the nodes exchange the latency in hours: shown in seconds
+                    "Latency": formatNumber(json.HW_RESOURCES.latency * 3600),
                     "Power consumption": formatNumber(json.HW_RESOURCES.power_consumption),
                     "Carbon footprint": formatNumber(json.CARBON_FOOTPRINT.carbon_footprint),
                     "Carbon intensity": formatNumber(json.CARBON_FOOTPRINT.carbon_intensity),
-                    "Energy Consumption": formatNumber(json.CARBON_FOOTPRINT.energy_consumption)
+                    "Energy Consumption": formatNumber(json.CARBON_FOOTPRINT.energy_consumption),
+                    // 0 means unknown: saved before the memory was measured, or the model failed to load
+                    "Memory footprint": Number(json.HW_RESOURCES.memory_footprint_of_ml_model) > 0 ?
+                                        Number(json.HW_RESOURCES.memory_footprint_of_ml_model).toFixed(2) : ""
                 });
             }
 
@@ -234,17 +239,19 @@ Rectangle {
                         TableModelColumn { display: "Carbon footprint" }
                         TableModelColumn { display: "Carbon intensity" }
                         TableModelColumn { display: "Energy Consumption" }
+                        TableModelColumn { display: "Memory footprint" }
 
                         rows: [
                             {"Iteration" : "Iteration",
                             "Problem kind" : "Problem",
                             "Suggested model" : "ML Model",
                             "Suggested hardware" : "Hardware",
-                            "Latency" : "Latency",
+                            "Latency" : "Latency [s]",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [gCO2e]",
                             "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
-                            "Energy Consumption" : "Energy Consumption [kWh]"}
+                            "Energy Consumption" : "Energy Consumption [kWh]",
+                            "Memory footprint" : "Memory Footprint [MB]"}
                         ]
                     }
 
@@ -644,7 +651,7 @@ Rectangle {
                 }
 
                 Repeater {
-                    model: [1,2,3,4,5,6,7,8]
+                    model: [1,2,3,4,5,6,7,8,9]
                     delegate: Row {
                         spacing: 5
                         CheckBox {
@@ -665,7 +672,7 @@ Rectangle {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: {
-                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption"];
+                                var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption", "Memory Footprint"];
                                 return headers[modelData - 1];
                             }
                         }
@@ -876,11 +883,12 @@ Rectangle {
         y: (parent.height - height)/2
         property string metricName: ""
         property var metricDescriptions: ({
-            "latency": "Time it takes for a complete inference of the model in the suggested hardware (ms).",
+            "latency": "Time it takes for a complete inference of the model in the suggested hardware (s).",
             "power consumption": "Instantaneous power consumed during execution of the model on the hardware (W).",
             "carbon footprint": "Total CO2e emissions from the use of the model on the suggested hardware (gCO2e).",
             "carbon intensity": "Emissions per unit of energy consumed (gCO2/kW).",
-            "energy consumption": "Total energy used by the execution (kWh)."
+            "energy consumption": "Total energy used by the execution (kWh).",
+            "memory footprint": "Memory the model needs: its weights plus the working memory to process the longest input it accepts (MB)."
         })
 
         function descriptionFor(name) {

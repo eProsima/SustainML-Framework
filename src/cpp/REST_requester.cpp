@@ -110,6 +110,12 @@ QString REST_requester::request_type_to_url(
         case RequestType::LOAD_ALL:
             url += "/load_all";
             break;
+        case RequestType::SAVE_HF:
+            url += "/save_hf";
+            break;
+        case RequestType::LOAD_HF:
+            url += "/load_hf";
+            break;
     }
     return url;
 }

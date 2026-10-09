@@ -659,6 +659,11 @@ Item {
             var loader = stack_layout.children[j]
             if (loader.item && loader.item.stack_id === removedStackId)
             {
+                // destroy() is deferred to the next event loop tick: take the loader out
+                // of stack_layout now, so its children (and their indices) are already
+                // final when the tab to show is selected below
+                loader.visible = false
+                loader.parent = null
                 loader.destroy()
                 break
             }
@@ -703,35 +708,28 @@ Item {
             }
             __current_tab = newCurrentTab
 
-            // stack_layout.children's position can NOT be resolved yet: the removed
-            // loader's destroy() (above) is deferred to the next event loop tick, so
-            // the array is still its old, longer length right now. Searching and
-            // assigning currentIndex immediately can pick an index that's valid now
-            // but out of range a moment later once the array actually shrinks - which
-            // shows as an empty tab, and only when the surviving target happens to be
-            // at (or near) the end of the array, e.g. "viewing the last tab, closing
-            // an earlier one". Deferring this lookup until after the shrink avoids it.
-            Qt.callLater(function()
+            // stack_layout.children is already final (the removed loader left it above), so
+            // select the tab to show right away: deferring it left a frame where the old
+            // index pointed past the shrunk children, a blank flash when viewing the last
+            // tab and closing an earlier one
+            var correctStackIndex = -1
+            for (var n = 0; n < stack_layout.children.length; n++)
             {
-                var correctStackIndex = -1
-                for (var n = 0; n < stack_layout.children.length; n++)
+                if (stack_layout.children[n].item && stack_layout.children[n].item.stack_id === newCurrentStackId)
                 {
-                    if (stack_layout.children[n].item && stack_layout.children[n].item.stack_id === newCurrentStackId)
-                    {
-                        correctStackIndex = n
-                        break
-                    }
+                    correctStackIndex = n
+                    break
                 }
+            }
 
-                if (correctStackIndex !== -1)
-                {
-                    stack_layout.currentIndex = correctStackIndex
-                }
-                else
-                {
-                    console.log("[__remove_idx] WARNING: could not resolve newCurrentStackId=" + newCurrentStackId + " in stack_layout.children - current tab selection left unchanged")
-                }
-            })
+            if (correctStackIndex !== -1)
+            {
+                stack_layout.currentIndex = correctStackIndex
+            }
+            else
+            {
+                console.log("[__remove_idx] WARNING: could not resolve newCurrentStackId=" + newCurrentStackId + " in stack_layout.children - current tab selection left unchanged")
+            }
         }
 
         tab_list.model = sustainml_custom_tabview.__tab_model

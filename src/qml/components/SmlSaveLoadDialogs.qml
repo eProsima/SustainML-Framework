@@ -23,6 +23,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 
 import eProsima.SustainML.Settings 1.0
+import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
 
 // Reusable "named save file" Save/Load dialog pair, backed by the backend's
@@ -44,6 +45,9 @@ Item
     property string load_title: "Load"
     property string save_prompt: "Name this save, or pick an existing one below to overwrite it:"
     property string no_files_text: "No saved files yet."
+    // If set ("tasks", "searches" or "comparisons"), the Load picker only lists the files
+    // holding data of that part
+    property string load_part: ""
 
     signal save_requested(string name)
     signal load_requested(string name)
@@ -65,7 +69,7 @@ Item
     {
         root.__opening_save_dialog = false
         root.__awaiting_files_list = true
-        engine.request_saved_files_list()
+        engine.request_saved_files_list(root.load_part)
     }
 
     Connections
@@ -173,8 +177,11 @@ Item
                             required property var modelData
 
                             width: save_existing_column.width
-                            height: 36
-                            radius: height / 2.5
+                            // Grows to fit a 2-line name instead of staying fixed at the
+                            // 1-line height - label.contentHeight already accounts for the
+                            // wrap/maximumLineCount below.
+                            height: Math.max(36, existing_label.contentHeight + 16)
+                            radius: 36 / 2.5
                             // "Selected" here just means it matches whatever's currently
                             // typed in the name field - the same thing clicking a row sets,
                             // so it also highlights correctly if someone types a match by hand.
@@ -182,8 +189,13 @@ Item
                                 ? Settings.app_color_green_1
                                 : (ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4)
 
-                            SmlText
+                            // Plain Text, not SmlText: wrapping up to 2 lines and only then
+                            // eliding the rest (wrapMode + maximumLineCount + elide together)
+                            // is a Text-only capability - SmlText is a TextEdit under the
+                            // hood, which has no maximumLineCount/multi-line-elide support.
+                            Text
                             {
+                                id: existing_label
                                 anchors
                                 {
                                     left: parent.left
@@ -192,11 +204,13 @@ Item
                                     rightMargin: Settings.spacing_normal
                                     verticalCenter: parent.verticalCenter
                                 }
-                                force_elide: true
-                                text_value: existing_save_row.modelData
-                                text_kind: SmlText.TextKind.Body
-                                force_color: true
-                                forced_color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
+                                text: existing_save_row.modelData
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                                font.family: SustainMLFont.body_font
+                                font.pixelSize: Settings.body_font_size
+                                color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
                             }
 
                             MouseArea
@@ -304,13 +318,20 @@ Item
                             required property var modelData
 
                             width: load_files_column.width
-                            height: 36
-                            radius: height / 2.5
+                            // Grows to fit a 2-line name instead of staying fixed at the
+                            // 1-line height - label.contentHeight already accounts for the
+                            // wrap/maximumLineCount below.
+                            height: Math.max(36, saved_file_label.contentHeight + 16)
+                            radius: 36 / 2.5
                             color: saved_file_row.modelData === root.__selected_saved_file
                                 ? Settings.app_color_green_1
                                 : (ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4)
 
-                            SmlText
+                            // Plain Text, not SmlText: wrapping up to 2 lines and only then
+                            // eliding the rest (wrapMode + maximumLineCount + elide together)
+                            // is a Text-only capability - SmlText is a TextEdit under the
+                            // hood, which has no maximumLineCount/multi-line-elide support.
+                            Text
                             {
                                 id: saved_file_label
                                 anchors
@@ -321,11 +342,13 @@ Item
                                     rightMargin: Settings.spacing_small
                                     verticalCenter: parent.verticalCenter
                                 }
-                                force_elide: true
-                                text_value: saved_file_row.modelData
-                                text_kind: SmlText.TextKind.Body
-                                force_color: true
-                                forced_color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
+                                text: saved_file_row.modelData
+                                wrapMode: Text.WordWrap
+                                maximumLineCount: 2
+                                elide: Text.ElideRight
+                                font.family: SustainMLFont.body_font
+                                font.pixelSize: Settings.body_font_size
+                                color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
                             }
 
                             SmlIcon
@@ -371,12 +394,20 @@ Item
                                 }
                                 onClicked:
                                 {
-                                    engine.delete_saved_file(saved_file_row.modelData)
-                                    root.__saved_file_names = root.__saved_file_names.filter(function(n) { return n !== saved_file_row.modelData })
-                                    if (root.__selected_saved_file === saved_file_row.modelData)
+                                    // Reassigning root.__saved_file_names below destroys and
+                                    // recreates every row delegate, including this very one -
+                                    // so everything this handler needs from the delegate's own
+                                    // scope (modelData) must be captured first, and that
+                                    // reassignment must be the LAST statement: anything after it
+                                    // would run against an already-destroyed delegate and throw
+                                    // (e.g. "root is not defined").
+                                    var deleted_name = saved_file_row.modelData
+                                    engine.delete_saved_file(deleted_name)
+                                    if (root.__selected_saved_file === deleted_name)
                                     {
                                         root.__selected_saved_file = ""
                                     }
+                                    root.__saved_file_names = root.__saved_file_names.filter(function(n) { return n !== deleted_name })
                                 }
                             }
                         }

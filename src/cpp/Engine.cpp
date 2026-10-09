@@ -606,6 +606,105 @@ QJsonObject Engine::request_specific_results(
     return specific_node_results_request(node_json_data);
 }
 
+void Engine::request_problem_limits(
+        const int problem_id,
+        const int iteration_id)
+{
+    QJsonObject task_json;
+    task_json["problem_id"] = problem_id;
+    task_json["iteration_id"] = iteration_id;
+
+    QJsonObject node_json_data;
+    node_json_data["node_id"] = static_cast<int>(sustainml::NodeID::ID_ORCHESTRATOR);
+    node_json_data["task_id"] = task_json;
+
+    REST_requester* requester = new REST_requester(
+        [this, problem_id, iteration_id](const REST_requester* requester, const QJsonObject& json_obj)
+        {
+            QJsonObject user_input = json_obj[Utils::node_name(sustainml::NodeID::ID_ORCHESTRATOR)].toObject();
+            if (!user_input.isEmpty())
+            {
+                QJsonObject extra_data = user_input["extra_data"].toObject();
+                emit problem_limits(
+                    problem_id,
+                    iteration_id,
+                    user_input["optimize_carbon_footprint_manual"].toBool() ||
+                    user_input["optimize_carbon_footprint_auto"].toBool(),
+                    user_input["desired_carbon_footprint"].toDouble(),
+                    extra_data["max_memory_footprint"].toDouble());
+            }
+            remove_requester(requester);
+        },
+        REST_requester::RequestType::REQUEST_RESULTS,
+        node_json_data);
+
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    requesters_.push_back(requester);
+}
+
+void Engine::request_problem_results(
+        const int problem_id)
+{
+    QSet<QString> requested;
+    for (const auto& task_id : received_task_ids)
+    {
+        if (static_cast<int>(task_id.problem_id()) != problem_id ||
+                requested.contains(Utils::task_string(task_id)))
+        {
+            continue;
+        }
+        requested.insert(Utils::task_string(task_id));
+        const int iteration_id = static_cast<int>(task_id.iteration_id());
+
+        QJsonObject task_json;
+        task_json["problem_id"] = problem_id;
+        task_json["iteration_id"] = iteration_id;
+
+        QJsonObject node_json_data;
+        node_json_data["node_id"] = 9;  // Request all information
+        node_json_data["task_id"] = task_json;
+
+        REST_requester* requester = new REST_requester(
+            [this, problem_id, iteration_id](const REST_requester* requester, const QJsonObject& json_obj)
+            {
+                if (json_obj.contains("task_id"))
+                {
+                    emit problem_iteration_results(problem_id, iteration_id, json_obj);
+                }
+                remove_requester(requester);
+            },
+            REST_requester::RequestType::REQUEST_RESULTS,
+            node_json_data);
+
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::remove_requester(
+        const REST_requester* requester)
+{
+    std::lock_guard<std::mutex> lock(requesters_mutex_);
+    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
+    {
+        if (*it == requester)
+        {
+            auto ptr = *it;
+            requesters_.erase(it);
+            ptr->disconnect();
+            ptr->deleteLater();
+            break;
+        }
+    }
+}
+
+bool Engine::iteration_follows(
+        const QJsonObject& carbon_extra_data) const
+{
+    return !cancel_requested_.load() &&
+           (carbon_extra_data["auto_reiterate"].toBool() || carbon_extra_data["num_outputs"].toInt() > 1);
+}
+
 void Engine::request_status()
 {
     node_status_request(QJsonObject());
@@ -890,7 +989,22 @@ void Engine::print_results(
         }
         case sustainml::NodeID::ID_CARBON_FOOTPRINT:
         {
-            if (!received_task_ids.empty() && (task_id == received_task_ids.back()))
+            // The submitted task is over with the carbon footprint of its last iteration: tasks
+            // replayed from a save file are already over, and no other iteration follows it
+            // (next output model, or the auto carbon footprint optimization trying another model)
+            types::TaskId last_live_task;
+            bool has_live_task = false;
+            for (auto it = received_task_ids.rbegin(); it != received_task_ids.rend(); ++it)
+            {
+                if (!replayed_task_ids_.contains(Utils::task_string(*it)))
+                {
+                    last_live_task = *it;
+                    has_live_task = true;
+                    break;
+                }
+            }
+            if (has_live_task && task_id == last_live_task &&
+                    !iteration_follows(node_json["extra_data"].toObject()))
             {
                 emit task_end();
             }
@@ -1114,10 +1228,11 @@ void Engine::node_results_response(
             QJsonObject node_json = json_obj[Utils::node_name(id)].toObject();
             {
                 QJsonObject extra_data = node_json["extra_data"].toObject();
-                if (extra_data.contains("num_outputs") && extra_data["num_outputs"].toInt() > 1 &&
-                        !cancel_requested_.load())
+                // Tasks replayed from a save file are over: no iteration of theirs is coming
+                types::TaskId task_id = Utils::task_id(node_json);
+                bool replayed = replayed_task_ids_.contains(Utils::task_string(task_id));
+                if (iteration_follows(extra_data) && !replayed)
                 {
-                    types::TaskId task_id = Utils::task_id(node_json);
                     task_id = types::TaskId(task_id.problem_id(), task_id.iteration_id() + 1);
                     received_task_ids.push_back(task_id);
                     emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
@@ -1449,13 +1564,18 @@ void Engine::response_for_cancel(
     }
 }
 
-void Engine::request_saved_files_list()
+void Engine::request_saved_files_list(
+        const QString& part)
 {
-    QJsonObject empty_json;
+    QJsonObject json_obj;
+    if (!part.isEmpty())
+    {
+        json_obj["part"] = part;
+    }
     REST_requester* requester = new REST_requester(
         std::bind(&Engine::saved_files_response, this, std::placeholders::_1, std::placeholders::_2),
         REST_requester::RequestType::REQUEST_SAVED_FILES,
-        empty_json);
+        json_obj);
 
     {
         std::lock_guard<std::mutex> lock(requesters_mutex_);
@@ -1621,6 +1741,7 @@ void Engine::replay_loaded_tasks(
 
         types::TaskId task_id(problem_id, iteration_id);
         received_task_ids.push_back(task_id);
+        replayed_task_ids_.insert(Utils::task_string(task_id));
         // Replay through the existing results path: this fires the same per-node
         // requests/signals a live task already uses, so the Results screen tab
         // creation logic needs no separate code path for loaded tasks. The backend
@@ -1752,6 +1873,70 @@ void Engine::save_all(
         std::lock_guard<std::mutex> lock(requesters_mutex_);
         requesters_.push_back(requester);
     }
+}
+
+void Engine::save_hf(
+        QString name,
+        QString part,
+        const QVariantList& data)
+{
+    QJsonObject json_obj;
+    json_obj["name"] = name;
+    json_obj["part"] = part;
+    json_obj["data"] = QJsonArray::fromVariantList(data);
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::save_hf_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::SAVE_HF,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::save_hf_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    QString message = json_obj.value("message").toString();
+    QString path = json_obj.value("path").toString();
+    emit update_log(message.isEmpty() ? QString("Saved HF history.") : message +
+            (path.isEmpty() ? QString() : QString(" (") + path + QString(")")));
+
+    remove_requester(requester);
+}
+
+void Engine::load_hf(
+        QString name,
+        QString part)
+{
+    QJsonObject json_obj;
+    json_obj["name"] = name;
+    json_obj["part"] = part;
+
+    REST_requester* requester = new REST_requester(
+        std::bind(&Engine::load_hf_response, this, std::placeholders::_1, std::placeholders::_2),
+        REST_requester::RequestType::LOAD_HF,
+        json_obj);
+
+    {
+        std::lock_guard<std::mutex> lock(requesters_mutex_);
+        requesters_.push_back(requester);
+    }
+}
+
+void Engine::load_hf_response(
+        const REST_requester* requester,
+        const QJsonObject& json_obj)
+{
+    if (json_obj.contains("part"))
+    {
+        emit hf_part_loaded(json_obj.value("part").toString(), json_obj.value("data").toArray().toVariantList());
+    }
+
+    remove_requester(requester);
 }
 
 void Engine::save_all_response(
