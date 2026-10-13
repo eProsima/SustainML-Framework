@@ -27,7 +27,7 @@ Item
             id: header
             color: "transparent"
             height: Settings.logo_height
-            width: (eProsima_logo.width + dfki_logo.width + ibm_logo.width + inria_logo.width + ku_logo.width + rptu_logo.width + upmem_logo.width + 5*Settings.spacing_normal + Settings.spacing_big - 10)
+            width: (eProsima_logo.width + dfki_logo.width + ibm_logo.width + inria_logo.width + ku_logo.width + rptu_logo.width + 4*Settings.spacing_normal + Settings.spacing_big - 10)
 
 
             // Layout constraints
@@ -215,36 +215,6 @@ Item
                 {
                     anchors.fill: parent
                     onClicked: Qt.openUrlExternally("https://rptu.de/en/");
-                }
-            }
-            // upmem logo
-            Image
-            {
-                id: upmem_logo
-
-                source: ScreenManager.night_mode ?   Settings.upmem_nightmode_logo : Settings.upmem_logo
-
-                // set image size
-                height: Settings.logo_height * 1.1
-
-                // Layout constraints
-                anchors
-                {
-                    left: rptu_logo.right
-                    leftMargin: Settings.spacing_normal
-                    verticalCenter: rptu_logo.verticalCenter
-                }
-
-                // Image smoothness
-                sourceSize.height: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                antialiasing: true
-
-                SmlMouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: Qt.openUrlExternally("https://www.upmem.com/");
                 }
             }
         }
