@@ -36,10 +36,8 @@ Window {
     property string dataset_profile: ""
     property string dataset_keywords: ""
     property string dataset_applications: ""
-    property var modality_list: []
     property var goal_list: []
     property var hardware_list: []
-    property var metrics_list: []
     property var model_list: []
     property bool refreshing: false
     property bool tasking: false
@@ -193,13 +191,6 @@ Window {
             main_window.initializing = false
         }
 
-        function onModalities_available(list_modalities, list_goals)
-        {
-            main_window.modality_list = ["(empty)"].concat(list_modalities)
-            main_window.goal_list = ["(empty)"].concat(list_goals)
-            main_window.refreshing = false
-        }
-
         // The LLM-generated "keywords"/"applications" fields are meant to be
         // arrays, but the prompt template describes them as plain quoted
         // strings (like every other field) - so the model (llama3) sometimes
@@ -239,12 +230,6 @@ Window {
         function onHardwares_available(list_hardwares)
         {
             main_window.hardware_list = ["(empty)"].concat(list_hardwares)
-            main_window.refreshing = false
-        }
-
-        function onMetrics_available(list_metrics)
-        {
-            main_window.metrics_list = list_metrics
             main_window.refreshing = false
         }
 
@@ -586,8 +571,6 @@ Window {
         // (as when a model is selected in the Problem Definition screen)
         engine.launch_task(
             def.__problem_short_description,
-            def.__modality,
-            def.__metric,
             def.__problem_definition,
             def.__inputs,
             def.__outputs,
@@ -893,11 +876,8 @@ Window {
             {
                 id: definition_screen_component
 
-                // Pass modalities
-                __modality_list: main_window.modality_list
                 __goal_list: main_window.goal_list
                 __hardware_list: main_window.hardware_list
-                __metrics: main_window.metrics_list
                 __model_list: main_window.model_list
                 __dataset_description: main_window.dataset_description
                 __dataset_topic: main_window.dataset_topic
@@ -943,8 +923,6 @@ Window {
                 onSend_task: {
                     engine.launch_task(
                             problem_short_description,
-                            modality,
-                            metric,
                             problem_definition,
                             inputs,
                             outputs,
@@ -973,16 +951,8 @@ Window {
 
                 onRefresh: {
                     main_window.refreshing = true
-                    engine.request_modalities()
-                    // engine.request_goals()
+                    engine.request_goals()
                     engine.request_hardwares()
-                }
-
-                onAsk_metrics: {
-                    main_window.refreshing = true
-                    engine.request_metrics(
-                        metric_req_type,
-                        req_type_values)
                 }
 
                 onAsk_models: {
@@ -1051,11 +1021,9 @@ Window {
                         Layout.preferredWidth: parent.width * 0.75
                         Layout.fillHeight: true
 
-                        __modality_list: main_window.modality_list
                         __goal_list: main_window.goal_list
                         __hardware_list: main_window.hardware_list
                         __model_list: main_window.model_list
-                        __metrics: main_window.metrics_list
                         __refreshing: main_window.refreshing
                         __initializing: main_window.initializing
                         __reiterate: true
@@ -1067,8 +1035,6 @@ Window {
                         onSend_task: {
                             engine.launch_task(
                                 problem_short_description,
-                                modality,
-                                metric,
                                 problem_definition,
                                 inputs,
                                 outputs,
@@ -1096,15 +1062,8 @@ Window {
                         }
                         onRefresh: {
                             main_window.refreshing = true
-                            engine.request_modalities()
-                            // engine.request_goals()
+                            engine.request_goals()
                             engine.request_hardwares()
-                        }
-                        onAsk_metrics: {
-                            main_window.refreshing = true
-                            engine.request_metrics(
-                                metric_req_type,
-                                req_type_values)
                         }
                     }
 

@@ -421,8 +421,6 @@ QString Engine::write_unet_visualizer(
 
 void Engine::launch_task(
         QString problem_short_description,
-        QString modality,
-        QString metric,
         QString problem_definition,
         QString inputs,
         QString outputs,
@@ -498,7 +496,6 @@ void Engine::launch_task(
     extra_data["hardware_required"] = hardware_required;
     extra_data["max_memory_footprint"] = max_memory_footprint;
     extra_data["goal"] = goal;
-    extra_data["metric"] = metric;
     extra_data["previous_problem_id"] = previous_problem_id;
     extra_data["num_outputs"] = num_outputs;
     extra_data["model_selected"] = model_selected;
@@ -519,7 +516,6 @@ void Engine::launch_task(
     }
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
-    json_data["modality"] = modality;
     json_data["problem_definition"] = problem_definition;
     json_data["inputs"] = ins;
     json_data["outputs"] = outs;
@@ -710,65 +706,12 @@ void Engine::request_status()
     node_status_request(QJsonObject());
 }
 
-void Engine::request_modalities()
+void Engine::request_goals()
 {
+    // The ML model metadata node lists the goals in its answer to the "modality" request
     QJsonObject json_config;
     json_config["configuration"] = "modality";
     json_config["node_id"] = 4;
-
-    config_request(json_config, [this](const QJsonObject& json_obj)
-            {
-                QJsonObject response_obj = json_obj["response"].toObject();
-                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-                {
-                    QJsonDocument config_doc = QJsonDocument::fromJson(
-                        response_obj["configuration"].toString().toUtf8());
-                    if (config_doc.isObject())
-                    {
-                        QJsonObject config_obj = config_doc.object();
-                        if (config_obj.contains("modalities") && config_obj["modalities"].isString())
-                        {
-                            QStringList modalities = config_obj["modalities"].toString().split(", ");
-                            QStringList goals = config_obj["goals"].toString().split(", ");
-                            emit modalities_available(modalities, goals);
-                        }
-                    }
-                }
-            });
-}
-
-void Engine::request_inout_modalities()
-{
-    QJsonObject json_config;
-    json_config["configuration"] = "in_out_modalities";
-    json_config["node_id"] = 4;
-
-    config_request(json_config, [this](const QJsonObject& json_obj)
-            {
-                QJsonObject response_obj = json_obj["response"].toObject();
-                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-                {
-                    QJsonDocument config_doc = QJsonDocument::fromJson(
-                        response_obj["configuration"].toString().toUtf8());
-                    if (config_doc.isObject())
-                    {
-                        QJsonObject config_obj = config_doc.object();
-                        if (config_obj.contains("inputs") && config_obj["inputs"].isString())
-                        {
-                            QStringList inputs = config_obj["inputs"].toString().split(", ");
-                            QStringList outputs = config_obj["outputs"].toString().split(", ");
-                            //emit modalities_available(inputs, outputs); //TODO: Implement this signal
-                        }
-                    }
-                }
-            });
-}
-
-void Engine::request_goals()
-{
-    QJsonObject json_config;
-    json_config["configuration"] = "goal";
-    json_config["node_id"] = 5;
 
     config_request(json_config, [this](const QJsonObject& json_obj)
             {
@@ -816,34 +759,6 @@ void Engine::request_hardwares()
             });
 }
 
-void Engine::request_metrics(
-        QString metric_req_type,
-        QString req_type_values)
-{
-    QJsonObject json_config;
-    json_config["configuration"] = "metrics, " + metric_req_type + ": " + req_type_values;
-    json_config["node_id"] = 4;
-
-    config_request(json_config, [this](const QJsonObject& json_obj)
-            {
-                QJsonObject response_obj = json_obj["response"].toObject();
-                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-                {
-                    QJsonDocument config_doc = QJsonDocument::fromJson(
-                        response_obj["configuration"].toString().toUtf8());
-                    if (config_doc.isObject())
-                    {
-                        QJsonObject config_obj = config_doc.object();
-                        if (config_obj.contains("metrics") && config_obj["metrics"].isString())
-                        {
-                            QStringList metrics = config_obj["metrics"].toString().split(", ");
-                            emit metrics_available(metrics);
-                        }
-                    }
-                }
-            });
-}
-
 void Engine::request_model_info(
         QString mode_name)
 {
@@ -873,33 +788,6 @@ void Engine::request_model_info(
                             QStringList likes = config_obj["likes"].toString().split(", ");
                             QStringList lastModified = config_obj["lastModified"].toString().split(", ");
                             // emit mode_details(model_uri, id, name, problem, coverTag, library, downloads, likes, lastModified);  // TODO: Implement this signal
-                        }
-                    }
-                }
-            });
-}
-
-void Engine::request_problem_from_modality(
-        QString modality)
-{
-    QJsonObject json_config;
-    json_config["configuration"] = "problem_from_modality, " + modality;
-    json_config["node_id"] = 4;
-
-    config_request(json_config, [this](const QJsonObject& json_obj)
-            {
-                QJsonObject response_obj = json_obj["response"].toObject();
-                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-                {
-                    QJsonDocument config_doc = QJsonDocument::fromJson(
-                        response_obj["configuration"].toString().toUtf8());
-                    if (config_doc.isObject())
-                    {
-                        QJsonObject config_obj = config_doc.object();
-                        if (config_obj.contains("goals") && config_obj["goals"].isString())
-                        {
-                            QStringList goals = config_obj["goals"].toString().split(", ");
-                            // emit mode_details(goals);  // TODO: Implement this signal
                         }
                     }
                 }
@@ -1115,15 +1003,12 @@ void Engine::send_reiteration_inputs(
     QJsonObject extraData = node_json["extra_data"].toObject();
     QString goal = extraData["goal"].toString();
     QString hardware_required = extraData["hardware_required"].toString();
-    QString metric = extraData["metric"].toString();
     int max_memory_footprint = extraData["max_memory_footprint"].toInt();
     int num_outputs = extraData["num_outputs"].toInt();
 
     emit reiterate_user_inputs(
         task_id.problem_id(),
         task_id.iteration_id(),
-        node_json["modality"].toString(),
-        metric,
         node_json["problem_short_description"].toString(),
         node_json["problem_definition"].toString(),
         inputs_str,
@@ -1436,7 +1321,7 @@ void Engine::node_status_response(
                 if (ml_model_meta_idle)
                 {
                     emit refreshing_on();
-                    request_modalities();
+                    request_goals();
                     ml_model_meta_idle = false;
                 }
             }
