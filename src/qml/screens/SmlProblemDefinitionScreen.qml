@@ -23,8 +23,6 @@ Item
 
     // Input values
     property string __problem_short_description: ""
-    property string __modality: ""
-    property string __metric: ""
     property string __problem_definition: ""
     property string __inputs: ""
     property string __outputs: ""
@@ -63,9 +61,7 @@ Item
     property string notSupportProblemMessage: ""
 
     // Private properties
-    property var __modality_list: []
     property var __goal_list: []
-    property var __metrics: []
     property var __hardware_list: []
     property var __model_list: []
     property string __dataset_description: ""
@@ -89,8 +85,6 @@ Item
     signal go_unet_models()
     signal send_task(
         string problem_short_description,
-        string modality,
-        string metric,
         string problem_definition,
         string inputs,
         string outputs,
@@ -132,10 +126,6 @@ Item
         string applications
     )
     signal refresh()
-    signal ask_metrics(
-        string metric_req_type,
-        string req_type_values
-    )
     signal ask_models(
         string goal_type
     )
@@ -152,7 +142,7 @@ Item
     Connections
     {
         target: engine
-        function onReiterate_user_inputs(problem_id, iteration_id, modality, metric, problem_short_description,
+        function onReiterate_user_inputs(problem_id, iteration_id, problem_short_description,
                           problem_definition, inputs, outputs, dataset_metadata_description,
                           dataset_metadata_topic, dataset_metadata_profile,
                           dataset_metadata_keywords, dataset_metadata_applications, minimum_samples,
@@ -162,8 +152,6 @@ Item
                           geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type, is_reiteration)
         {
             root.__problem_short_description = problem_short_description
-            root.__modality = modality
-            root.__metric = metric
             root.__types = type
             root.__problem_definition = problem_definition
             root.__inputs = inputs
@@ -412,7 +400,7 @@ Item
             background_nightmode_color: Settings.app_color_dark
             width: scroll_view.width * 0.9
             height: root.__input_height_big
-            KeyNavigation.tab: modality_input
+            KeyNavigation.tab: types_input
             anchors
             {
                 top: problem_definition_header.bottom
@@ -432,139 +420,6 @@ Item
             }
         }
 
-        // Modality
-        SmlText
-        {
-            id: modality_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Modality"
-            color: modality_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: problem_definition_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            focus: true
-            id: modality_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            displayText: root.__modality
-            placeholder_text: displayText !== "" ? "" : "Select the modality of the input data"
-            model: root.__modality_list
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: root.__metrics.length > 0 ? (scroll_view.width - Settings.spacing_big) / 2 * 0.9 : scroll_view.width * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: inputs_input
-            anchors
-            {
-                top: modality_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: modality_header.left
-            }
-            onModelChanged:
-            {
-                modality_input.currentIndex = -1
-            }
-            onText_changed:
-            {
-                if (text === "(empty)") text = ""
-                root.__modality = text
-                if (text !== "" && text !== "(empty)")
-                {
-                    root.ask_metrics("cover_tag", text)
-                }
-
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    // Enabling selecting the same item in 2 consecutive runs
-                    modality_input.currentIndex = -1
-                    modality_input.open()
-                    modality_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                inputs_input.focus = true
-            }
-        }
-
-        // Metrics
-        SmlText
-        {
-            id: metrics_header
-            visible: root.__metrics.length > 0
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Metrics"
-            color: metrics_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: modality_header.top
-                left: modality_input.right
-                leftMargin: Settings.spacing_big
-            }
-        }
-
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            focus: true
-            id: metrics_input
-            visible: root.__metrics.length > 0
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            displayText: root.__metric
-            placeholder_text: displayText !== "" ? "" : "Select the metrics for the model"
-            model: root.__metrics
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: inputs_input
-            anchors
-            {
-                top: metrics_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: metrics_header.left
-            }
-            onModelChanged:
-            {
-                metrics_input.currentIndex = -1
-            }
-            onText_changed:
-            {
-                root.__metric = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    // Enabling selecting the same item in 2 consecutive runs
-                    metrics_input.currentIndex = -1
-                    metrics_input.open()
-                    metrics_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                inputs_input.focus = true
-            }
-        }
-
          // Types
         SmlText
         {
@@ -574,7 +429,7 @@ Item
             color: types_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
             anchors
             {
-                top: modality_input.bottom
+                top: problem_definition_input.bottom
                 topMargin: Settings.spacing_small
                 left: parent.left
             }
@@ -1877,8 +1732,6 @@ Item
     {
         // Reset internal state
         root.__problem_short_description = ""
-        root.__modality = ""
-        root.__metric = ""
         root.__problem_definition = ""
         root.__inputs = ""
         root.__outputs = ""
@@ -1921,8 +1774,6 @@ Item
 
         // Reset combobox selections
         types_input.currentIndex = 0
-        modality_input.currentIndex = -1
-        metrics_input.currentIndex = -1
         goal_input.currentIndex = -1
         required_hardware_input.currentIndex = -1
         model_select_input.currentIndex = -1
@@ -1938,8 +1789,6 @@ Item
     {
         root.send_task(
                 root.__problem_short_description,
-                root.__modality,
-                root.__metric,
                 root.__problem_definition,
                 root.__inputs,
                 root.__outputs,

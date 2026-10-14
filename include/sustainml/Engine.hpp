@@ -229,8 +229,6 @@ public slots:
      * @brief  launch task with user input data
      *
      * @param problem_short_description short description of the problem
-     * @param modality modality of the problem
-     * @param metric metric of the problem
      * @param problem_definition definition of the problem
      * @param inputs inputs of the problem
      * @param outputs outputs of the problem
@@ -258,8 +256,6 @@ public slots:
      */
     void launch_task(
             QString problem_short_description,
-            QString modality,
-            QString metric,
             QString problem_definition,
             QString inputs,
             QString outputs,
@@ -330,16 +326,6 @@ public slots:
     void request_status();
 
     /**
-     * @brief public method to request modalities of ML
-     */
-    void request_modalities();
-
-    /**
-     * @brief public method to request inputs and outputs modalities of ML
-     */
-    void request_inout_modalities();
-
-    /**
      * @brief public method to request goals of ML
      */
     void request_goals();
@@ -350,16 +336,6 @@ public slots:
     void request_hardwares();
 
     /**
-     * @brief public method to request metrics from modalities or problem
-     *
-     * @param metric_req_type indicate if metrics are retrieved from modalities or problem. Also provide ins, out modalities or problem type
-     * @param req_type_values provide ins, out modalities or problem type. Each separated by comma
-     */
-    void request_metrics(
-            QString metric_req_type,
-            QString req_type_values);
-
-    /**
      * @brief public method to request model details
      *
      * @param mode_name indicate model name that details are requested
@@ -368,20 +344,12 @@ public slots:
             QString mode_name);
 
     /**
-     * @brief public method to request problem types from modality
-     *
-     * @param modality indicate modality to request problem types
-     */
-    void request_problem_from_modality(
-            QString modality);
-
-    /**
      * @brief public method to request models types from goal
      *
-     * @param modality indicate goal to request models types
+     * @param goal indicate goal to request models types
      */
     void request_model_from_goal(
-            QString modality);
+            QString goal);
 
     /**
      * @brief private method to request user_inputs from the given previous task.
@@ -597,8 +565,6 @@ signals:
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
-     * @param modality modality of the problem
-     * @param metric metric of the problem
      * @param problem_short_description short description of the problem
      * @param problem_definition definition of the problem
      * @param inputs_str inputs of the problem
@@ -626,8 +592,6 @@ signals:
     void reiterate_user_inputs(
             const int& problem_id,
             const int& iteration_id,
-            const QString& modality,
-            const QString& metric,
             const QString& problem_short_description,
             const QString& problem_definition,
             const QString& inputs_str,
@@ -668,16 +632,6 @@ signals:
     void initializing_off();
 
     /**
-     * @brief Modalities received signal to display in the GUI
-     *
-     * @param modalities list of possible modalities
-     * @param goals list of possible goals
-     */
-    void modalities_available(
-            const QStringList& modalities,
-            const QStringList& goals);
-
-    /**
      * @brief Dataset metadata received signal to display in the GUI
      * @param dataset_metadata map with dataset metadata
      */
@@ -700,20 +654,12 @@ signals:
             const QStringList& hardwares);
 
     /**
-     * @brief Metrics received signal to display in the GUI
-     *
-     * @param metrics list of possible metrics
-     */
-    void metrics_available(
-            const QStringList& metrics);
-
-    /**
      * @brief Models received signal to display in the GUI
      *
-     * @param metrics list of possible models
+     * @param models list of possible models
      */
     void models_available(
-            const QStringList& metrics);
+            const QStringList& models);
 
     /**
      * @brief Signal to display the error message
