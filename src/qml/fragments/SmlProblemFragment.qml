@@ -38,18 +38,6 @@ Item
         problem_fragment_view.update_problem_id(problem_id, -1)
     }
 
-    // Extends the Overview/Iteration tab row's background to line up with the right
-    // edge of the last Problem-level tab above, growing/shrinking live as tabs are
-    // added or closed (problem_tabs_width is pushed in from the outer tab bar).
-    Rectangle
-    {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        width: problem_tabs_width
-        height: 36
-        color: ScreenManager.night_mode ? "#404040" : "white"
-    }
-
     SmlTabView
     {
         id: problem_fragment_view
@@ -71,14 +59,7 @@ Item
         allowed_stack_components: problem_components
         default_stack_component: "general_view"
         reduced_tabs: true
-        tab_background_color: "transparent"
-        tab_background_nightmode_color: "transparent"
-        selected_tab_color: "#e0e0e0"
-        selected_tab_nightmode_color: "#505050"
-        not_selected_tab_color: "#d0d0d0"
-        not_selected_tab_nightmode_color: "#404040"
-        not_selected_shadow_tab_color: "#909090"
-        not_selected_shadow_tab_nightmode_color: "#303030"
+        tab_style: "underline"
 
         onTab_view_loaded:
         {

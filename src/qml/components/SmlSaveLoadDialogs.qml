@@ -25,6 +25,7 @@ import QtQuick.Controls 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Reusable "named save file" Save/Load dialog pair, backed by the backend's
 // saved_files_available() signal. Any screen that wants its own save/load flow
@@ -93,50 +94,37 @@ Item
         }
     }
 
-    Dialog
+    SmlModal
     {
         id: save_name_dialog
-        anchors.centerIn: parent
-        modal: true
-        padding: 16
+        title: root.save_title
+        icon_name: Settings.save_icon_name
+        dialog_width: 460
         standardButtons: Dialog.Save | Dialog.Cancel
-
-        background: Rectangle
-        {
-            anchors.fill: parent
-            radius: 10
-            color: Settings.app_color_light
-            border.color: Settings.app_color_green_4
-            border.width: 1
-        }
-
-        header: Item { }
 
         contentItem: Column
         {
             id: save_dialog_column
-            spacing: 16
+            spacing: Theme.space3
 
-            SmlText
+            Text
             {
-                text_value: root.save_title
-                text_kind: SmlText.TextKind.Header_2
-                width: 280
-                horizontalAlignment: Text.AlignHCenter
+                text: root.save_prompt
+                textFormat: Text.PlainText
+                font.family: Theme.uiFontFamily
+                font.pixelSize: Theme.fontSizeBody
+                lineHeight: 1.3
+                color: Theme.textSecondary
+                wrapMode: Text.WordWrap
+                width: parent.width
             }
 
-            SmlText
-            {
-                text_value: root.save_prompt
-                text_kind: SmlText.TextKind.Body
-                width: 280
-            }
-
-            TextField
+            SmlInput
             {
                 id: save_name_field
-                width: 280
-                placeholderText: "e.g. experiment 1"
+                width: parent.width
+                height: Theme.controlHeight + 4
+                placeholder_text: "e.g. experiment 1"
                 // Matches persistence.py's own whitelist exactly, so what's typed
                 // here is always exactly what ends up saved - nothing gets silently
                 // dropped server-side. '/' is allowed as a literal character - the
@@ -144,28 +132,37 @@ Item
                 validator: RegExpValidator { regExp: /^[A-Za-z0-9 _/-]*$/ }
             }
 
-            SmlText
+            SmlFieldLabel
             {
                 visible: root.__saved_file_names.length > 0
-                text_value: "Existing saves:"
-                text_kind: SmlText.TextKind.Body
-                width: 280
+                text: "Existing saves"
+                width: parent.width
+                topPadding: Theme.space1
             }
 
             ScrollView
             {
-                width: 280
-                height: Math.min(save_existing_column.implicitHeight, 160)
+                id: save_files_scroll
+                width: parent.width
+                height: Math.min(save_existing_column.implicitHeight, 180)
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical: SmlScrollBar
+                {
+                    parent: save_files_scroll
+                    x: save_files_scroll.width - width
+                    y: save_files_scroll.topPadding
+                    height: save_files_scroll.availableHeight
+                    policy: ScrollBar.AsNeeded
+                }
 
                 Column
                 {
                     id: save_existing_column
                     // Narrower than the ScrollView itself, leaving clearance on the right
                     // for its overlay scrollbar so it doesn't cover the row content.
-                    width: 280 - 16
-                    spacing: 8
+                    width: save_dialog_column.width - 16
+                    spacing: Theme.space1
 
                     Repeater
                     {
@@ -180,14 +177,16 @@ Item
                             // Grows to fit a 2-line name instead of staying fixed at the
                             // 1-line height - label.contentHeight already accounts for the
                             // wrap/maximumLineCount below.
-                            height: Math.max(36, existing_label.contentHeight + 16)
-                            radius: 36 / 2.5
+                            height: Math.max(34, existing_label.contentHeight + 14)
+                            radius: Theme.radiusSm
                             // "Selected" here just means it matches whatever's currently
                             // typed in the name field - the same thing clicking a row sets,
                             // so it also highlights correctly if someone types a match by hand.
-                            color: existing_save_row.modelData === save_name_field.text
-                                ? Settings.app_color_green_1
-                                : (ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4)
+                            readonly property bool __selected: existing_save_row.modelData === save_name_field.text
+                            color: __selected ? Theme.accentSubtleStrong
+                                 : existing_mouse.containsMouse ? Theme.accentSubtle : Theme.sunken
+                            border.width: __selected ? 1 : 0
+                            border.color: Theme.brandGreen
 
                             // Plain Text, not SmlText: wrapping up to 2 lines and only then
                             // eliding the rest (wrapMode + maximumLineCount + elide together)
@@ -199,23 +198,28 @@ Item
                                 anchors
                                 {
                                     left: parent.left
-                                    leftMargin: Settings.spacing_normal
+                                    leftMargin: Theme.space3
                                     right: parent.right
-                                    rightMargin: Settings.spacing_normal
+                                    rightMargin: Theme.space3
                                     verticalCenter: parent.verticalCenter
                                 }
                                 text: existing_save_row.modelData
+                                textFormat: Text.PlainText
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: 2
                                 elide: Text.ElideRight
-                                font.family: SustainMLFont.body_font
-                                font.pixelSize: Settings.body_font_size
-                                color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
+                                font.family: Theme.uiFontFamily
+                                font.pixelSize: Theme.fontSizeBody
+                                font.weight: existing_save_row.__selected ? Font.DemiBold : Font.Normal
+                                color: Theme.textPrimary
                             }
 
                             MouseArea
                             {
+                                id: existing_mouse
                                 anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
                                 onClicked: save_name_field.text = existing_save_row.modelData
                             }
                         }
@@ -234,15 +238,13 @@ Item
         }
     }
 
-    Dialog
+    SmlModal
     {
         id: load_picker_dialog
-        anchors.centerIn: parent
-        modal: true
-        padding: 16
+        title: root.load_title
+        icon_name: Settings.load_icon_name
+        dialog_width: 460
         standardButtons: Dialog.Open | Dialog.Cancel
-
-        width: 320
 
         Component.onCompleted:
         {
@@ -259,45 +261,38 @@ Item
             }
         }
 
-        background: Rectangle
-        {
-            anchors.fill: parent
-            radius: 10
-            color: Settings.app_color_light
-            border.color: Settings.app_color_green_4
-            border.width: 1
-        }
-
-        header: Item { }
-
         contentItem: Column
         {
             id: load_dialog_column
-            spacing: 12
+            spacing: Theme.space3
             width: load_picker_dialog.availableWidth
 
-            SmlText
-            {
-                text_value: root.load_title
-                text_kind: SmlText.TextKind.Header_2
-                width: parent.width
-                horizontalAlignment: Text.AlignHCenter
-            }
-
-            SmlText
+            Text
             {
                 visible: root.__saved_file_names.length === 0
-                text_value: root.no_files_text
-                text_kind: SmlText.TextKind.Body
+                text: root.no_files_text
+                textFormat: Text.PlainText
+                font.family: Theme.uiFontFamily
+                font.pixelSize: Theme.fontSizeBody
+                color: Theme.textMuted
                 width: parent.width
             }
 
             ScrollView
             {
+                id: load_files_scroll
                 width: parent.width
                 height: Math.min(load_files_column.implicitHeight, 260)
                 clip: true
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                ScrollBar.vertical: SmlScrollBar
+                {
+                    parent: load_files_scroll
+                    x: load_files_scroll.width - width
+                    y: load_files_scroll.topPadding
+                    height: load_files_scroll.availableHeight
+                    policy: ScrollBar.AsNeeded
+                }
 
                 Column
                 {
@@ -306,7 +301,7 @@ Item
                     // for its overlay scrollbar so it doesn't cover the row content
                     // (including the delete X, which sits at the row's right edge).
                     width: load_picker_dialog.contentItem.width - 16
-                    spacing: 8
+                    spacing: Theme.space1
 
                     Repeater
                     {
@@ -321,11 +316,13 @@ Item
                             // Grows to fit a 2-line name instead of staying fixed at the
                             // 1-line height - label.contentHeight already accounts for the
                             // wrap/maximumLineCount below.
-                            height: Math.max(36, saved_file_label.contentHeight + 16)
-                            radius: 36 / 2.5
-                            color: saved_file_row.modelData === root.__selected_saved_file
-                                ? Settings.app_color_green_1
-                                : (ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4)
+                            height: Math.max(34, saved_file_label.contentHeight + 14)
+                            radius: Theme.radiusSm
+                            readonly property bool __selected: saved_file_row.modelData === root.__selected_saved_file
+                            color: __selected ? Theme.accentSubtleStrong
+                                 : saved_file_mouse.containsMouse ? Theme.accentSubtle : Theme.sunken
+                            border.width: __selected ? 1 : 0
+                            border.color: Theme.brandGreen
 
                             // Plain Text, not SmlText: wrapping up to 2 lines and only then
                             // eliding the rest (wrapMode + maximumLineCount + elide together)
@@ -337,18 +334,20 @@ Item
                                 anchors
                                 {
                                     left: parent.left
-                                    leftMargin: Settings.spacing_normal
+                                    leftMargin: Theme.space3
                                     right: delete_icon.left
-                                    rightMargin: Settings.spacing_small
+                                    rightMargin: Theme.space2
                                     verticalCenter: parent.verticalCenter
                                 }
                                 text: saved_file_row.modelData
+                                textFormat: Text.PlainText
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: 2
                                 elide: Text.ElideRight
-                                font.family: SustainMLFont.body_font
-                                font.pixelSize: Settings.body_font_size
-                                color: ScreenManager.night_mode ? Settings.app_color_green_1 : Settings.app_color_green_3
+                                font.family: Theme.uiFontFamily
+                                font.pixelSize: Theme.fontSizeBody
+                                font.weight: saved_file_row.__selected ? Font.DemiBold : Font.Normal
+                                color: Theme.textPrimary
                             }
 
                             SmlIcon
@@ -357,13 +356,12 @@ Item
                                 anchors
                                 {
                                     right: parent.right
-                                    rightMargin: Settings.spacing_normal
+                                    rightMargin: Theme.space3
                                     verticalCenter: parent.verticalCenter
                                 }
-                                name: Settings.close_tab_icon_name
-                                size: Settings.spacing_normal
-                                color: Settings.app_color_green_3
-                                nightmode_color: Settings.app_color_green_1
+                                name: Settings.delete_icon_name
+                                size: Theme.iconSizeDefault
+                                variant: delete_mouse.containsMouse ? Theme.iconDanger : Theme.iconMuted
                             }
 
                             // Click anywhere but the X to select this saved file - loading
@@ -376,8 +374,11 @@ Item
                                     top: parent.top
                                     bottom: parent.bottom
                                     right: delete_icon.left
-                                    rightMargin: -Settings.spacing_small
+                                    rightMargin: -Theme.space2
                                 }
+                                id: saved_file_mouse
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
                                 onClicked: root.__selected_saved_file = saved_file_row.modelData
                             }
 
@@ -387,11 +388,14 @@ Item
                                 anchors
                                 {
                                     left: delete_icon.left
-                                    leftMargin: -Settings.spacing_small
+                                    leftMargin: -Theme.space2
                                     top: parent.top
                                     bottom: parent.bottom
                                     right: parent.right
                                 }
+                                id: delete_mouse
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
                                 onClicked:
                                 {
                                     // Reassigning root.__saved_file_names below destroys and

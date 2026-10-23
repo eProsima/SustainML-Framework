@@ -3,7 +3,22 @@
         <file>qml/main.qml</file>
         <file alias="Settings">qml/utils/ProjectSettings.qml</file>
         <file alias="ScreenManager">qml/utils/ScreenManager.qml</file>
+        <file alias="Theme">qml/utils/Theme.qml</file>
         <file>qml/components/SmlButton.qml</file>
+        <file>qml/components/SmlToolTip.qml</file>
+        <file>qml/components/SmlFocusRing.qml</file>
+        <file>qml/components/SmlIconButton.qml</file>
+        <file>qml/components/SmlDialogButtonBox.qml</file>
+        <file>qml/components/SmlModal.qml</file>
+        <file>qml/components/SmlCard.qml</file>
+        <file>qml/components/SmlScreenHeader.qml</file>
+        <file>qml/components/SmlChip.qml</file>
+        <file>qml/components/SmlCheckBox.qml</file>
+        <file>qml/components/SmlFieldLabel.qml</file>
+        <file>qml/components/SmlMenu.qml</file>
+        <file>qml/components/SmlMenuItem.qml</file>
+        <file>qml/components/SmlGrowingLoader.qml</file>
+        <file>qml/components/SmlEmptyState.qml</file>
         <file>qml/components/SmlCombobox.qml</file>
         <file>qml/components/SmlIcon.qml</file>
         <file>qml/components/SmlInput.qml</file>

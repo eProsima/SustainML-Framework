@@ -6,6 +6,7 @@ import QtQuick.Layouts 1.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Fragments imports
 import "../fragments"
@@ -21,16 +22,13 @@ Item {
     property bool reduced_tabs: false
     property bool rounded: true
     property bool allow_tab_rename: false
-    property string selected_tab_color: "white"
-    property string selected_tab_nightmode_color: "#303030"
-    property string tab_background_color: "transparent"
-    property string tab_background_nightmode_color: "transparent"
-    property string not_selected_tab_color: Settings.app_color_light
-    property string not_selected_tab_nightmode_color: Settings.app_color_dark
-    property string selected_shadow_tab_color: "#c0c0c0"
-    property string selected_shadow_tab_nightmode_color: "#707070"
-    property string not_selected_shadow_tab_color: "#d0d0d0"
-    property string not_selected_shadow_tab_nightmode_color: "black"
+    // "card": framed tabs, the selected one a surface card joined to the page (top-level
+    // tabs); "underline": outlined segments on a baseline, the
+    // selected one filled in green (tabs inside a page)
+    property string tab_style: "card"
+    readonly property bool __underline: tab_style === "underline"
+    property color selected_tab_color: __underline ? Theme.transparent : Theme.surface
+    property color not_selected_tab_color: Theme.transparent
 
     // Private properties
     property int __current_tab: 0                                               // current tab displayed
@@ -49,14 +47,14 @@ Item {
 
     // Read only design properties
     readonly property int __max_tabs: 15
-    readonly property int __tabs_height: 36
-    readonly property int __tabs_margins: 15
-    readonly property int __tab_icons_size: 16
+    readonly property int __tabs_height: 38
+    readonly property int __tabs_margins: Theme.space3 + 2
+    readonly property int __tab_icons_size: 14
     readonly property int __max_tab_size: !reduced_tabs ? 200 : 200 - __tab_icons_size - (2 * __tabs_margins)
     readonly property int __min_tab_size: !reduced_tabs ? 180 : 180 - __tab_icons_size - (2 * __tabs_margins)
     readonly property int __add_tab_width: 50
     readonly property int __min_gap: 80
-    readonly property int __radius: Settings.input_default_rounded_radius
+    readonly property int __radius: Theme.radiusMd
 
     // initialize first element in the tab
     Component.onCompleted:{
@@ -83,8 +81,14 @@ Item {
     // stack layout (where idx referred to the tab, which would contain different views)
     StackLayout {
         id: stack_layout
-        width: sustainml_custom_tabview.width
+        // Card tabs: inset by the outline of the content card drawn around the pages
+        readonly property int __inset: sustainml_custom_tabview.__underline ? 0 : 1
+        x: __inset
+        width: sustainml_custom_tabview.width - 2 * __inset
         anchors.top: tab_list.bottom; anchors.bottom: sustainml_custom_tabview.bottom
+        anchors.topMargin: __inset
+        // Card tabs: the pages stop short of the content card's rounded bottom corners
+        anchors.bottomMargin: sustainml_custom_tabview.__underline ? 0 : Theme.radiusSm
 
         Component {
             id: stack_component
@@ -132,42 +136,87 @@ Item {
                     : sustainml_custom_tabview.width / sustainml_custom_tabview.__tab_model.count > __max_tab_size
                         ? __max_tab_size
                         : sustainml_custom_tabview.width / sustainml_custom_tabview.__tab_model.count
-            color: __current_tab == idx
-                    ? ScreenManager.night_mode ? selected_tab_nightmode_color : selected_tab_color
-                    : ScreenManager.night_mode ? not_selected_tab_nightmode_color : not_selected_tab_color
-            property string shadow_color: __current_tab == idx
-                    ? ScreenManager.night_mode ? selected_shadow_tab_nightmode_color : selected_shadow_tab_color
-                    : ScreenManager.night_mode ? not_selected_shadow_tab_nightmode_color : not_selected_shadow_tab_color
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: idx == 0 || __current_tab == idx ? delegated_rect.color : shadow_color}
-                GradientStop { position: 0.04; color: delegated_rect.color }
-                GradientStop { position: 0.96; color: delegated_rect.color }
-                GradientStop { position: 1.0; color: __current_tab == idx + 1 ? shadow_color : delegated_rect.color}
-            }
-            radius: sustainml_custom_tabview.rounded ? sustainml_custom_tabview.__radius : 0
+            readonly property bool __selected: __current_tab == idx
+            readonly property bool __hovered: tab_mouse.containsMouse || close_mouse.containsMouse
+            color: __selected ? selected_tab_color : not_selected_tab_color
+            radius: sustainml_custom_tabview.__underline ? Theme.radiusSm : sustainml_custom_tabview.__radius
+            Behavior on color { ColorAnimation { duration: Theme.durFast } }
+
+            // Square bottom half, so a selected card tab joins the page below it
             Rectangle
             {
-                visible: sustainml_custom_tabview.rounded
+                visible: !sustainml_custom_tabview.__underline
                 width: parent.width
                 height: parent.height / 2
                 anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
+                // The selected tab also covers the content card's top border below it
+                anchors.bottomMargin: delegated_rect.__selected ? -1 : 0
+                color: parent.color
+            }
 
-                color: __current_tab == idx
-                        ? ScreenManager.night_mode ? selected_tab_nightmode_color: selected_tab_color
-                        : ScreenManager.night_mode ? not_selected_tab_nightmode_color: not_selected_tab_color
-                property string shadow_color: __current_tab == idx
-                        ? ScreenManager.night_mode ? selected_shadow_tab_nightmode_color : selected_shadow_tab_color
-                        : ScreenManager.night_mode ? not_selected_shadow_tab_nightmode_color : not_selected_shadow_tab_color
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: idx == 0 || __current_tab == idx ? delegated_rect.color : shadow_color}
-                    GradientStop { position: 0.04; color: delegated_rect.color }
-                    GradientStop { position: 0.96; color: delegated_rect.color }
-                    GradientStop { position: 1.0; color: __current_tab == idx + 1 ? shadow_color : delegated_rect.color}
+            // Outline of the selected card tab: top and sides only, on top of its fill, reaching
+            // down to the content card's border so both outlines meet without a notch
+            Item
+            {
+                visible: !sustainml_custom_tabview.__underline && delegated_rect.__selected
+                anchors { top: parent.top; left: parent.left; right: parent.right }
+                height: parent.height + 1
+                clip: true
+                z: 1
+
+                Rectangle
+                {
+                    anchors { fill: parent; bottomMargin: -2 * radius }
+                    radius: delegated_rect.radius
+                    color: Theme.transparent
+                    border.width: 1
+                    border.color: Theme.borderStrong
                 }
             }
+
+            // Frame of an unselected card tab: a lighter card with a visible outline, a small
+            // gap to its neighbours, rounded at the top only (the clip cuts its bottom corners)
+            Item
+            {
+                visible: !sustainml_custom_tabview.__underline && !delegated_rect.__selected
+                anchors.fill: parent
+                anchors.leftMargin: 2
+                anchors.rightMargin: 2
+                anchors.topMargin: 3
+                clip: true
+                z: -1
+
+                Rectangle
+                {
+                    anchors.fill: parent
+                    anchors.bottomMargin: -radius
+                    radius: sustainml_custom_tabview.__radius
+                    color: delegated_rect.__hovered ? Theme.raised : Theme.alpha(Theme.surface, Theme.darkMode ? 0.35 : 0.55)
+                    border.width: 1
+                    border.color: delegated_rect.__hovered ? Theme.brandGreen : Theme.borderStrong
+                    Behavior on color { ColorAnimation { duration: Theme.durFast } }
+                }
+            }
+
+            // Frame of a flat (in-page) tab: an outlined segment, green and filled when selected
+            Rectangle
+            {
+                visible: sustainml_custom_tabview.__underline
+                anchors.fill: parent
+                anchors.leftMargin: 3
+                anchors.rightMargin: 3
+                anchors.topMargin: 5
+                anchors.bottomMargin: 5
+                radius: Theme.radiusSm
+                color: delegated_rect.__selected ? Theme.accentFill
+                     : delegated_rect.__hovered ? Theme.accentSubtle : Theme.raised
+                border.width: 1
+                border.color: delegated_rect.__selected ? Theme.accentBorder
+                            : delegated_rect.__hovered ? Theme.brandGreen : Theme.borderStrong
+                z: -1
+                Behavior on color { ColorAnimation { duration: Theme.durFast } }
+            }
+
 
             // Measures candidate strings against tab_title_display's font, so the
             // truncation below can tell exactly how many trailing characters fit.
@@ -205,10 +254,11 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: __elide_left(title, width)
                 clip: true
-                font.bold: true
-                font.family: SustainMLFont.title_font
-                font.pixelSize: Settings.body_font_size
-                color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
+                font.family: Theme.uiFontFamily
+                font.weight: delegated_rect.__selected ? Font.DemiBold : Font.Medium
+                font.pixelSize: Theme.fontSizeBody
+                color: delegated_rect.__selected ? (sustainml_custom_tabview.__underline ? Theme.onAccent : Theme.textPrimary)
+                                                 : Theme.textSecondary
 
                 function __elide_left(str, availWidth) {
                     if (availWidth <= 0)
@@ -246,14 +296,15 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text:  title
                 // Text components set up
-                font.bold: true
-                font.family: SustainMLFont.title_font
-                font.pixelSize: Settings.body_font_size
-                color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
+                font.family: Theme.uiFontFamily
+                font.weight: Font.DemiBold
+                font.pixelSize: Theme.fontSizeBody
+                color: Theme.textPrimary
                 wrapMode: TextEdit.NoWrap
                 clip: true
                 selectByKeyboard: true
-                selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
+                selectionColor: Theme.accentSubtleStrong
+                selectedTextColor: Theme.textPrimary
                 readOnly: !sustainml_custom_tabview.allow_tab_rename
                 focus: editing
                 property bool editing: false
@@ -298,11 +349,12 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 name: Settings.close_tab_icon_name
                 size: __tab_icons_size
-                color: Settings.app_color_dark
-                nightmode_color: Settings.app_color_light
+                variant: close_mouse.containsMouse ? Theme.iconDefault : Theme.iconMuted
             }
             // tab selection action
             MouseArea {
+                id: tab_mouse
+                hoverEnabled: true
                 anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.left: parent.left;
                 anchors.right: close_icon.left; anchors.rightMargin: - __tabs_margins
                 onClicked: {
@@ -318,6 +370,8 @@ Item {
             }
             // close tab action
             MouseArea {
+                id: close_mouse
+                hoverEnabled: true
                 anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.right: parent.right
                 anchors.left: close_icon.left; anchors.leftMargin: - __tabs_margins
                 onClicked: {
@@ -374,8 +428,18 @@ Item {
             anchors.left: parent.left
             height: parent.height
             width: sustainml_custom_tabview.width
-            color: ScreenManager.night_mode ? tab_background_nightmode_color : tab_background_color
+            color: Theme.transparent
             z: -1
+
+            // Baseline under flat tabs
+            Rectangle
+            {
+                visible: sustainml_custom_tabview.__underline
+                anchors.bottom: parent.bottom
+                width: parent.width
+                height: 1
+                color: Theme.border
+            }
         }
     }
 
@@ -387,22 +451,14 @@ Item {
         anchors.verticalCenter: tab_list.verticalCenter
         height: __tabs_height
         width: sustainml_custom_tabview.__tab_model.count == __max_tabs ? 0 : __add_tab_width
-        color: not_selected_tab_color
-        property string shadow_color: ScreenManager.night_mode ? not_selected_shadow_tab_nightmode_color : not_selected_shadow_tab_color
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color:  add_new_tab_button.shadow_color}
-            GradientStop { position: 0.08; color: add_new_tab_button.color }
-            GradientStop { position: 1.0; color: add_new_tab_button.color }
-        }
+        color: Theme.transparent
         // add new tab icon
         SmlIcon {
             visible: sustainml_custom_tabview.__tab_model.count < __max_tabs
             anchors.centerIn: parent
             name: Settings.add_tab_icon_name
             size: __tab_icons_size
-            color: Settings.app_color_dark
-            nightmode_color: Settings.app_color_light
+            variant: Theme.iconMuted
         }
         // add new tab action
         MouseArea {
@@ -421,20 +477,7 @@ Item {
         width: sustainml_custom_tabview.width - add_new_tab_button.width - tab_list.width; height: __tabs_height
         anchors.right: sustainml_custom_tabview.right
         anchors.verticalCenter: tab_list.verticalCenter
-        color: not_selected_tab_color
-
-        Rectangle {
-            id: remain_width_shadow
-            width: parent.width >= __min_gap ? __min_gap : parent.width; height: parent.height
-            color: parent.color
-            property string shadow_color: ScreenManager.night_mode ? not_selected_shadow_tab_nightmode_color : not_selected_shadow_tab_color
-            gradient: Gradient {
-            orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: remain_width_shadow.shadow_color}
-                GradientStop { position: 0.08; color: not_selected_tab_color }
-                GradientStop { position: 1.0; color: not_selected_tab_color }
-            }
-        }
+        color: Theme.transparent
     }
 
 

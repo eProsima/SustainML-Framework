@@ -1,191 +1,154 @@
 import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick.Templates 2.15 as T
 
 // Project imports
-import eProsima.SustainML.Settings 1.0
-import eProsima.SustainML.Font 1.0
-import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
-Item {
-    id: sustainml_custom_button
+/*
+    Text button, with an optional leading icon, in one of five roles:
+
+      - "secondary" (default): an ordinary action, on a raised fill with an outline
+      - "primary":   the one action a screen or dialog is for, filled in SustainML green
+      - "ghost":     a light action among others (navigation), no fill until hovered
+      - "subtle":    a toolbar action on the screen header, tinted fill
+      - "danger":    an action that deletes or clears: red text and outline on the raised fill
+
+    Pressing changes the colour only, so nothing beside the button moves. A disabled
+    button is dimmed and does not react. It is a real button: Tab reaches it and
+    Space / Enter press it.
+
+    Usage:
+        SmlButton {
+            variant: "primary"
+            icon_name: "check"
+            text_value: "Submit"
+            tooltip_text: "Submit the problem and start the task"
+            onClicked: ...
+        }
+ */
+T.AbstractButton {
+    id: control
 
     // External properties
-    property int text_kind: SmlText.TextKind.Body   // Text body kind as default
-    required property string text_value             // Required text introduced by the user
-    required property string icon_name              // Required icon name introduced by the user
-    required property bool rounded                  // Required if the button has rounded corners
-    property string color: Settings.app_color_dark
-    property string color_pressed: color
-    property string color_text: ""
-    property string color_disable: Settings.app_color_disable
-    property string nightmode_color: Settings.app_color_light
-    property string nightmode_color_pressed: nightmode_color
-    property string nightmode_color_text: ""
-    property int size: Settings.button_icon_size
-    property real scalingFactor: 1
-    property int anim_angle: Settings.button_movement_anim_angle
-    property int anim_duration: Settings.button_movement_anim_duration
+    property string text_value: ""
+    property string icon_name: ""
+    property string variant: "secondary"
+    // "sm", "md" (default) or "lg"
+    property string size: "md"
     property bool disabled: false
     property string tooltip_text: ""
-    property int tooltip_delay: 1000    // ms before showing
-    property int tooltip_timeout: 0     // ms visible
+    property int tooltip_delay: 600
+    // Icon and label at the left edge instead of centred (menu rows)
+    property bool align_left: false
 
+    readonly property bool primary_: variant === "primary"
+    readonly property bool ghost_: variant === "ghost"
+    readonly property bool subtle_: variant === "subtle"
+    readonly property bool danger_: variant === "danger"
 
-    property string __font_color:  sustainml_custom_button.text_kind === SmlText.TextKind.App_name ? ScreenManager.app_name_color  :
-                                   sustainml_custom_button.text_kind === SmlText.TextKind.Body     ? ScreenManager.body_font_color :
-                                                                                                     ScreenManager.title_font_color
+    // Only when set: dialog standard buttons get their text ("Save", "Cancel") from the
+    // button box, which a plain "text: text_value" binding would overwrite with ""
+    Binding on text { value: control.text_value; when: control.text_value !== "" }
+    enabled: !disabled
+    hoverEnabled: true
+    focusPolicy: Qt.TabFocus
+    opacity: enabled ? 1.0 : 0.45
 
-    // Internal properties
-    property bool __pressed: false
+    implicitHeight: size === "sm" ? Theme.controlHeightSm : size === "lg" ? Theme.controlHeightLg : Theme.controlHeight
+    implicitWidth: Math.max(implicitHeight, contentItem.implicitWidth + leftPadding + rightPadding)
+    leftPadding: text === "" ? 0 : (size === "lg" ? Theme.space5 : size === "sm" ? Theme.space2 + 2 : Theme.space3 + 2)
+    rightPadding: leftPadding
+    topPadding: 0
+    bottomPadding: 0
 
-    width: background.width
-    height: background.height
+    font.family: Theme.uiFontFamily
+    font.pixelSize: size === "lg" ? 15 : Theme.fontSizeBody
+    font.weight: Font.DemiBold
 
-    // External signals
-    signal clicked();
+    Accessible.role: Accessible.Button
+    Accessible.name: text !== "" ? text : tooltip_text
 
-    Rectangle
-    {
-        id: background
-        color: ScreenManager.night_mode
-                ? sustainml_custom_button.nightmode_color
-                : sustainml_custom_button.disabled
-                ? sustainml_custom_button.color_disable
-                : sustainml_custom_button.color
-        height: sustainml_custom_button.size * 2
-        border.color: text.force_color ? text.forced_color : __font_color
-        border.width: 0.5
-        // width: text_value === "" ? height : text.width + sustainml_custom_button.size + Settings.spacing_normal * 3
-        anchors
-        {
-            verticalCenter: parent.verticalCenter
-            horizontalCenter: parent.horizontalCenter
-        }
-        width: contentContainer.width + sustainml_custom_button.size
-        radius: rounded ? height / 2.5 : 0
-    }
+    readonly property string icon_variant_: primary_ ? Theme.iconOnAccent
+                                          : danger_ ? Theme.iconDanger
+                                          : Theme.iconDefault
+    readonly property color text_color_: primary_ ? Theme.onAccent
+                                       : danger_ ? Theme.danger
+                                       : Theme.textPrimary
 
-    Rectangle {
-        id: contentContainer
-        anchors {
-            left: background.left
-            leftMargin: sustainml_custom_button.size / 2
-            right: background.right
-            rightMargin: sustainml_custom_button.size / 2
-            verticalCenter: background.verticalCenter
-        }
-        width: (text_value !== "" && icon_name !== "")
-                ? text.width + icon.width + 2 * Settings.spacing_normal
-                : (text_value !== "" ? text.width : (icon_name !== "" ? icon.width : height))
-        color: "transparent"
-        height: background.height
+    contentItem: Item {
+        implicitWidth: row.implicitWidth
+        implicitHeight: Math.max(label.implicitHeight, icon.height)
 
-        SmlIcon {
-            id: icon
-            name: sustainml_custom_button.icon_name
-            size: sustainml_custom_button.size
-            scalingFactor: sustainml_custom_button.scalingFactor
-            color: text.color
-            nightmode_color: text.color
-            color_pressed: sustainml_custom_button.color_pressed
-            nightmode_color_pressed: sustainml_custom_button.nightmode_color_pressed
-            anim_angle: sustainml_custom_button.anim_angle
-            anim_duration: sustainml_custom_button.anim_duration
-            pressed: sustainml_custom_button.__pressed
-            anchors {
-                verticalCenter: parent.verticalCenter
-                left: parent.left
-                leftMargin: (sustainml_custom_button.icon_name !== "" && sustainml_custom_button.text_value !== "") ? sustainml_custom_button.size / 4 : 0
+        Row {
+            id: row
+            x: control.align_left ? 0 : Math.round((parent.width - width) / 2)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.space2
+
+            SmlIcon {
+                id: icon
+                anchors.verticalCenter: parent.verticalCenter
+                visible: control.icon_name !== ""
+                name: control.icon_name
+                size: control.size === "lg" ? Theme.iconSizeLarge
+                    : control.size === "sm" ? Theme.iconSizeDense : Theme.iconSizeDefault
+                variant: control.icon_variant_
             }
-        }
 
-        SmlText {
-            id: text
-            text_kind: sustainml_custom_button.text_kind
-            text_value: sustainml_custom_button.text_value
-            force_color: !sustainml_custom_button.disabled && (
-                sustainml_custom_button.__pressed
-                ? true
-                : ScreenManager.night_mode
-                    ? sustainml_custom_button.nightmode_color_text !== ""
-                    : sustainml_custom_button.color_text !== ""
-                )
-            forced_color: !sustainml_custom_button.__pressed && sustainml_custom_button.nightmode_color_text !== ""
-                     && sustainml_custom_button.color_text !== ""
-                ? ScreenManager.night_mode
-                    ? sustainml_custom_button.nightmode_color_text
-                    : sustainml_custom_button.color_text
-                : ScreenManager.night_mode
-                    ? sustainml_custom_button.nightmode_color_pressed
-                    : sustainml_custom_button.color_pressed
-            anchors {
-                verticalCenter: parent.verticalCenter
-                verticalCenterOffset: 2
-                left: icon.right
-                leftMargin: (sustainml_custom_button.icon_name === "" || sustainml_custom_button.text_value === "")
-                             ? 0 : Settings.spacing_normal
+            Text {
+                id: label
+                anchors.verticalCenter: parent.verticalCenter
+                visible: control.text !== ""
+                textFormat: Text.PlainText
+                text: control.text
+                font: control.font
+                color: control.text_color_
             }
         }
     }
 
-    MouseArea
-    {
-        id: mouse_area
-        anchors.centerIn: background
-        hoverEnabled: true
-        width: background.width
-        height: background.height
-        onPressed: { if (!sustainml_custom_button.disabled) sustainml_custom_button.__pressed = true; }
-        onReleased: { if (!sustainml_custom_button.disabled) sustainml_custom_button.__pressed = false; }
-        onClicked: { if (!sustainml_custom_button.disabled) sustainml_custom_button.clicked(); }
-        onEntered: { if (!sustainml_custom_button.disabled) { mouse_area.cursorShape = Qt.PointingHandCursor; icon.start_animation(); } }
-        onExited:  { if (!sustainml_custom_button.disabled) mouse_area.cursorShape = Qt.ArrowCursor; }
-    }
+    background: Rectangle {
+        implicitWidth: control.implicitHeight
+        implicitHeight: control.implicitHeight
+        radius: control.size === "lg" ? Theme.radiusMd : Theme.radiusSm
+        color: control.primary_ ? (control.down ? Theme.accentFillPressed
+                                                : control.hovered ? Theme.accentFillHover : Theme.accentFill)
+             : control.subtle_ ? Theme.sunken
+             : control.ghost_ ? Theme.transparent
+             : Theme.raised
+        border.width: control.ghost_ || control.subtle_ ? 0 : 1
+        border.color: control.primary_ ? Theme.accentBorder
+                    : control.danger_ ? Theme.danger
+                    : control.hovered ? Theme.brandGreen : Theme.borderStrong
 
-    ToolTip
-    {
-        id: internalTooltip
-        visible: tooltip_text !== "" && mouse_area.containsMouse && !disabled
-        text: tooltip_text
-        delay: tooltip_delay
-        timeout: tooltip_timeout
+        Behavior on color { ColorAnimation { duration: Theme.durFast } }
+        Behavior on border.color { ColorAnimation { duration: Theme.durFast } }
 
-        // Dynamic positioning: prefer right, fallback left, never covering cursor horizontally
-        function updatePos() {
-            var root = sustainml_custom_button
-            while (root.parent) root = root.parent
-            var margin = 12
-            var global = sustainml_custom_button.mapToItem(root, mouse_area.mouseX, mouse_area.mouseY)
-
-            x = (root.width - (global.x + margin) >= implicitWidth)
-                    ? mouse_area.mouseX + margin
-                    : mouse_area.mouseX - implicitWidth - margin
-
-            var top = Math.max(margin, Math.min(global.y - implicitHeight / 2, root.height - implicitHeight - margin))
-            y = sustainml_custom_button.mapFromItem(root, 0, top).y
-        }
-
-        onVisibleChanged: if (visible) updatePos()
-        onImplicitWidthChanged: if (visible) updatePos()
-        onImplicitHeightChanged: if (visible) updatePos()
-        Connections {
-            target: mouse_area
-            function onPositionChanged() {
-                if (internalTooltip.visible) internalTooltip.updatePos()
-            }
-        }
-
-        background: Rectangle {
-            color: Qt.rgba(0.18, 0.18, 0.18, 0.75)
-            radius: 6
-        }
-        contentItem: Text {
-            text: internalTooltip.text
-            color: "white"
-            wrapMode: Text.WordWrap
-            font.pixelSize: 12
-            padding: 8
-            width: Math.min(280, implicitWidth)
+        // Hover and press for the unfilled variants, as a veil over whatever fill they have
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            visible: !control.primary_
+            color: control.danger_ ? (control.down ? Theme.alpha(Theme.danger, 0.2)
+                                                   : control.hovered ? Theme.alpha(Theme.danger, 0.1) : Theme.transparent)
+                 : control.down ? Theme.accentSubtleStrong
+                 : control.hovered ? Theme.accentSubtle : Theme.transparent
+            Behavior on color { ColorAnimation { duration: Theme.durFast } }
         }
     }
+
+    // Pointing hand over an enabled button
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton
+        cursorShape: control.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+    }
+
+    SmlToolTip {
+        visible: control.tooltip_text !== "" && control.hovered && !control.pressed
+        text: control.tooltip_text
+        delay: control.tooltip_delay
+    }
+
+    SmlFocusRing { shown: control.visualFocus }
 }

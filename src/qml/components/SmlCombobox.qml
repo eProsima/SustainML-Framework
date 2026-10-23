@@ -1,26 +1,18 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Controls.Styles 1.4
-
 
 // Project imports
-import eProsima.SustainML.Settings 1.0
-import eProsima.SustainML.Font 1.0
-import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
+/*
+    Drop-down choice in the style of SmlInput: raised fill, 1 px outline, 2 px focus
+    outline while open, chevron indicator, and a rounded overlay popup with hover-tint
+    rows and a check on the current value. searchable adds a filter field on top.
+ */
 ComboBox {
     id: sustainml_custom_combobox
 
     // External properties
-    property int rounded_radius: 0 //Settings.input_default_rounded_radius
-    property int border_width: Settings.input_default_border_width
-    property string background_color: ""
-    property string background_nightmode_color: ""
-    property string background_disable_color: Settings.app_color_disable
-    property string border_color: ""
-    property string border_editting_color: ""
-    property string border_nightmode_color: ""
-    property string border_nightmode_editting_color: ""
     property string placeholder_text: ""
     property bool disabled: false
     property bool searchable: false
@@ -63,23 +55,28 @@ ComboBox {
         }
     }
 
+    implicitHeight: Theme.controlHeight
+    hoverEnabled: true
+    font.family: Theme.uiFontFamily
+    font.pixelSize: Theme.fontSizeBody
+
     // Custom placeholder field
-    SmlTextNoSelectable
+    Text
     {
         id: placeholder_text
-        text_value: sustainml_custom_combobox.placeholder_text
-
+        text: sustainml_custom_combobox.placeholder_text
+        textFormat: Text.PlainText
         anchors
         {
-            top: sustainml_custom_combobox.top
-            topMargin: Settings.spacing_normal
             left: sustainml_custom_combobox.left
-            leftMargin: Settings.spacing_normal
+            leftMargin: Theme.space3
+            right: sustainml_custom_combobox.right
+            rightMargin: Theme.space3 + Theme.iconSizeDefault + Theme.space2
+            verticalCenter: sustainml_custom_combobox.verticalCenter
         }
-
-        width: sustainml_custom_combobox.width - 2 * Settings.spacing_normal
-        force_color: true
-        forced_color: sustainml_custom_combobox.disabled ? "#888" : "#aaa"
+        font: sustainml_custom_combobox.font
+        color: sustainml_custom_combobox.disabled ? Theme.textDisabled : Theme.textMuted
+        elide: Text.ElideRight
         visible: sustainml_custom_combobox.currentIndex === -1
     }
     onCurrentIndexChanged:
@@ -104,76 +101,85 @@ ComboBox {
     {
         id: background
         anchors.fill: parent
-        radius: sustainml_custom_combobox.rounded_radius
-        color: ScreenManager.night_mode
-                ? sustainml_custom_combobox.background_nightmode_color
-                : sustainml_custom_combobox.disabled
-                ? sustainml_custom_combobox.background_disable_color : sustainml_custom_combobox.background_color
-        border.color: ScreenManager.night_mode ? sustainml_custom_combobox.__edited
-                    ? sustainml_custom_combobox.border_nightmode_editting_color
-                    : sustainml_custom_combobox.border_nightmode_color
-                : sustainml_custom_combobox.__edited
-                    ? sustainml_custom_combobox.border_editting_color
-                    : sustainml_custom_combobox.border_color
-        border.width: sustainml_custom_combobox.border_width
+        radius: Theme.radiusSm
+        color: sustainml_custom_combobox.disabled ? Theme.sunken : Theme.raised
+        border.width: sustainml_custom_combobox.__edited || sustainml_custom_combobox.visualFocus ? 2 : 1
+        border.color: sustainml_custom_combobox.disabled ? Theme.border
+                    : sustainml_custom_combobox.__edited || sustainml_custom_combobox.visualFocus ? Theme.focusRing
+                    : sustainml_custom_combobox.hovered ? Theme.brandGreen
+                    : Theme.borderInput
+        Behavior on border.color { ColorAnimation { duration: Theme.durFast } }
     }
 
     // Combobox displayed text
-    contentItem: SmlTextNoSelectable
+    contentItem: Text
     {
-        text_value: sustainml_custom_combobox.displayText
-        text_kind: SmlText.TextKind.Body
+        text: sustainml_custom_combobox.displayText
+        textFormat: Text.PlainText
+        font: sustainml_custom_combobox.font
+        color: sustainml_custom_combobox.disabled ? Theme.textDisabled : Theme.textPrimary
         width: parent.width
-        leftPadding: Settings.spacing_normal
-        rightPadding: sustainml_custom_combobox.indicator.width + sustainml_custom_combobox.spacing
-        topPadding: Settings.spacing_small
-        bottomPadding: Settings.spacing_small
+        leftPadding: Theme.space3
+        rightPadding: sustainml_custom_combobox.indicator.width + Theme.space3 + Theme.space2
 
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
-
-        wrapMode: Text.WrapAnywhere
-        maximumLineCount: 2
         elide: Text.ElideRight
-        force_elide: true
     }
 
     // Combobox text shown in the popup
     delegate: ItemDelegate {
         id: item_delegate
-        width: sustainml_custom_combobox.width
+        width: sustainml_custom_combobox.width - 2 * Theme.space1
+        // The item, read from modelData here only: Qt 5.15 does not reliably resolve
+        // modelData from custom properties or nested items of a delegate
+        text: typeof modelData === "string" ? modelData : ""
         visible: !sustainml_custom_combobox.searchable ||
                  sustainml_custom_combobox.__search_text === "" ||
-                 (typeof modelData === "string" &&
-                  modelData.toLowerCase().indexOf(sustainml_custom_combobox.__search_text.toLowerCase()) !== -1)
-        height: visible ? sustainml_custom_combobox.height * 0.75 : 0
+                 item_delegate.text.toLowerCase().indexOf(sustainml_custom_combobox.__search_text.toLowerCase()) !== -1
+        height: visible ? Theme.controlHeightSm + 2 : 0
+        leftPadding: Theme.space3
+        rightPadding: Theme.space2
+        topPadding: 0
+        bottomPadding: 0
+        hoverEnabled: true
 
-        contentItem: Rectangle{
-            width: parent.implicitWidth
-            height: item_delegate.height
-            color: "transparent"
+        readonly property bool current_: item_delegate.text !== ""
+                                         && item_delegate.text === sustainml_custom_combobox.displayText
 
-            SmlTextNoSelectable {
-                text_value: modelData
-                text_kind: SmlText.TextKind.Body
-
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignLeft
-                rightPadding: Settings.spacing_normal + 5
-                width: parent.width - 5
-
-                wrapMode: Text.WrapAnywhere
-                maximumLineCount: 2
+        contentItem: Item {
+            Text {
+                anchors.left: parent.left
+                anchors.right: check_icon.left
+                anchors.rightMargin: Theme.space2
+                anchors.verticalCenter: parent.verticalCenter
+                text: item_delegate.text
+                textFormat: Text.PlainText
+                font.family: Theme.uiFontFamily
+                font.pixelSize: Theme.fontSizeBody
+                font.weight: item_delegate.current_ ? Font.DemiBold : Font.Normal
+                color: Theme.textPrimary
                 elide: Text.ElideRight
-                force_elide: true
-                forced_color: ScreenManager.night_mode
-                                ? sustainml_custom_combobox.border_nightmode_editting_color
-                                : sustainml_custom_combobox.border_editting_color
-                force_color: item_delegate.hovered
+            }
+            // A plain Image, not SmlIcon: an object with required properties inside a delegate
+            // makes Qt 5.15 withhold the model context (modelData, index) from the whole delegate
+            Image {
+                id: check_icon
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                width: Theme.iconSizeDense
+                height: Theme.iconSizeDense
+                sourceSize.width: Theme.iconSizeDense * 2
+                sourceSize.height: Theme.iconSizeDense * 2
+                source: "qrc:/images/icons/check/check_" + Theme.iconAccent + ".svg"
+                visible: item_delegate.current_
             }
         }
         background: Rectangle {
-            color: "transparent"
+            radius: Theme.radiusSm
+            color: item_delegate.pressed ? Theme.accentSubtleStrong
+                 : item_delegate.hovered || item_delegate.highlighted ? Theme.accentSubtle
+                 : Theme.transparent
         }
 
         // Cursor shaped Mouse Area that propagates events to the parent
@@ -191,10 +197,13 @@ ComboBox {
     // Combobox selection popup
     popup: Popup {
         id:comboPopup
-        y: sustainml_custom_combobox.height - 1
+        y: sustainml_custom_combobox.height + Theme.space1
         width: sustainml_custom_combobox.width
         height: contentItem.implicitHeight + topPadding + bottomPadding
-        padding: 10
+        padding: Theme.space1
+
+        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durFast } }
+        exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Theme.durFast } }
 
         onOpened: {
             sustainml_custom_combobox.__index_changed = false
@@ -214,30 +223,37 @@ ComboBox {
             Rectangle {
                 visible: sustainml_custom_combobox.searchable
                 width: parent.width
-                height: sustainml_custom_combobox.searchable ? sustainml_custom_combobox.height * 0.65 : 0
-                radius: 4
-                color: ScreenManager.night_mode
-                    ? sustainml_custom_combobox.background_nightmode_color
-                    : sustainml_custom_combobox.background_color
-                border.color: ScreenManager.night_mode
-                    ? sustainml_custom_combobox.border_nightmode_editting_color
-                    : sustainml_custom_combobox.border_editting_color
-                border.width: sustainml_custom_combobox.border_width
+                height: sustainml_custom_combobox.searchable ? Theme.controlHeightSm + 2 : 0
+                radius: Theme.radiusSm
+                color: Theme.sunken
+                border.color: popupSearchInput.activeFocus ? Theme.focusRing : Theme.border
+                border.width: 1
+
+                SmlIcon {
+                    id: search_icon
+                    anchors.left: parent.left
+                    anchors.leftMargin: Theme.space2
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "search"
+                    size: Theme.iconSizeDense
+                    variant: Theme.iconMuted
+                }
 
                 TextInput {
                     id: popupSearchInput
                     anchors {
-                        left: parent.left
+                        left: search_icon.right
                         right: parent.right
-                        leftMargin: Settings.spacing_normal
-                        rightMargin: Settings.spacing_normal
+                        leftMargin: Theme.space2
+                        rightMargin: Theme.space2
                         verticalCenter: parent.verticalCenter
                     }
                     height: font.pixelSize + 4
-                    font.pixelSize: 13
-                    color: ScreenManager.night_mode
-                        ? sustainml_custom_combobox.border_nightmode_editting_color
-                        : sustainml_custom_combobox.border_editting_color
+                    font.family: Theme.uiFontFamily
+                    font.pixelSize: Theme.fontSizeBody
+                    color: Theme.textPrimary
+                    selectionColor: Theme.accentSubtleStrong
+                    selectedTextColor: Theme.textPrimary
                     clip: true
                     onTextChanged: sustainml_custom_combobox.__search_text = text
                     KeyNavigation.down: listView
@@ -245,8 +261,9 @@ ComboBox {
                     Text {
                         anchors.fill: parent
                         text: "Filter..."
-                        color: "#aaa"
-                        font.pixelSize: 13
+                        textFormat: Text.PlainText
+                        color: Theme.textMuted
+                        font: popupSearchInput.font
                         visible: popupSearchInput.text === ""
                         verticalAlignment: Text.AlignVCenter
                     }
@@ -260,49 +277,50 @@ ComboBox {
                 clip: true
                 // Cap to ~8 rows before scrolling - a long result list (e.g. HF model
                 // search) would otherwise size the popup to fit every item at once.
-                implicitHeight: Math.min(contentHeight, sustainml_custom_combobox.height * 0.75 * 8)
+                implicitHeight: Math.min(contentHeight, (Theme.controlHeightSm + 2) * 8)
                 model: sustainml_custom_combobox.popup.visible ? sustainml_custom_combobox.delegateModel : null
 
-                // Adds a little extra space so the last item isn't clipped by rounded border/padding
-                bottomMargin: 5
+                // Not only spacing: the list's height follows its contentHeight, so without this
+                // margin an empty list starts 0 px tall and never creates its first row
+                bottomMargin: Theme.space1
 
-                ScrollBar.vertical: ScrollBar {
-                    interactive: true
-                    width: 8
+                ScrollBar.vertical: SmlScrollBar {
+                    policy: listView.contentHeight > listView.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
                 }
             }
         }
 
         background: Rectangle {
-            radius: sustainml_custom_combobox.rounded_radius
-            color: ScreenManager.night_mode
-                    ? sustainml_custom_combobox.background_nightmode_color
-                    : sustainml_custom_combobox.background_color
-            border.color: ScreenManager.night_mode
-                        ? sustainml_custom_combobox.border_nightmode_editting_color
-                        : sustainml_custom_combobox.border_editting_color
-            border.width: sustainml_custom_combobox.border_width
+            radius: Theme.radiusMd
+            color: Theme.overlay
+            border.color: Theme.borderStrong
+            border.width: 1
+
+            // Soft drop shadow
+            Rectangle {
+                z: -1
+                anchors.fill: parent
+                anchors.topMargin: 3
+                anchors.bottomMargin: -3
+                radius: parent.radius
+                color: Theme.shadow
+            }
         }
     }
 
     // Combobox indicator
     indicator: SmlIcon {
         id: icon
-        name: Settings.arrow_down_icon_name
-        size: Settings.spacing_normal
-        color: sustainml_custom_combobox.__edited
-                ? sustainml_custom_combobox.border_editting_color
-                : sustainml_custom_combobox.border_color
-        nightmode_color: sustainml_custom_combobox.__edited
-                ? sustainml_custom_combobox.border_nightmode_editting_color
-                : sustainml_custom_combobox.border_nightmode_color
-        color_pressed: sustainml_custom_combobox.border_editting_color
-        nightmode_color_pressed: sustainml_custom_combobox.border_nightmode_editting_color
+        name: "down"
+        size: Theme.iconSizeDefault
+        variant: sustainml_custom_combobox.disabled ? Theme.iconMuted : Theme.iconDefault
+        rotation: sustainml_custom_combobox.popup.visible ? 180 : 0
+        Behavior on rotation { NumberAnimation { duration: Theme.durFast } }
 
         anchors
         {
             right: parent.right
-            rightMargin: Settings.spacing_normal
+            rightMargin: Theme.space3
             verticalCenter: parent.verticalCenter
         }
     }

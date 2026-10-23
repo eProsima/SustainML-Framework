@@ -7,6 +7,7 @@ import QtQuick.Controls 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "../components"
@@ -30,437 +31,181 @@ Item
     // false when opened from the start screen, where there is nothing to save yet
     property bool save_enabled: true
 
-    // Internal properties
-    readonly property int __margin: Settings.spacing_big * 2
-    readonly property string __error_status: "#f44336"
-    readonly property string __idle_status: Settings.app_color_green_2
-    readonly property string __initializing_status: "#f1c232"
-    readonly property string __running_status: "#3d85c6"
-    readonly property int __font_status_size: 14
-    readonly property int __status_margin: (Settings.spacing_big * 3) + 15
-    readonly property int __status_width: 80
-    readonly property int __status_height: 20
+    // Status tone of a node state: never told by colour alone, the chip shows the state too
+    function __status_tone(status)
+    {
+        return status == "IDLE" ? "success"
+             : status == "RUNNING" ? "accent"
+             : status == "INITIALIZING" ? "warning"
+             : "danger"
+    }
 
     // External signals
     signal go_home();
     signal go_back();
 
-    Rectangle
+    SmlScreenHeader
     {
-        color: "transparent"
+        id: header
+        title: "Node status"
+        subtitle: "State of the SustainML framework nodes, and saved data"
 
+        navigation: [
+            // Go home button
+            SmlButton
+            {
+                id: go_home_button
+                icon_name: Settings.home_icon_name
+                text_value: "Home"
+                tooltip_text: "Go to Home screen"
+                onClicked: root.go_home()
+            },
+            // Go back button
+            SmlIconButton
+            {
+                id: go_back_button
+                outlined: true
+                icon_name: Settings.back_icon_name
+                tooltip_text: "Go back to previous screen"
+                onClicked: root.go_back()
+            }
+        ]
+
+        actions: [
+            // Save everything (current results + HF searches + comparisons) into a named file
+            SmlButton
+            {
+                id: save_all_button
+                icon_name: Settings.save_icon_name
+                text_value: "Save"
+                disabled: !root.save_enabled
+                tooltip_text: "Save current results, HF searches, and comparisons into a named file"
+                onClicked: save_load_all_dialogs.open_save()
+            },
+
+            // Load everything (results + HF searches + comparisons) from a named file
+            SmlButton
+            {
+                id: load_all_button
+                icon_name: Settings.load_icon_name
+                text_value: "Load"
+                tooltip_text: "Load results, HF searches, and comparisons from a named file"
+                onClicked: save_load_all_dialogs.open_load()
+            },
+
+            // Clear saved data button
+            SmlButton
+            {
+                id: clear_saved_data_button
+                variant: "danger"
+                icon_name: Settings.delete_icon_name
+                text_value: "Clear saved data"
+                tooltip_text: "Delete all saved result files from the backend"
+                onClicked: clear_saved_data_dialog.open()
+            }
+        ]
+    }
+
+    SmlCard
+    {
+        id: nodes_card
+        anchors
+        {
+            top: header.bottom
+            topMargin: Theme.space5
+            horizontalCenter: parent.horizontalCenter
+        }
+        width: Math.min(parent.width - 2 * Theme.pagePadding, 560)
+        title: "Framework nodes"
+        icon_name: "workflow"
+        content_padding: Theme.space2
+
+        Column
+        {
+            width: nodes_card.content_area.width
+
+            Repeater
+            {
+                model: ["App Requirements", "Carbon Footprint", "HW Constraints", "HW Resources", "ML Model", "Model Metadata"]
+
+                delegate: Item
+                {
+                    id: node_row
+                    required property string modelData
+                    required property int index
+                    readonly property string status: node_row.index === 0 ? root.app
+                                                   : node_row.index === 1 ? root.carbon
+                                                   : node_row.index === 2 ? root.hw_constraints
+                                                   : node_row.index === 3 ? root.hw_resources
+                                                   : node_row.index === 4 ? root.model
+                                                   : root.metadata
+
+                    width: parent.width
+                    height: 44
+
+                    Text
+                    {
+                        anchors { left: parent.left; leftMargin: Theme.space4; verticalCenter: parent.verticalCenter }
+                        text: node_row.modelData
+                        textFormat: Text.PlainText
+                        font.family: Theme.uiFontFamily
+                        font.pixelSize: Theme.fontSizeBody
+                        font.weight: Font.Medium
+                        color: Theme.textPrimary
+                    }
+
+                    SmlChip
+                    {
+                        anchors { right: parent.right; rightMargin: Theme.space4; verticalCenter: parent.verticalCenter }
+                        text: node_row.status
+                        tone: root.__status_tone(node_row.status)
+                        pulse: node_row.status == "RUNNING" || node_row.status == "INITIALIZING"
+                    }
+
+                    Rectangle
+                    {
+                        visible: node_row.index > 0
+                        anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: Theme.space4; rightMargin: Theme.space4 }
+                        height: 1
+                        color: Theme.border
+                    }
+                }
+            }
+        }
+    }
+
+    SmlModal
+    {
+        id: clear_saved_data_dialog
+        title: "Clear saved data"
+        icon_name: Settings.delete_icon_name
+        tone: "danger"
+        standardButtons: Dialog.Yes | Dialog.No
+
+        Text
+        {
+            width: clear_saved_data_dialog.availableWidth
+            text: "This will permanently delete all saved result files from the backend. Tasks currently in progress are not affected. Continue?"
+            textFormat: Text.PlainText
+            wrapMode: Text.WordWrap
+            lineHeight: 1.3
+            font.family: Theme.uiFontFamily
+            font.pixelSize: Theme.fontSizeBody
+            color: Theme.textSecondary
+        }
+
+        onAccepted: engine.clear_saved_data()
+    }
+
+    SmlSaveLoadDialogs
+    {
+        id: save_load_all_dialogs
         anchors.fill: parent
-
-        // Go home button
-        SmlButton
-        {
-            id: go_home_button
-            icon_name: Settings.home_icon_name
-            text_kind: SmlText.TextKind.Header_2
-            text_value: "Home"
-            rounded: true
-            color: Settings.app_color_green_3
-            color_pressed: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_1
-            nightmode_color_pressed: Settings.app_color_green_3
-            tooltip_text: "Go to Home screen"
-            anchors
-            {
-                top: parent.top
-                topMargin: Settings.spacing_normal
-                left: parent.left
-                leftMargin: Settings.spacing_normal
-            }
-            onClicked: root.go_home()
-        }
-
-        // Go back button
-        SmlButton
-        {
-            id: go_back_button
-            icon_name: Settings.back_icon_name
-            text_kind: SmlText.TextKind.Header_2
-            text_value: ""
-            rounded: true
-            color: Settings.app_color_green_3
-            color_pressed: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_1
-            nightmode_color_pressed: Settings.app_color_green_3
-            tooltip_text: "Go back to previous screen"
-            anchors
-            {
-                top: go_home_button.top
-                left: go_home_button.right
-                leftMargin: Settings.spacing_small
-            }
-            onClicked: root.go_back()
-        }
-
-        // Node status
-        SmlText {
-            id: header
-            text_value: "Node Status"
-            text_kind: SmlText.TextKind.Header_3
-            anchors
-            {
-                top: parent.top
-                left: parent.left
-                topMargin: root.__margin + Settings.spacing_big
-                leftMargin: Settings.spacing_big
-            }
-        }
-
-        SmlText {
-            id: app_item
-            text_value: "App Requirements"
-            text_kind: SmlText.TextKind.Body
-            anchors
-            {
-                top: header.bottom
-                topMargin: Settings.spacing_normal
-                left: header.left
-                leftMargin: Settings.spacing_normal
-            }
-
-            Rectangle
-            {
-                color: app == "IDLE" ? root.__idle_status
-                        : app == "RUNNING" ? root.__running_status
-                        : app == "INITIALIZING" ? root.__initializing_status
-                        : root.__error_status
-                radius: Settings.input_default_rounded_radius
-                width: root.__status_width
-                height: root.__status_height
-                anchors
-                {
-                    verticalCenter: parent.verticalCenter
-                    left: parent.left
-                    leftMargin: root.__status_margin*1.5
-                }
-
-                SmlText {
-                    text_value: app
-                    text_kind: SmlText.TextKind.Body
-                    force_size: true
-                    forced_size: root.__font_status_size
-                    anchors.centerIn: parent
-                    force_color: true
-                    forced_color: Settings.app_color_light
-                }
-            }
-        }
-        SmlText {
-            id: carbon_item
-            text_value: "Carbon Footprint"
-            text_kind: SmlText.TextKind.Body
-            anchors
-            {
-                top: app_item.bottom
-                topMargin: Settings.spacing_normal
-                left: header.left
-                leftMargin: Settings.spacing_normal
-            }
-            Rectangle
-            {
-                color: carbon == "IDLE" ? root.__idle_status
-                        : carbon == "RUNNING" ? root.__running_status
-                        : carbon == "INITIALIZING" ? root.__initializing_status
-                        : root.__error_status
-                radius: Settings.input_default_rounded_radius
-                width: root.__status_width
-                height: root.__status_height
-                anchors
-                {
-                    verticalCenter: parent.verticalCenter
-                    left: parent.left
-                    leftMargin: root.__status_margin*1.5
-                }
-
-                SmlText {
-                    text_value: carbon
-                    text_kind: SmlText.TextKind.Body
-                    force_size: true
-                    forced_size: root.__font_status_size
-                    anchors.centerIn: parent
-                    force_color: true
-                    forced_color: Settings.app_color_light
-                }
-            }
-        }
-        SmlText {
-            id: constraints_item
-            text_value: "HW Constraints"
-            text_kind: SmlText.TextKind.Body
-            anchors
-            {
-                top: carbon_item.bottom
-                topMargin: Settings.spacing_normal
-                left: header.left
-                leftMargin: Settings.spacing_normal
-            }
-            Rectangle
-            {
-                color: hw_constraints == "IDLE" ? root.__idle_status
-                        : hw_constraints == "RUNNING" ? root.__running_status
-                        : hw_constraints == "INITIALIZING" ? root.__initializing_status
-                        : root.__error_status
-                radius: Settings.input_default_rounded_radius
-                width: root.__status_width
-                height: root.__status_height
-                anchors
-                {
-                    verticalCenter: parent.verticalCenter
-                    left: parent.left
-                    leftMargin: root.__status_margin*1.5
-                }
-
-                SmlText {
-                    text_value: hw_constraints
-                    text_kind: SmlText.TextKind.Body
-                    force_size: true
-                    forced_size: root.__font_status_size
-                    anchors.centerIn: parent
-                    force_color: true
-                    forced_color: Settings.app_color_light
-                }
-            }
-        }
-        SmlText {
-            id: resources_item
-            text_value: "HW Resources"
-            text_kind: SmlText.TextKind.Body
-            anchors
-            {
-                top: constraints_item.bottom
-                topMargin: Settings.spacing_normal
-                left: header.left
-                leftMargin: Settings.spacing_normal
-            }
-            Rectangle
-            {
-                color: hw_resources == "IDLE" ? root.__idle_status
-                        : hw_resources == "RUNNING" ? root.__running_status
-                        : hw_resources == "INITIALIZING" ? root.__initializing_status
-                        : root.__error_status
-                radius: Settings.input_default_rounded_radius
-                width: root.__status_width
-                height: root.__status_height
-                anchors
-                {
-                    verticalCenter: parent.verticalCenter
-                    left: parent.left
-                    leftMargin: root.__status_margin*1.5
-                }
-
-                SmlText {
-                    text_value: hw_resources
-                    text_kind: SmlText.TextKind.Body
-                    force_size: true
-                    forced_size: root.__font_status_size
-                    anchors.centerIn: parent
-                    force_color: true
-                    forced_color: Settings.app_color_light
-                }
-            }
-        }
-        SmlText {
-            id: model_item
-            text_value: "ML Model"
-            text_kind: SmlText.TextKind.Body
-            anchors
-            {
-                top: resources_item.bottom
-                topMargin: Settings.spacing_normal
-                left: header.left
-                leftMargin: Settings.spacing_normal
-            }
-            Rectangle
-            {
-                color: model == "IDLE" ? root.__idle_status
-                        : model == "RUNNING" ? root.__running_status
-                        : model == "INITIALIZING" ? root.__initializing_status
-                        : root.__error_status
-                radius: Settings.input_default_rounded_radius
-                width: root.__status_width
-                height: root.__status_height
-                anchors
-                {
-                    verticalCenter: parent.verticalCenter
-                    left: parent.left
-                    leftMargin: root.__status_margin*1.5
-                }
-
-                SmlText {
-                    text_value: model
-                    text_kind: SmlText.TextKind.Body
-                    force_size: true
-                    forced_size: root.__font_status_size
-                    anchors.centerIn: parent
-                    force_color: true
-                    forced_color: Settings.app_color_light
-                }
-            }
-        }
-        SmlText {
-            id: metadata_item
-            text_value: "Model Metadata"
-            text_kind: SmlText.TextKind.Body
-            anchors
-            {
-                top: model_item.bottom
-                topMargin: Settings.spacing_normal
-                left: header.left
-                leftMargin: Settings.spacing_normal
-            }
-            Rectangle
-            {
-                color: metadata == "IDLE" ? root.__idle_status
-                        : metadata == "RUNNING" ? root.__running_status
-                        : metadata == "INITIALIZING" ? root.__initializing_status
-                        : root.__error_status
-                radius: Settings.input_default_rounded_radius
-                width: root.__status_width
-                height: root.__status_height
-                anchors
-                {
-                    verticalCenter: parent.verticalCenter
-                    left: parent.left
-                    leftMargin: root.__status_margin*1.5
-                }
-
-                SmlText {
-                    text_value: metadata
-                    text_kind: SmlText.TextKind.Body
-                    force_size: true
-                    forced_size: root.__font_status_size
-                    anchors.centerIn: parent
-                    force_color: true
-                    forced_color: Settings.app_color_light
-                }
-            }
-        }
-
-        // Save everything (current results + HF searches + comparisons) into a named file
-        SmlButton
-        {
-            id: save_all_button
-            icon_name: Settings.save_icon_name
-            text_kind: SmlText.TextKind.Header_2
-            text_value: "Save"
-            rounded: true
-            color: Settings.app_color_green_3
-            color_pressed: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_1
-            nightmode_color_pressed: Settings.app_color_green_3
-            disabled: !root.save_enabled
-            tooltip_text: "Save current results, HF searches, and comparisons into a named file"
-            anchors
-            {
-                top: go_home_button.top
-                left: go_back_button.right
-                leftMargin: Settings.spacing_small
-            }
-            onClicked: save_load_all_dialogs.open_save()
-        }
-
-        // Load everything (results + HF searches + comparisons) from a named file
-        SmlButton
-        {
-            id: load_all_button
-            icon_name: Settings.load_icon_name
-            text_kind: SmlText.TextKind.Header_2
-            text_value: "Load"
-            rounded: true
-            color: Settings.app_color_green_3
-            color_pressed: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_1
-            nightmode_color_pressed: Settings.app_color_green_3
-            tooltip_text: "Load results, HF searches, and comparisons from a named file"
-            anchors
-            {
-                top: save_all_button.top
-                left: save_all_button.right
-                leftMargin: Settings.spacing_small
-            }
-            onClicked: save_load_all_dialogs.open_load()
-        }
-
-        // Clear saved data button
-        SmlButton
-        {
-            id: clear_saved_data_button
-            icon_name: Settings.delete_icon_name
-            text_kind: SmlText.TextKind.Header_2
-            text_value: "Clear saved data"
-            rounded: true
-            color: Settings.app_color_green_3
-            color_pressed: Settings.app_color_green_1
-            nightmode_color: Settings.app_color_green_1
-            nightmode_color_pressed: Settings.app_color_green_3
-            tooltip_text: "Delete all saved result files from the backend"
-            anchors
-            {
-                top: save_all_button.top
-                left: load_all_button.right
-                leftMargin: Settings.spacing_small
-            }
-            onClicked: clear_saved_data_dialog.open()
-        }
-
-        Dialog
-        {
-            id: clear_saved_data_dialog
-            anchors.centerIn: parent
-            modal: true
-            padding: 16
-            standardButtons: Dialog.Yes | Dialog.No
-
-            background: Rectangle
-            {
-                anchors.fill: parent
-                radius: 10
-                color: Settings.app_color_light
-                border.color: Settings.app_color_green_4
-                border.width: 1
-            }
-
-            header: Item { }
-
-            contentItem: Column
-            {
-                id: contentColumn
-                spacing: 16
-
-                SmlText
-                {
-                    text_value: "Clear saved data"
-                    text_kind: SmlText.TextKind.Header_2
-                    width: 320
-                    horizontalAlignment: Text.AlignHCenter
-                }
-
-                SmlText
-                {
-                    text_value: "This will permanently delete all saved result files from the backend. Tasks currently in progress are not affected. Continue?"
-                    text_kind: SmlText.TextKind.Body
-                    width: 320
-                    horizontalAlignment: Text.AlignHCenter
-                }
-            }
-
-            onAccepted: engine.clear_saved_data()
-        }
-
-        SmlSaveLoadDialogs
-        {
-            id: save_load_all_dialogs
-            anchors.fill: parent
-            save_title: "Save Everything"
-            load_title: "Load Everything"
-            save_prompt: "Name this save, or pick an existing one below to overwrite it. Saves current results, HF searches, and comparisons together."
-            no_files_text: "No saved files yet."
-            onSave_requested: engine.save_all(name, root.hf_saved_searches, root.hf_compare_history)
-            onLoad_requested: engine.load_all(name)
-        }
+        save_title: "Save Everything"
+        load_title: "Load Everything"
+        save_prompt: "Name this save, or pick an existing one below to overwrite it. Saves current results, HF searches, and comparisons together."
+        no_files_text: "No saved files yet."
+        onSave_requested: engine.save_all(name, root.hf_saved_searches, root.hf_compare_history)
+        onLoad_requested: engine.load_all(name)
     }
 }

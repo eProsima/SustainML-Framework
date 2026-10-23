@@ -10,6 +10,7 @@ import QtQml 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "components"
@@ -131,7 +132,7 @@ Window {
     height: Settings.app_height
     // Minimal window size
     minimumWidth: 1050
-    minimumHeight: 390
+    minimumHeight: 560
     visible: true
     title:  Settings.app_name
 
@@ -356,9 +357,9 @@ Window {
         id: hfTip
         visible: false
         z: 99999
-        radius: 8
-        color: "white"
-        border.color: Settings.app_color_green_4
+        radius: Theme.radiusMd
+        color: Theme.overlay
+        border.color: Theme.borderStrong
         border.width: 1
         clip: true
 
@@ -368,9 +369,12 @@ Window {
         Text {
             id: hfTipText
             anchors.fill: parent
-            anchors.margins: 10
+            anchors.margins: Theme.space3
             wrapMode: Text.WordWrap
-            color: Settings.app_color_green_1
+            font.family: Theme.uiFontFamily
+            font.pixelSize: Theme.fontSizeBody
+            lineHeight: 1.25
+            color: Theme.textPrimary
             text: ""
         }
 
@@ -747,11 +751,18 @@ Window {
     // Background
     Rectangle
     {
-        color: ScreenManager.background_color
+        color: Theme.appBackground
 
         // Set background size two times the app size
         width:  2 * Settings.app_width
         height: 2 * Settings.app_height
+
+        // Laid out for the default window size and scaled to the actual one, so the shapes
+        // keep the same composition (the curve flowing down-left) at any window size
+        transform: Scale {
+            xScale: main_window.width / Settings.app_width
+            yScale: main_window.height / Settings.app_height
+        }
 
         // Initial position
         x: 0
@@ -762,6 +773,9 @@ Window {
         {
             id: background
             source: ScreenManager.background_shape
+            opacity: Theme.decorationOpacity
+            // Only behind the start screen: every other screen has a uniform background
+            visible: opacity > 0 && ScreenManager.current_screen === ScreenManager.Screens.Start
 
             // Set image size two times the app size
             width:  2 * Settings.app_width
@@ -771,9 +785,9 @@ Window {
             x: Settings.background_x_initial
             y: 0
 
-            // Image smoothness
-            sourceSize.width: Settings.app_width
-            sourceSize.height: Settings.app_height
+            // Rendered at its on-screen size (after the window scale), so it stays sharp
+            sourceSize.width: Math.ceil(width * main_window.width / Settings.app_width)
+            sourceSize.height: Math.ceil(height * main_window.height / Settings.app_height)
             smooth: true
             antialiasing: true
         }
@@ -783,6 +797,9 @@ Window {
         {
             id: background_2
             source: ScreenManager.background_2_shape
+            opacity: Theme.decorationOpacity
+            // Only behind the start screen: every other screen has a uniform background
+            visible: opacity > 0 && ScreenManager.current_screen === ScreenManager.Screens.Start
 
             // Set image size two times the app size
             width:  2 * Settings.app_width
@@ -792,9 +809,9 @@ Window {
             x: 2 * Settings.app_width
             y: 2 * Settings.app_height
 
-            // Image smoothness
-            sourceSize.width: Settings.app_width
-            sourceSize.height: Settings.app_height
+            // Rendered at its on-screen size (after the window scale), so it stays sharp
+            sourceSize.width: Math.ceil(width * main_window.width / Settings.app_width)
+            sourceSize.height: Math.ceil(height * main_window.height / Settings.app_height)
             smooth: true
             antialiasing: true
         }
@@ -1013,6 +1030,7 @@ Window {
                 SplitView {
                     anchors.fill: parent
                     orientation: Qt.Horizontal
+                    handleDelegate: Rectangle { width: 1; color: Theme.border }
 
                     SmlProblemDefinitionScreen {
                         id: definition_screen_component
@@ -1072,47 +1090,72 @@ Window {
                         Layout.maximumWidth: parent.width * 0.30
                         Layout.preferredWidth: parent.width * 0.25
                         Layout.fillHeight: true
-                        color: "transparent"
+                        color: Theme.surface
 
                         Column {
                             anchors.fill: parent
-                            spacing: 10
-                            padding: 20
+                            anchors.topMargin: Theme.headerHeight
+                            spacing: 0
+                            padding: Theme.space5
 
-                            SmlText {
-                                text_kind: SmlText.TextKind.Header_3
-                                text_value: "Previous Results"
-                                horizontalAlignment: Text.AlignHCenter
-                                anchors.horizontalCenter: parent.horizontalCenter
-                            }
+                            Row {
+                                spacing: Theme.space3
+                                bottomPadding: Theme.space4
 
-                            Rectangle {
-                                anchors.topMargin: Settings.spacing_normal
-                                width: parent.width * 0.9
-                                height: 1
-                                color: "black"
+                                Rectangle {
+                                    width: 32
+                                    height: 32
+                                    radius: Theme.radiusMd
+                                    color: Theme.accentFill
+                                    SmlIcon {
+                                        anchors.centerIn: parent
+                                        name: Settings.results_icon_name
+                                        size: Theme.iconSizeDefault + 2
+                                        variant: Theme.iconOnAccent
+                                    }
+                                }
+
+                                SmlText {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text_kind: SmlText.TextKind.Header_2
+                                    text_value: "Previous Results"
+                                }
                             }
 
                             // Item list for the results
                             Repeater {
                                 model: reiterateModel
-                                delegate: Row {
-                                    width: parent.width * 0.9
-                                    spacing: 10
+                                delegate: Column {
+                                    width: parent.width - 2 * Theme.space5
+                                    topPadding: Theme.space3
+                                    bottomPadding: Theme.space3
+                                    spacing: 2
+
+                                    Rectangle {
+                                        width: parent.width
+                                        height: 1
+                                        color: Theme.border
+                                        visible: index > 0
+                                    }
 
                                     Text {
-                                        text: label + ":"
-                                        font.pixelSize: 13
-                                        width: parent.width * 0.6
+                                        topPadding: index > 0 ? Theme.space3 : 0
+                                        text: label
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMeta
+                                        color: Theme.textMuted
+                                        width: parent.width
                                         elide: Text.ElideRight
                                     }
 
                                     Text {
                                         text: value
-                                        font.pixelSize: 13
-                                        color: "green"
-                                        width: parent.width * 0.35
-                                        horizontalAlignment: Text.AlignRight
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeBody
+                                        font.weight: Font.DemiBold
+                                        color: Theme.accentText
+                                        width: parent.width
+                                        wrapMode: Text.WrapAnywhere
                                     }
                                 }
                             }
@@ -1209,114 +1252,91 @@ Window {
             id: uNet_screen
             Rectangle
             {
+                id: unetScreen
                 color: "transparent"
                 Component.onCompleted: {
                     loadUnetInfo()
                 }
 
-                // HOME BUTTON
-                SmlButton
+                SmlScreenHeader
                 {
-                    id: unet_go_home_button
-                    icon_name: Settings.home_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Home"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Go to Home screen"
-                    anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_normal
-                        left: parent.left
-                        leftMargin: Settings.spacing_normal
-                    }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
-                }
+                    id: unet_header
+                    title: "U-Net models"
+                    subtitle: "CNN architectures for the FPGA: click a model to open its graph"
 
-                // BACK ARROW
-                SmlButton
-                {
-                    id: unet_go_back_button
-                    icon_name: Settings.back_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: ""
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Go to Problem Definition screen"
-                    anchors {
-                        top: unet_go_home_button.top
-                        left: unet_go_home_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
-                }
+                    navigation: [
+                        // HOME BUTTON
+                        SmlButton
+                        {
+                            id: unet_go_home_button
+                            icon_name: Settings.home_icon_name
+                            text_value: "Home"
+                            tooltip_text: "Go to Home screen"
+                            onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                        },
 
-                // U-NET GRAPHS: the cards opened so far
-                SmlButton
-                {
-                    id: unet_go_graphs_button
-                    icon_name: Settings.analyze_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "U-Net graphs"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: main_window.unetOpenModels.length > 0
-                                  ? "Go to the U-Net graphs screen (" + main_window.unetOpenModels.length + " open)"
-                                  : "Go to the U-Net graphs screen (click a model below to open its graph)"
-                    anchors {
-                        top: unet_go_home_button.top
-                        left: unet_go_back_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.UNetGraph)
+                        // BACK ARROW
+                        SmlIconButton
+                        {
+                            id: unet_go_back_button
+                            outlined: true
+                            icon_name: Settings.back_icon_name
+                            tooltip_text: "Go to Problem Definition screen"
+                            onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                        }
+                    ]
+
+                    actions: [
+                        // U-NET GRAPHS: the cards opened so far
+                        SmlButton
+                        {
+                            id: unet_go_graphs_button
+                            icon_name: "network"
+                            text_value: main_window.unetOpenModels.length > 0
+                                        ? "U-Net graphs (" + main_window.unetOpenModels.length + ")" : "U-Net graphs"
+                            tooltip_text: main_window.unetOpenModels.length > 0
+                                          ? "Go to the U-Net graphs screen (" + main_window.unetOpenModels.length + " open)"
+                                          : "Go to the U-Net graphs screen (click a model below to open its graph)"
+                            onClicked: main_window.load_screen(ScreenManager.Screens.UNetGraph)
+                        }
+                    ]
                 }
 
                 // MAIN CONTENT – two columns with shared vertical scroll
-                Rectangle {
+                SmlCard {
                     id: unet_content
-                    color: "transparent"
                     anchors {
-                        top: unet_go_back_button.bottom
-                        topMargin: Settings.spacing_big * 2
-                        left: parent.left
-                        leftMargin: Settings.spacing_big
-                        right: parent.right
-                        rightMargin: Settings.spacing_big
+                        top: unet_header.bottom
+                        topMargin: Theme.space5
+                        horizontalCenter: parent.horizontalCenter
                         bottom: parent.bottom
-                        bottomMargin: Settings.spacing_big * 2
+                        bottomMargin: Theme.pagePadding
+                    }
+                    width: Math.min(parent.width - 2 * Theme.pagePadding, Theme.contentMaxWidth)
+                    title: "Available models"
+                    subtitle: main_window.model_list.length + " models"
+                    icon_name: "network"
+                    content_padding: Theme.space2
+
+                    // On the card itself, not in its content area (whose size it would feed back into)
+                    SmlEmptyState {
+                        parent: unet_content
+                        anchors.centerIn: parent
+                        visible: main_window.model_list.length === 0
+                        title: "No U-Net models yet"
+                        hint: "The U-Net models appear here once the framework sends the list."
                     }
 
-                    // White card with green border
-                    Rectangle {
+                    Item {
                         id: tableFrame
                         anchors.fill: parent
-                        anchors.margins: Settings.spacing_big
-                        radius: 18
-                        color: "white"
-                        border.color: Settings.app_color_green_4
-                        border.width: 2
                         clip: true   // Keep content clipped inside the card
 
                         // Flickable inside the card – only content scrolls
                         Flickable {
                             id: unetList
                             anchors.fill: parent
-                            anchors.margins: Settings.spacing_big
+                            anchors.margins: Theme.space2
                             clip: true
 
                             // Restore the previous scroll position as soon as the rows are laid out
@@ -1353,31 +1373,39 @@ Window {
                             }
 
                             contentWidth: width
-                            contentHeight: modelsColumn.implicitHeight + Settings.spacing_big
+                            contentHeight: modelsColumn.implicitHeight + Theme.space2
 
                             Column {
                                 id: modelsColumn
-                                width: parent.width
-                                spacing: Settings.spacing_small
+                                width: parent.width - Theme.space3
+                                spacing: 2
 
                                 // Header row: model name + description
                                 Row {
                                     width: parent.width
-                                    spacing: Settings.spacing_big
+                                    spacing: Theme.space5
+                                    leftPadding: Theme.space3
+                                    bottomPadding: Theme.space2
 
                                     // Left header: model name
-                                    SmlText {
-                                        text_kind: SmlText.TextKind.Header_3
-                                        text_value: "U-Net model"
-                                        color: Settings.app_color_green_4
+                                    Text {
+                                        text: "U-NET MODEL"
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMicro
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 0.8
+                                        color: Theme.textMuted
                                         width: parent.width * 0.2
                                     }
 
                                     // Right header: description
-                                    SmlText {
-                                        text_kind: SmlText.TextKind.Header_3
-                                        text_value: "Description"
-                                        color: Settings.app_color_green_1
+                                    Text {
+                                        text: "DESCRIPTION"
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMicro
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 0.8
+                                        color: Theme.textMuted
                                         width: parent.width * 0.75
                                     }
                                 }
@@ -1388,13 +1416,13 @@ Window {
                                     delegate: Rectangle {
                                         id: unetRow
                                         width: parent.width
-                                        height: unetRowContent.implicitHeight + Settings.spacing_small
-                                        radius: 6
+                                        height: unetRowContent.implicitHeight + Theme.space4
+                                        radius: Theme.radiusMd
                                         color: unetRowMouse.pressed || unetRow.__flash
-                                               ? Qt.rgba(Settings.app_color_green_4.r, Settings.app_color_green_4.g, Settings.app_color_green_4.b, 0.35)
-                                               : unetRowMouse.containsMouse ? Settings.app_color_light
-                                               // Transparent light gray, not "transparent" (black), so the fade never passes through dark gray
-                                               : Qt.rgba(Settings.app_color_light.r, Settings.app_color_light.g, Settings.app_color_light.b, 0)
+                                               ? Theme.accentSubtleStrong
+                                               : unetRowMouse.containsMouse ? Theme.accentSubtle
+                                               // Transparent green, not "transparent" (black), so the fade never passes through dark gray
+                                               : Theme.alpha(Theme.brandGreenBright, 0)
                                         Behavior on color { ColorAnimation { duration: 50 } }
 
                                         // Keeps the "clicked" color visible briefly, even for a quick click
@@ -1409,14 +1437,17 @@ Window {
                                             id: unetRowContent
                                             width: parent.width
                                             anchors.verticalCenter: parent.verticalCenter
-                                            spacing: Settings.spacing_big
+                                            spacing: Theme.space5
+                                            leftPadding: Theme.space3
 
                                             // LEFT COLUMN: model name
                                             Text {
                                                 text: modelData
+                                                font.family: Theme.monoFontFamily
                                                 font.pixelSize: 13
+                                                font.weight: Font.DemiBold
                                                 font.underline: unetRowMouse.containsMouse
-                                                color: Settings.app_color_green_4
+                                                color: Theme.accentText
                                                 elide: Text.ElideRight
                                                 width: parent.width * 0.2
                                             }
@@ -1424,10 +1455,12 @@ Window {
                                             // RIGHT COLUMN: description
                                             Text {
                                                 text: getUnetDescription(modelData)
+                                                font.family: Theme.uiFontFamily
                                                 font.pixelSize: 13
-                                                color: Settings.app_color_green_1
+                                                lineHeight: 1.2
+                                                color: Theme.textSecondary
                                                 wrapMode: Text.WordWrap
-                                                width: parent.width * 0.75
+                                                width: parent.width * 0.75 - Theme.space3
                                             }
                                         }
 
@@ -1443,45 +1476,23 @@ Window {
                                             }
                                         }
 
-                                        Controls2.ToolTip {
+                                        SmlToolTip {
                                             id: unetRowTooltip
                                             visible: unetRowMouse.containsMouse && !unetRowMouse.pressed && !unetRow.__flash
                                             text: "Click to open the architecture graph of " + modelData
                                             delay: 150
                                             x: unetRowMouse.mouseX + 12
                                             y: unetRowMouse.mouseY + 18
-
-                                            background: Rectangle {
-                                                color: Qt.rgba(0.18, 0.18, 0.18, 0.75)
-                                                radius: 6
-                                            }
-                                            contentItem: Text {
-                                                text: unetRowTooltip.text
-                                                color: "white"
-                                                font.pixelSize: 12
-                                                padding: 8
-                                            }
                                         }
                                     }
                                 }
                             }
 
-                            // Scrollbar inside the white card, on the right edge
-                            Controls2.ScrollBar.vertical: Controls2.ScrollBar {
-                                policy: Controls2.ScrollBar.AlwaysOn
-                                width: 8
-                                anchors {
-                                    right: parent.right
-                                    top: parent.top
-                                    bottom: parent.bottom
-                                }
-                                contentItem: Rectangle {
-                                    radius: 4
-                                    color: Settings.app_color_green_4   // Green handle
-                                }
-                                background: Rectangle {
-                                    color: "transparent"
-                                }
+                            // Scrollbar on the right edge of the screen
+                            Controls2.ScrollBar.vertical: SmlScrollBar {
+                                policy: Controls2.ScrollBar.AsNeeded
+                                screen_edge: unetScreen
+                                track: unetList
                             }
                         }
                     }
@@ -1497,7 +1508,7 @@ Window {
                 id: unetGraphScreen
                 color: "transparent"
 
-                readonly property color __card_color: ScreenManager.night_mode ? "#303030" : "white"
+                readonly property color __card_color: Theme.surface
 
                 // Front-truncated text with literal "..." (as SmlTabView does: the title font's
                 // ellipsis glyph renders badly), or nothing when not even that fits
@@ -1514,51 +1525,33 @@ Window {
                     return ""
                 }
 
-                // HOME BUTTON
-                SmlButton
+                SmlScreenHeader
                 {
-                    id: unet_graph_home_button
-                    icon_name: Settings.home_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Home"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Go to Home screen"
-                    anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_normal
-                        left: parent.left
-                        leftMargin: Settings.spacing_normal
-                    }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
-                }
+                    id: unet_graph_header
+                    title: "U-Net graphs"
+                    subtitle: "Architecture of the opened U-Net models"
 
-                // BACK ARROW
-                SmlButton
-                {
-                    id: unet_graph_back_button
-                    icon_name: Settings.back_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: ""
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Back to U-Net models"
-                    anchors {
-                        top: unet_graph_home_button.top
-                        left: unet_graph_home_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: main_window.go_back()
+                    navigation: [
+                        // HOME BUTTON
+                        SmlButton
+                        {
+                            id: unet_graph_home_button
+                            icon_name: Settings.home_icon_name
+                            text_value: "Home"
+                            tooltip_text: "Go to Home screen"
+                            onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                        },
+
+                        // BACK ARROW
+                        SmlIconButton
+                        {
+                            id: unet_graph_back_button
+                            outlined: true
+                            icon_name: Settings.back_icon_name
+                            tooltip_text: "Back to U-Net models"
+                            onClicked: main_window.go_back()
+                        }
+                    ]
                 }
 
                 // CARDS: one per opened model, styled like the Results screen tabs (SmlTabView)
@@ -1568,12 +1561,17 @@ Window {
                     spacing: 0
                     clip: true
                     interactive: false
-                    height: 36
+                    // Above the content below it, and 1 px taller than the cards, so the active
+                    // card covers the content's top border and merges with it
+                    z: 1
+                    height: 39
                     anchors {
-                        top: unet_graph_back_button.bottom
-                        topMargin: Settings.spacing_normal
+                        top: unet_graph_header.bottom
+                        topMargin: Theme.space4
                         left: parent.left
+                        leftMargin: Theme.pagePadding
                         right: parent.right
+                        rightMargin: Theme.pagePadding
                     }
                     model: main_window.unetOpenModels
 
@@ -1583,37 +1581,55 @@ Window {
                         required property int index
                         readonly property bool active: unetCard.modelData === main_window.unetActiveModel
                         readonly property bool next_active: main_window.unetOpenModels[unetCard.index + 1] === main_window.unetActiveModel
-                        readonly property color shadow_color: active
-                                ? (ScreenManager.night_mode ? "#707070" : "#c0c0c0")
-                                : (ScreenManager.night_mode ? "black" : "#d0d0d0")
-
                         // share the bar like SmlTabView: at most 200 px, narrower as more cards open
                         width: Math.min(200, unetCards.width / Math.max(1, unetCards.count))
-                        height: 36
-                        radius: Settings.input_default_rounded_radius
-                        color: active ? unetGraphScreen.__card_color
-                             : ScreenManager.night_mode ? Settings.app_color_dark : Settings.app_color_light
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: unetCard.index === 0 || unetCard.active ? unetCard.color : unetCard.shadow_color }
-                            GradientStop { position: 0.04; color: unetCard.color }
-                            GradientStop { position: 0.96; color: unetCard.color }
-                            GradientStop { position: 1.0; color: unetCard.next_active ? unetCard.shadow_color : unetCard.color }
-                        }
+                        height: 38
+                        radius: Theme.radiusMd
+                        color: active ? unetGraphScreen.__card_color : Theme.transparent
 
-                        // square bottom half, so the card joins the content below
+                        // square bottom half, so the card joins the content below (covering its border)
                         Rectangle {
                             width: parent.width
                             height: parent.height / 2
                             anchors.bottom: parent.bottom
-                            gradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0.0; color: unetCard.index === 0 || unetCard.active ? unetCard.color : unetCard.shadow_color }
-                                GradientStop { position: 0.04; color: unetCard.color }
-                                GradientStop { position: 0.96; color: unetCard.color }
-                                GradientStop { position: 1.0; color: unetCard.next_active ? unetCard.shadow_color : unetCard.color }
+                            anchors.bottomMargin: unetCard.active ? -1 : 0
+                            color: parent.color
+                        }
+
+                        // Outline of the active card: top and sides only, on top of its fill, reaching
+                        // down to the content's border so both outlines meet without a notch
+                        Item {
+                            visible: unetCard.active
+                            anchors { top: parent.top; left: parent.left; right: parent.right }
+                            height: parent.height + 1
+                            clip: true
+                            z: 1
+                            Rectangle {
+                                anchors { fill: parent; bottomMargin: -2 * radius }
+                                radius: unetCard.radius
+                                color: Theme.transparent
+                                border.width: 1
+                                border.color: Theme.borderStrong
                             }
                         }
+
+                        // Frame of an inactive card: lighter card with a visible outline, rounded at the top
+                        Item {
+                            visible: !unetCard.active
+                            anchors { fill: parent; leftMargin: 2; rightMargin: 2; topMargin: 3 }
+                            clip: true
+                            z: -1
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.bottomMargin: -radius
+                                radius: Theme.radiusMd
+                                color: unetCardMouse.containsMouse ? Theme.raised : Theme.alpha(Theme.surface, Theme.darkMode ? 0.35 : 0.55)
+                                border.width: 1
+                                border.color: unetCardMouse.containsMouse ? Theme.brandGreen : Theme.borderStrong
+                            }
+                        }
+
+
 
                         MouseArea {
                             id: unetCardMouse
@@ -1636,19 +1652,18 @@ Window {
                             // keeps the end of the name (the model number) when space is short
                             text: unetGraphScreen.__elide_left(unetCard.modelData, unetCardMetrics, width)
                             clip: true
-                            font.bold: true
-                            font.family: SustainMLFont.title_font
-                            font.pixelSize: Settings.body_font_size
-                            color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
+                            font.family: Theme.monoFontFamily
+                            font.weight: unetCard.active ? Font.DemiBold : Font.Normal
+                            font.pixelSize: Theme.fontSizeBody
+                            color: unetCard.active ? Theme.textPrimary : Theme.textSecondary
                         }
 
                         SmlIcon {
                             id: unetCardClose
                             anchors { right: parent.right; rightMargin: Math.min(15, unetCard.width * 0.08); verticalCenter: parent.verticalCenter }
                             name: Settings.close_tab_icon_name
-                            size: 16
-                            color: Settings.app_color_dark
-                            nightmode_color: Settings.app_color_light
+                            size: 14
+                            variant: Theme.iconMuted
 
                             MouseArea {
                                 anchors.fill: parent
@@ -1681,12 +1696,32 @@ Window {
                     id: unet_graph_content
                     anchors {
                         top: unetCards.bottom
+                        topMargin: -1
                         left: parent.left
+                        leftMargin: Theme.pagePadding
                         right: parent.right
+                        rightMargin: Theme.pagePadding
                         bottom: parent.bottom
+                        bottomMargin: Theme.pagePadding
                     }
                     color: unetGraphScreen.__card_color
+                    radius: Theme.radiusSm
+                    border.width: 1
+                    border.color: Theme.borderStrong
                     clip: true
+
+                    // Square top-left corner while the first card is active, so it joins the content cleanly
+                    Item {
+                        visible: main_window.unetOpenModels.length > 0
+                                 && main_window.unetOpenModels[0] === main_window.unetActiveModel
+                                 && unetCards.contentX <= unetCards.originX
+                        anchors { top: parent.top; left: parent.left }
+                        width: parent.radius
+                        height: parent.radius
+                        Rectangle { anchors.fill: parent; color: parent.parent.color }
+                        Rectangle { anchors { top: parent.top; left: parent.left; right: parent.right } height: 1; color: parent.parent.border.color }
+                        Rectangle { anchors { top: parent.top; bottom: parent.bottom; left: parent.left } width: 1; color: parent.parent.border.color }
+                    }
 
                     Flickable {
                         id: unetGraphFlick
@@ -1700,22 +1735,16 @@ Window {
 
                         SmlUnetGraph {
                             id: unetGraph
-                            width: unetGraphFlick.width - 14   // room for the scroll bar
+                            width: unetGraphFlick.width
                             info: main_window.unetInfoMap[main_window.unetActiveModel] || null
                             onOpen_in_browser: main_window.openUnetVisualizer(model_name)
                         }
 
-                        Controls2.ScrollBar.vertical: Controls2.ScrollBar {
+                        Controls2.ScrollBar.vertical: SmlScrollBar {
                             policy: unetGraphFlick.contentHeight > unetGraphFlick.height
                                     ? Controls2.ScrollBar.AlwaysOn : Controls2.ScrollBar.AlwaysOff
-                            width: 8
-                            contentItem: Rectangle {
-                                radius: 4
-                                color: Settings.app_color_green_4
-                            }
-                            background: Rectangle {
-                                color: "transparent"
-                            }
+                            screen_edge: unetGraphScreen
+                            track: unet_graph_content
                         }
                     }
 
@@ -1726,16 +1755,11 @@ Window {
                     }
 
                     // No card open
-                    Text {
+                    SmlEmptyState {
                         visible: main_window.unetActiveModel === ""
                         anchors.centerIn: parent
-                        width: parent.width - 2 * Settings.spacing_big
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.WordWrap
-                        text: "No U-Net model open. Go back to the U-Net models list and click a model to open its graph here."
-                        font.family: SustainMLFont.body_font
-                        font.pixelSize: Settings.body_font_size
-                        color: ScreenManager.night_mode ? Settings.app_color_light : Settings.app_color_dark
+                        title: "No U-Net model open"
+                        hint: "Go back to the U-Net models list and click a model to open its graph here."
                     }
                 }
             }
@@ -1745,213 +1769,162 @@ Window {
             id: huggingFace_screen
             Rectangle
             {
+                id: hfScreen
                 color: "transparent"
 
-                // Home
-                SmlButton
+                SmlScreenHeader
                 {
-                    id: hf_go_home_button
-                    icon_name: Settings.home_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Home"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Go to Home screen"
-                    anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_normal
-                        left: parent.left
-                        leftMargin: Settings.spacing_normal
-                    }
-                    onClicked: {
-                        main_window.refreshing = false
-                        main_window.clear_hf_models()
-                        main_window.load_screen(ScreenManager.Screens.Home)
-                    }
+                    id: hf_header
+                    title: "Hugging Face models"
+                    subtitle: "Pre-trained models suggested for the problem description"
+
+                    navigation: [
+                        // Home
+                        SmlButton
+                        {
+                            id: hf_go_home_button
+                            icon_name: Settings.home_icon_name
+                            text_value: "Home"
+                            tooltip_text: "Go to Home screen"
+                            onClicked: {
+                                main_window.refreshing = false
+                                main_window.clear_hf_models()
+                                main_window.load_screen(ScreenManager.Screens.Home)
+                            }
+                        },
+
+                        // Back
+                        SmlIconButton
+                        {
+                            id: hf_go_back_button
+                            outlined: true
+                            icon_name: Settings.back_icon_name
+                            tooltip_text: "Back to Problem Definition"
+                            onClicked: {
+                                main_window.refreshing = false
+                                main_window.clear_hf_models()
+                                main_window.load_screen(ScreenManager.Screens.Definition)
+                            }
+                        }
+                    ]
+
+                    actions: [
+                        SmlChip {
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: main_window.hf_selected_ids.length > 0
+                            text: main_window.hf_selected_ids.length + " / " + maxCompareModels + " selected"
+                            tone: "accent"
+                            icon_name: Settings.check_icon_name
+                        },
+
+                        // Compare (top bar)
+                        SmlButton {
+                            id: hf_go_compare_button
+                            z: 100000
+                            variant: "primary"
+                            icon_name: Settings.compare_icon_name
+                            text_value: "Compare"
+                            tooltip_text: "Compare the selected models (2 to " + maxCompareModels + ")"
+
+                            disabled: main_window.hf_selected_ids.length < 2 || main_window.hf_selected_ids.length > maxCompareModels
+
+                            onClicked: {
+                                // Freeze ids (so they don't get lost/changed later)
+                                main_window.hf_compare_last_request_ids = main_window.hf_selected_ids.slice(0)
+
+                                // Clear current view: nothing should appear open/selected while the
+                                // new comparison is being computed, and the selection must not carry
+                                // over into whatever the user picks for their next comparison.
+                                main_window.hf_compare_obj = ({})
+                                main_window.hf_open_compare_index = -1
+                                main_window.hf_selected_ids = []
+
+                                engine.request_hf_models_info(main_window.hf_compare_last_request_ids)
+                                main_window.load_screen(ScreenManager.Screens.Compare)
+                            }
+                        },
+
+                        // Results (top bar)
+                        SmlButton {
+                            id: hf_go_results_button
+                            z: 100000
+                            icon_name: Settings.results_icon_name
+                            text_value: "Results"
+                            tooltip_text: "Saved Hugging Face searches"
+
+                            disabled: main_window.hf_saved_searches.length === 0
+
+                            onClicked: main_window.load_screen(ScreenManager.Screens.HFresults)
+                        },
+
+                        // Comparisons (top bar) - browse comparisons already done, without
+                        // starting a new one (unlike the "Compare" button above, this never
+                        // touches hf_compare_obj/hf_selected_ids). The Compare screen already
+                        // shows the hf_compare_history sidebar to pick from - this just adds a
+                        // direct path to it. Distinguished from "Compare" by icon (history
+                        // clock vs. scale) rather than color.
+                        SmlButton {
+                            id: hf_go_comparisons_button
+                            z: 100000
+                            icon_name: Settings.comparisons_icon_name
+                            text_value: "Comparisons"
+                            tooltip_text: "Saved Hugging Face model comparisons"
+
+                            disabled: main_window.hf_compare_history.length === 0
+
+                            onClicked: main_window.load_screen(ScreenManager.Screens.Compare)
+                        }
+                    ]
                 }
 
-                // Back
-                SmlButton
+                SmlCard
                 {
-                    id: hf_go_back_button
-                    icon_name: Settings.back_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: ""
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Back to Problem Definition"
+                    id: hf_card
                     anchors {
-                        top: hf_go_home_button.top
-                        left: hf_go_home_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: {
-                        main_window.refreshing = false
-                        main_window.clear_hf_models()
-                        main_window.load_screen(ScreenManager.Screens.Definition)
-                    }
-                }
-
-                // Compare (top bar)
-                SmlButton {
-                    id: hf_go_compare_button
-                    z: 100000
-
-                    anchors {
-                        top: hf_go_home_button.top
-                        left: hf_go_back_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-
-                    icon_name: Settings.compare_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Compare"
-                    rounded: true
-
-                    disabled: main_window.hf_selected_ids.length < 2 || main_window.hf_selected_ids.length > maxCompareModels
-
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-
-                    onClicked: {
-                        // Freeze ids (so they don't get lost/changed later)
-                        main_window.hf_compare_last_request_ids = main_window.hf_selected_ids.slice(0)
-
-                        // Clear current view: nothing should appear open/selected while the
-                        // new comparison is being computed, and the selection must not carry
-                        // over into whatever the user picks for their next comparison.
-                        main_window.hf_compare_obj = ({})
-                        main_window.hf_open_compare_index = -1
-                        main_window.hf_selected_ids = []
-
-                        engine.request_hf_models_info(main_window.hf_compare_last_request_ids)
-                        main_window.load_screen(ScreenManager.Screens.Compare)
-                    }
-                }
-
-                // Results (top bar)
-                SmlButton {
-                    id: hf_go_results_button
-                    z: 100000
-
-                    anchors {
-                        top: hf_go_home_button.top
-                        left: hf_go_compare_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-
-                    icon_name: Settings.results_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Results"
-                    rounded: true
-
-                    disabled: main_window.hf_saved_searches.length === 0
-
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-
-                    onClicked: main_window.load_screen(ScreenManager.Screens.HFresults)
-                }
-
-                // Comparisons (top bar) - browse comparisons already done, without
-                // starting a new one (unlike the "Compare" button above, this never
-                // touches hf_compare_obj/hf_selected_ids). The Compare screen already
-                // shows the hf_compare_history sidebar to pick from - this just adds a
-                // direct path to it. Distinguished from "Compare" by icon (history
-                // clock vs. scale) rather than color.
-                SmlButton {
-                    id: hf_go_comparisons_button
-                    z: 100000
-
-                    anchors {
-                        top: hf_go_home_button.top
-                        left: hf_go_results_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-
-                    icon_name: Settings.comparisons_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Comparisons"
-                    rounded: true
-
-                    disabled: main_window.hf_compare_history.length === 0
-
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Compare)
-                }
-
-                Rectangle
-                {
-                    anchors {
-                        top: hf_go_back_button.bottom
-                        topMargin: Settings.spacing_big * 2
-                        left: parent.left
-                        leftMargin: Settings.spacing_big
-                        right: parent.right
-                        rightMargin: Settings.spacing_big
+                        top: hf_header.bottom
+                        topMargin: Theme.space5
+                        horizontalCenter: parent.horizontalCenter
                         bottom: parent.bottom
-                        bottomMargin: Settings.spacing_big * 2
+                        bottomMargin: Theme.pagePadding
                     }
-                    radius: 18
-                    color: "white"
-                    border.color: Settings.app_color_green_4
-                    border.width: 2
-                    clip: true
+                    width: Math.min(parent.width - 2 * Theme.pagePadding, Theme.contentMaxWidth)
+                    title: "Hugging Face suggestions"
+                    subtitle: main_window.hf_query_text !== "" ? ("Query: " + main_window.hf_query_text) : ""
+                    icon_name: "sparkles"
+                    content_padding: Theme.space4
+
+                    // On the card itself, not in its content area (whose size it would feed back into)
+                    SmlEmptyState {
+                        parent: hf_card
+                        anchors.centerIn: parent
+                        visible: main_window.hf_models_list.length === 0 && !main_window.refreshing
+                        title: "No suggestions yet"
+                        hint: "Suggestions for the problem description appear here after a Hugging Face search."
+                    }
 
                     Column
                     {
                         anchors.fill: parent
-                        anchors.margins: Settings.spacing_big
-                        spacing: Settings.spacing_small
+                        spacing: Theme.space2
 
-                        SmlText
-                        {
-                            text_kind: SmlText.TextKind.Header_2
-                            text_value: "Hugging Face suggestions"
-                            color: Settings.app_color_green_4
-                        }
-
-                        SmlText
-                        {
-                            text_kind: SmlText.TextKind.Body
-                            text_value: main_window.hf_query_text !== "" ? ("Query: " + main_window.hf_query_text) : ""
-                            color: Settings.app_color_green_1
+                        // Searching: the list below fills in when the results arrive
+                        SmlChip {
+                            visible: main_window.refreshing
+                            text: "Searching Hugging Face..."
+                            tone: "accent"
+                            pulse: true
                         }
 
                         Row {
                             id: hfListRow
                             width: parent.width
-                            height: parent.height - 120
-                            spacing: 10   // Space between list and scrollbar
+                            height: parent.height - (main_window.refreshing ? 22 + parent.spacing : 0)
+                            spacing: Theme.space2   // Space between list and scrollbar
 
                             Flickable {
                                 id: hfList
                                 clip: true
-                                width: hfListRow.width - hfScroll.width - hfListRow.spacing
+                                width: hfListRow.width
                                 height: hfListRow.height
 
                                 contentWidth: width
@@ -1962,17 +1935,17 @@ Window {
                                 Column {
                                     id: hfColumn
                                     width: parent.width
-                                    spacing: Settings.spacing_small
+                                    spacing: Theme.space2
 
                                     Repeater {
                                         model: main_window.hf_models_list
 
                                         delegate: Rectangle {
                                             width: hfList.width
-                                            radius: 10
-                                            border.color: Settings.app_color_green_4
+                                            radius: Theme.radiusMd
+                                            border.color: hover.hovered ? Theme.brandGreen : Theme.border
                                             border.width: 1
-                                            color: "transparent"
+                                            color: hover.hovered ? Theme.alpha(Theme.brandGreenBright, 0.08) : Theme.raised
                                             height: 54
 
                                             property string mid: {
@@ -2038,20 +2011,21 @@ Window {
 
                                             RowLayout {
                                                 anchors.fill: parent
-                                                anchors.margins: Settings.spacing_small
-                                                spacing: Settings.spacing_big
+                                                anchors.leftMargin: Theme.space3
+                                                anchors.rightMargin: Theme.space3
+                                                spacing: Theme.space5
 
                                                 RowLayout {
                                                     Layout.fillWidth: true
                                                     Layout.alignment: Qt.AlignVCenter
-                                                    spacing: 10
+                                                    spacing: Theme.space2
 
                                                     Item {
                                                         width: 26
                                                         height: 26
                                                         Layout.alignment: Qt.AlignVCenter
 
-                                                        Controls2.CheckBox {
+                                                        SmlCheckBox {
                                                             id: hfSelectBox
                                                             anchors.centerIn: parent
 
@@ -2107,8 +2081,10 @@ Window {
                                                     Text {
                                                         id: modelNameText
                                                         text: mid
+                                                        font.family: Theme.uiFontFamily
                                                         font.pixelSize: 14
-                                                        color: Settings.app_color_green_4
+                                                        font.weight: Font.DemiBold
+                                                        color: Theme.textPrimary
                                                         elide: Text.ElideRight
                                                         Layout.fillWidth: true
                                                         Layout.alignment: Qt.AlignVCenter
@@ -2118,32 +2094,22 @@ Window {
                                                 // RIGHT: score
                                                 Text {
                                                     text: (typeof modelData === "object" && modelData.score !== undefined) ? ("score " + Number(modelData.score).toFixed(6)) : ""
+                                                    font.family: Theme.monoFontFamily
                                                     font.pixelSize: 12
-                                                    color: Settings.app_color_green_1
+                                                    color: Theme.textMuted
                                                     horizontalAlignment: Text.AlignRight
                                                     Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
                                                     Layout.preferredWidth: 180
                                                 }
 
                                                 // FAR RIGHT: Analyze button
-                                                Controls2.Button {
-                                                    text: "⚡ Analyze"
+                                                SmlButton {
+                                                    variant: "primary"
+                                                    size: "sm"
+                                                    icon_name: "zap"
+                                                    text_value: "Analyze"
+                                                    tooltip_text: "Evaluate this model for the problem"
                                                     Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                                                    Layout.preferredWidth: 90
-                                                    height: 32
-
-                                                    contentItem: Text {
-                                                        text: parent.text
-                                                        font.pixelSize: 15
-                                                        color: Settings.app_color_light
-                                                        horizontalAlignment: Text.AlignHCenter
-                                                        verticalAlignment: Text.AlignVCenter
-                                                    }
-
-                                                    background: Rectangle {
-                                                        radius: 8
-                                                        color: Settings.app_color_green_4
-                                                    }
 
                                                     onClicked: main_window.open_hf_analyze(modelData)
                                                 }
@@ -2155,14 +2121,12 @@ Window {
                                 Controls2.ScrollBar.vertical: hfScroll
                             }
 
-                            Controls2.ScrollBar {
+                            // On the right edge of the screen
+                            SmlScrollBar {
                                 id: hfScroll
-                                policy: Controls2.ScrollBar.AlwaysOn
-                                width: 8
-                                height: hfListRow.height
-
-                                contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
-                                background: Rectangle { color: "transparent" }
+                                policy: Controls2.ScrollBar.AsNeeded
+                                screen_edge: hfScreen
+                                track: hfList
                             }
                         }
                     }
@@ -2177,6 +2141,7 @@ Window {
 
             Rectangle
             {
+                id: compareScreen
                 color: "transparent"
 
                 function softHyphenate(s, step) {
@@ -2207,102 +2172,59 @@ Window {
                     return res
                 }
 
-                // HOME BUTTON
-                SmlButton {
-                    id: homeBtn
-                    icon_name: Settings.home_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Home"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Go to Home screen"
-                    anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_normal
-                        left: parent.left
-                        leftMargin: Settings.spacing_normal
-                    }
-                    onClicked: {
-                        main_window.clear_hf_models()
-                        main_window.load_screen(ScreenManager.Screens.Home)
-                    }
-                }
+                SmlScreenHeader
+                {
+                    id: compare_header
+                    title: "Model comparison"
+                    subtitle: "Hugging Face models side by side, and the comparisons saved so far"
 
-                // BACK BUTTON (to HF list)
-                SmlButton {
-                    id: compare_back_button
-                    icon_name: Settings.back_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: ""
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Go back to previous screen"
-                    anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_normal
-                        left: homeBtn.right
-                        leftMargin: Settings.spacing_small
-                    }
+                    navigation: [
+                        // HOME BUTTON
+                        SmlButton {
+                            id: homeBtn
+                            icon_name: Settings.home_icon_name
+                            text_value: "Home"
+                            tooltip_text: "Go to Home screen"
+                            onClicked: {
+                                main_window.clear_hf_models()
+                                main_window.load_screen(ScreenManager.Screens.Home)
+                            }
+                        },
 
-                    onClicked: {
-                        main_window.go_back()
-                    }
-                }
+                        // BACK BUTTON (to HF list)
+                        SmlIconButton {
+                            id: compare_back_button
+                            outlined: true
+                            icon_name: Settings.back_icon_name
+                            tooltip_text: "Go back to previous screen"
 
-                // Save / Load only this screen's comparisons (Results: tasks only, Settings: everything)
-                SmlButton {
-                    id: compare_save_button
-                    z: 100000
-                    icon_name: Settings.save_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Save"
-                    rounded: true
-                    disabled: main_window.hf_compare_history.length === 0
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Save the comparisons into a file"
-                    anchors {
-                        top: compare_back_button.top
-                        left: compare_back_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: compare_save_load_dialogs.open_save()
-                }
+                            onClicked: {
+                                main_window.go_back()
+                            }
+                        }
+                    ]
 
-                SmlButton {
-                    id: compare_load_button
-                    z: 100000
-                    icon_name: Settings.load_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Load"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Load comparisons from a file, added to the current ones"
-                    anchors {
-                        top: compare_back_button.top
-                        left: compare_save_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: compare_save_load_dialogs.open_load()
+                    actions: [
+                        // Save / Load only this screen's comparisons (Results: tasks only, Settings: everything)
+                        SmlButton {
+                            id: compare_save_button
+                            z: 100000
+                            icon_name: Settings.save_icon_name
+                            text_value: "Save"
+                            disabled: main_window.hf_compare_history.length === 0
+                            tooltip_text: "Save the comparisons into a file"
+                            onClicked: compare_save_load_dialogs.open_save()
+                        },
+
+                        SmlButton {
+                            id: compare_load_button
+                            z: 100000
+                            icon_name: Settings.load_icon_name
+                            text_value: "Load"
+                            tooltip_text: "Load comparisons from a file, added to the current ones"
+                            onClicked: compare_save_load_dialogs.open_load()
+                        }
+                    ]
                 }
 
                 SmlSaveLoadDialogs
@@ -2319,52 +2241,72 @@ Window {
                     onLoad_requested: engine.load_hf(name, "comparisons")
                 }
 
-                Rectangle {
+                SmlCard {
+                    id: compare_card
                     anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_big * 2 + 40
-                        left: parent.left
-                        leftMargin: Settings.spacing_big
-                        right: parent.right
-                        rightMargin: Settings.spacing_big
+                        top: compare_header.bottom
+                        topMargin: Theme.space5
+                        horizontalCenter: parent.horizontalCenter
                         bottom: parent.bottom
-                        bottomMargin: Settings.spacing_big * 2
+                        bottomMargin: Theme.pagePadding
                     }
-                    radius: 18
-                    color: "white"
-                    border.color: Settings.app_color_green_4
-                    border.width: 2
-                    clip: true
+                    width: Math.min(parent.width - 2 * Theme.pagePadding, Theme.contentMaxWidth)
+                    title: "Hugging Face model comparison"
+                    subtitle: main_window.hf_compare_history.length + " saved comparisons"
+                    icon_name: Settings.compare_icon_name
+                    content_padding: Theme.space4
 
-                    // Clicking any blank area of this panel (declared first, so any
+                    // Compare clears the shown comparison and keeps the requested models until
+                    // the result is saved into hf_compare_history
+                    readonly property bool comparing_: main_window.hf_compare_obj !== null
+                                                       && Object.keys(main_window.hf_compare_obj).length === 0
+                                                       && main_window.hf_compare_last_request_ids.length >= 2
+
+                    actions: [
+                        SmlChip {
+                            visible: compare_card.comparing_ && main_window.hf_compare_history.length > 0
+                            text: "Comparing " + main_window.hf_compare_last_request_ids.length + " models..."
+                            tone: "accent"
+                            pulse: true
+                        }
+                    ]
+
+                    // On the card itself, not in its content area (whose size it would feed back into)
+                    SmlEmptyState {
+                        parent: compare_card
+                        anchors.centerIn: parent
+                        readonly property bool waiting_: compare_card.comparing_
+                        visible: main_window.hf_compare_history.length === 0 && main_window.hf_open_compare_index === -1
+                        busy: waiting_
+                        title: waiting_ ? "Comparing " + main_window.hf_compare_last_request_ids.length + " models"
+                                        : "No comparisons"
+                        hint: waiting_ ? main_window.hf_compare_last_request_ids.join(", ") + "\n\nThe comparison appears here as soon as it is ready."
+                                       : "Saved comparisons appear here."
+                    }
+
+                    // Clicking any blank area of this panel (behind everything else, so any
                     // row/icon/button on top of it still gets the click instead)
                     // discards an in-progress, unsaved rename.
                     MouseArea {
+                        parent: compare_card
                         anchors.fill: parent
+                        z: -1
                         onClicked: main_window.hf_renaming_index = -1
                     }
 
                     Column {
                         anchors.fill: parent
-                        anchors.margins: Settings.spacing_big
-                        spacing: Settings.spacing_small
-
-                        SmlText {
-                            id: titleText
-                            text_kind: SmlText.TextKind.Header_2
-                            text_value: "Hugging Face model comparison"
-                            color: Settings.app_color_green_4
-                        }
+                        spacing: Theme.space2
 
                         // CONTENT (vertical scroll only)
                         Flickable {
                             id: cmpScroll
                             width: parent.width
-                            height: parent.height - titleText.implicitHeight - 10
+                            height: parent.height
                             clip: true
 
-                            // Reserve room for the scrollbar so it doesn't overlap table lines
-                            property int sbSpace: 12
+                            // The scrollbar is on the screen edge, outside the content
+                            property int sbSpace: 0
 
                             contentWidth: width - sbSpace
                             contentHeight: cmpContent.implicitHeight
@@ -2379,9 +2321,10 @@ Window {
 
                                 Text {
                                     text: "Saved comparisons"
-                                    font.pixelSize: 19
-                                    font.bold: true
-                                    color: Settings.app_color_green_4
+                                    font.family: Theme.uiFontFamily
+                                    font.pixelSize: Theme.fontSizeCardTitle
+                                    font.weight: Font.DemiBold
+                                    color: Theme.textPrimary
                                     visible: main_window.hf_compare_history.length > 0
                                 }
 
@@ -2400,11 +2343,11 @@ Window {
                                         required property var modelData
 
                                         width: parent.width
-                                        height: 34
-                                        radius: 8
-                                        border.color: Settings.app_color_green_4
-                                        border.width: isOpen ? 2 : 1
-                                        color: isOpen ? Settings.app_color_green_4 : "transparent"
+                                        height: 38
+                                        radius: Theme.radiusMd
+                                        border.color: isOpen ? Theme.brandGreen : Theme.border
+                                        border.width: 1
+                                        color: isOpen ? Theme.accentSubtleStrong : Theme.raised
 
                                         readonly property bool isOpen: savedCompareRow.index === main_window.hf_open_compare_index
                                         readonly property string displayName: (savedCompareRow.modelData.name && savedCompareRow.modelData.name.length > 0)
@@ -2419,8 +2362,10 @@ Window {
                                             anchors.right: renameIcon.left
                                             anchors.rightMargin: 8
                                             elide: Text.ElideRight
-                                            font.pixelSize: 15
-                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_1
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
+                                            font.weight: savedCompareRow.isOpen ? Font.DemiBold : Font.Normal
+                                            color: Theme.textPrimary
                                             text: savedCompareRow.displayName
                                             visible: !renameField.visible
                                         }
@@ -2446,10 +2391,11 @@ Window {
                                             anchors.rightMargin: 8
                                             clip: true
                                             selectByMouse: true
-                                            font.pixelSize: 15
-                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_1
-                                            selectionColor: savedCompareRow.isOpen ? Settings.app_color_green_1 : Settings.app_color_green_4
-                                            selectedTextColor: Settings.app_color_light
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
+                                            color: Theme.textPrimary
+                                            selectionColor: Theme.accentSubtleStrong
+                                            selectedTextColor: Theme.textPrimary
 
                                             // Renaming (hf_commit_rename) reassigns hf_compare_history, which
                                             // destroys and recreates every row's delegate - including this one,
@@ -2469,8 +2415,7 @@ Window {
                                             id: renameIcon
                                             name: Settings.rename_icon_name
                                             size: 16
-                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
-                                            nightmode_color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
+                                            variant: Theme.iconMuted
                                             clickable_text: "Rename"
                                             anchors.verticalCenter: parent.verticalCenter
                                             anchors.right: deleteIcon.left
@@ -2487,8 +2432,7 @@ Window {
                                             id: deleteIcon
                                             name: Settings.delete_icon_name
                                             size: 16
-                                            color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
-                                            nightmode_color: savedCompareRow.isOpen ? Settings.app_color_light : Settings.app_color_green_4
+                                            variant: Theme.iconMuted
                                             clickable_text: "Delete"
                                             anchors.verticalCenter: parent.verticalCenter
                                             anchors.right: parent.right
@@ -2522,15 +2466,16 @@ Window {
                                 Rectangle {
                                     width: parent.width
                                     height: 1
-                                    color: Settings.app_color_green_4
+                                    color: Theme.border
                                 }
 
                                 // Comparison table
                                 Text {
                                     text: "Comparison table"
-                                    font.pixelSize: 19
-                                    font.bold: true
-                                    color: Settings.app_color_green_4
+                                    font.family: Theme.uiFontFamily
+                                    font.pixelSize: Theme.fontSizeCardTitle
+                                    font.weight: Font.DemiBold
+                                    color: Theme.textPrimary
                                 }
 
                                 // Header row (5 columns)
@@ -2541,41 +2486,56 @@ Window {
                                     Text {
                                         width: parent.width * 0.34
                                         text: "MODEL"
-                                        font.pixelSize: 17
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMeta
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 0.6
                                         wrapMode: Text.WordWrap
-                                        color: Settings.app_color_green_4
+                                        color: Theme.textMuted
                                     }
                                     Text {
                                         width: parent.width * 0.14
                                         text: "LICENSE"
-                                        font.pixelSize: 17
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMeta
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 0.6
                                         wrapMode: Text.WordWrap
-                                        color: Settings.app_color_green_4
+                                        color: Theme.textMuted
                                     }
                                     Text {
                                         width: parent.width * 0.14
                                         text: "MODEL FAMILY"
-                                        font.pixelSize: 17
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMeta
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 0.6
                                         wrapMode: Text.WordWrap
-                                        color: Settings.app_color_green_4
+                                        color: Theme.textMuted
                                     }
                                     Text {
                                         width: parent.width * 0.14
                                         text: "ARCHITECTURE"
-                                        font.pixelSize: 17
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMeta
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 0.6
                                         wrapMode: Text.WordWrap
-                                        color: Settings.app_color_green_4
+                                        color: Theme.textMuted
                                     }
                                     Text {
                                         width: parent.width * 0.2
                                         text: "LANGUAGES"
-                                        font.pixelSize: 17
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMeta
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 0.6
                                         wrapMode: Text.WordWrap
-                                        color: Settings.app_color_green_4
+                                        color: Theme.textMuted
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
+                                Rectangle { width: parent.width; height: 1; color: Theme.border }
 
                                 Repeater {
                                     model: (main_window.hf_compare_obj && main_window.hf_compare_obj.comparison_table)
@@ -2588,28 +2548,31 @@ Window {
                                         Text {
                                             width: parent.width * 0.34
                                             text: softHyphenate(modelData.model_id || "", 14)
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.WordWrap
                                             elide: Text.ElideNone
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
 
                                         Text {
                                             width: parent.width * 0.14
                                             text: modelData.license || ""
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.WordWrap
                                             elide: Text.ElideNone
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
 
                                         Text {
                                             width: parent.width * 0.14
                                             text: modelData.model_family || ""
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.WordWrap
                                             elide: Text.ElideNone
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
 
                                         Text {
@@ -2623,24 +2586,26 @@ Window {
                                                 14
                                             )
 
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.WordWrap
                                             elide: Text.ElideNone
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
 
                                         Text {
                                             width: parent.width * 0.2
                                             text: softHyphenate(modelData.languages || "", 14)
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.WordWrap
                                             elide: Text.ElideNone
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
+                                Rectangle { width: parent.width; height: 1; color: Theme.border }
 
                                 Repeater {
                                     model: (main_window.hf_compare_obj && main_window.hf_compare_obj.model_cards)
@@ -2652,174 +2617,113 @@ Window {
 
                                         Text {
                                             text: (modelData.model_id || "")
-                                            font.pixelSize: 17
-                                            font.bold: false
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: 16
+                                            font.weight: Font.DemiBold
                                             wrapMode: Text.NoWrap
-                                            color: Settings.app_color_green_4
+                                            color: Theme.accentText
+
                                         }
 
                                         Text {
                                             text: modelData.purpose
-                                                ? ("<font color='" + Settings.app_color_green_4 + "'>Purpose:</font> " + modelData.purpose)
+                                                ? ("<b>Purpose:</b> " + modelData.purpose)
                                                 : ""
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.NoWrap
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
 
                                         Text {
                                             text: (modelData.best_for && modelData.best_for.length)
-                                                ? ("<font color='" + Settings.app_color_green_4 + "'>Best for:</font> " + modelData.best_for.join(", "))
+                                                ? ("<b>Best for:</b> " + modelData.best_for.join(", "))
                                                 : ""
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.NoWrap
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
 
                                         Text {
                                             text: (modelData.watch_out_for && modelData.watch_out_for.length)
-                                                ? ("<font color='" + Settings.app_color_green_4 + "'>Watch out for:</font> " + modelData.watch_out_for.join(", "))
+                                                ? ("<b>Watch out for:</b> " + modelData.watch_out_for.join(", "))
                                                 : ""
-                                            font.pixelSize: 15
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
                                             wrapMode: Text.NoWrap
-                                            color: Settings.app_color_green_1
+                                            color: Theme.textSecondary
                                         }
 
-                                        Rectangle { width: parent.width; height: 1; color: "#E0E0E0" }
+                                        Rectangle { width: parent.width; height: 1; color: Theme.border }
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: Settings.app_color_green_4 }
+                                Rectangle { width: parent.width; height: 1; color: Theme.border }
 
                                 // Comparison summary
                                 Text {
                                     text: "Comparison summary"
-                                    font.pixelSize: 19
-                                    font.bold: true
-                                    color: Settings.app_color_green_4
+                                    font.family: Theme.uiFontFamily
+                                    font.pixelSize: Theme.fontSizeCardTitle
+                                    font.weight: Font.DemiBold
+                                    color: Theme.textPrimary
                                 }
 
                                 Text {
                                     width: parent.width
                                     text: (main_window.hf_compare_obj && main_window.hf_compare_obj.comparison_summary)
                                         ? main_window.hf_compare_obj.comparison_summary : ""
-                                    font.pixelSize: 15
+                                    font.family: Theme.uiFontFamily
+                                    font.pixelSize: Theme.fontSizeBody
                                     wrapMode: Text.WordWrap
-                                    color: Settings.app_color_green_1
+                                    color: Theme.textSecondary
                                 }
                                 }   // end comparisonDetails Column
                             }
 
-                            Controls2.ScrollBar.vertical: Controls2.ScrollBar {
-                                policy: Controls2.ScrollBar.AlwaysOn
-                                width: 8
-                                anchors {
-                                    right: parent.right
-                                    top: parent.top
-                                    bottom: parent.bottom
-                                }
-                                contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
-                                background: Rectangle { color: "transparent" }
+                            Controls2.ScrollBar.vertical: SmlScrollBar {
+                                policy: Controls2.ScrollBar.AsNeeded
+                                screen_edge: compareScreen
+                                track: cmpScroll
                             }
                         }
 
                         // Delete confirmation dialog for saved comparisons
-                        Controls2.Dialog {
+                        SmlModal {
                             id: deleteCompareDialog
                             property int pendingIndex: -1
                             property string pendingName: ""
 
-                            anchors.centerIn: parent
-                            modal: true
-                            width: dialogContent.implicitWidth
-                            height: dialogContent.implicitHeight
+                            title: "Delete comparison?"
+                                icon_name: Settings.delete_icon_name
+                            tone: "danger"
+                            dialog_width: 400
 
-                            background: Rectangle {
-                                anchors.fill: parent
-                                radius: 10
-                                color: Settings.app_color_light
-                                border.color: Settings.app_color_green_4
-                                border.width: 1
+                            Text {
+                                width: deleteCompareDialog.availableWidth
+                                text: "Are you sure you want to delete \"" + deleteCompareDialog.pendingName + "\"? This cannot be undone."
+                                textFormat: Text.PlainText
+                                wrapMode: Text.WordWrap
+                                lineHeight: 1.3
+                                font.family: Theme.uiFontFamily
+                                font.pixelSize: Theme.fontSizeBody
+                                color: Theme.textSecondary
                             }
 
-                            header: Item { }
-
-                            Column {
-                                id: dialogContent
-                                spacing: 16
-                                padding: 16
-                                anchors.centerIn: parent
-
-                                Text {
-                                    width: 260
-                                    text: "Delete comparison?"
-                                    font.pixelSize: 20
-                                    font.bold: true
-                                    color: Settings.app_color_green_1
-                                    wrapMode: Text.WordWrap
-                                    horizontalAlignment: Text.AlignHCenter
+                            footer: SmlDialogButtonBox {
+                                SmlButton {
+                                    id: deleteCompareCancelButton
+                                    text_value: "Cancel"
+                                    onClicked: deleteCompareDialog.close()
                                 }
-
-                                Text {
-                                    width: 260
-                                    text: "Are you sure you want to delete \"" + deleteCompareDialog.pendingName + "\"? This cannot be undone."
-                                    wrapMode: Text.WordWrap
-                                    font.pixelSize: 15
-                                    color: Settings.app_color_dark
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-
-                                Row {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    spacing: Settings.spacing_small
-
-                                    Controls2.Button {
-                                        id: cancelDeleteButton
-                                        height: 32
-                                        width: 80
-                                        font.pixelSize: 14
-                                        onClicked: deleteCompareDialog.close()
-
-                                        background: Rectangle {
-                                            anchors.fill: parent
-                                            radius: 5
-                                            color: Settings.app_color_light
-                                            border.color: Settings.app_color_green_1
-                                            border.width: 1
-                                        }
-                                        contentItem: Text {
-                                            text: "Cancel"
-                                            font.pixelSize: cancelDeleteButton.font.pixelSize
-                                            color: Settings.app_color_green_1
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
-                                    }
-
-                                    Controls2.Button {
-                                        id: confirmDeleteButton
-                                        height: 32
-                                        width: 80
-                                        font.pixelSize: 14
-                                        onClicked: {
-                                            main_window.hf_delete_saved_compare(deleteCompareDialog.pendingIndex)
-                                            deleteCompareDialog.close()
-                                        }
-
-                                        background: Rectangle {
-                                            anchors.fill: parent
-                                            radius: 5
-                                            color: Settings.app_color_green_1
-                                            border.color: Settings.app_color_green_1
-                                            border.width: 1
-                                        }
-                                        contentItem: Text {
-                                            text: "Delete"
-                                            font.pixelSize: confirmDeleteButton.font.pixelSize
-                                            color: Settings.app_color_light
-                                            horizontalAlignment: Text.AlignHCenter
-                                            verticalAlignment: Text.AlignVCenter
-                                        }
+                                SmlButton {
+                                    variant: "danger"
+                                    icon_name: Settings.delete_icon_name
+                                    text_value: "Delete"
+                                    onClicked: {
+                                        main_window.hf_delete_saved_compare(deleteCompareDialog.pendingIndex)
+                                        deleteCompareDialog.close()
                                     }
                                 }
                             }
@@ -2836,6 +2740,7 @@ Window {
 
             Rectangle
             {
+                id: hfrScreen
                 color: "transparent"
 
                 property int selectedIndex: -1
@@ -2851,93 +2756,51 @@ Window {
                     return Qt.formatDateTime(d, "dd/MM/yyyy HH:mm")
                 }
 
-                SmlButton {
-                    id: hfr_home_button
-                    icon_name: Settings.home_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Home"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Go to Home screen"
-                    anchors {
-                        top: parent.top
-                        topMargin: Settings.spacing_normal
-                        left: parent.left
-                        leftMargin: Settings.spacing_normal
-                    }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Home)
-                }
+                SmlScreenHeader
+                {
+                    id: hfr_header
+                    title: "Search results"
+                    subtitle: "Hugging Face searches saved so far: pick one to see its models"
 
-                SmlButton {
-                    id: hfr_back_button
-                    icon_name: Settings.back_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: ""
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Back to Problem Definition"
-                    anchors {
-                        top: hfr_home_button.top
-                        left: hfr_home_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
-                }
+                    navigation: [
+                        SmlButton {
+                            id: hfr_home_button
+                            icon_name: Settings.home_icon_name
+                            text_value: "Home"
+                            tooltip_text: "Go to Home screen"
+                            onClicked: main_window.load_screen(ScreenManager.Screens.Home)
+                        },
 
-                // Save / Load only this screen's searches (Results: tasks only, Settings: everything)
-                SmlButton {
-                    id: hfr_save_button
-                    z: 100000
-                    icon_name: Settings.save_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Save"
-                    rounded: true
-                    disabled: main_window.hf_saved_searches.length === 0
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Save the searches into a file"
-                    anchors {
-                        top: hfr_back_button.top
-                        left: hfr_back_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: hfr_save_load_dialogs.open_save()
-                }
+                        SmlIconButton {
+                            id: hfr_back_button
+                            outlined: true
+                            icon_name: Settings.back_icon_name
+                            tooltip_text: "Back to Problem Definition"
+                            onClicked: main_window.load_screen(ScreenManager.Screens.Definition)
+                        }
+                    ]
 
-                SmlButton {
-                    id: hfr_load_button
-                    z: 100000
-                    icon_name: Settings.load_icon_name
-                    text_kind: SmlText.TextKind.Header_2
-                    text_value: "Load"
-                    rounded: true
-                    color: Settings.app_color_green_4
-                    color_pressed: Settings.app_color_green_1
-                    color_text: Settings.app_color_green_3
-                    nightmode_color: Settings.app_color_green_2
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    nightmode_color_text: Settings.app_color_green_1
-                    tooltip_text: "Load searches from a file, added to the current ones"
-                    anchors {
-                        top: hfr_back_button.top
-                        left: hfr_save_button.right
-                        leftMargin: Settings.spacing_small
-                    }
-                    onClicked: hfr_save_load_dialogs.open_load()
+                    actions: [
+                        // Save / Load only this screen's searches (Results: tasks only, Settings: everything)
+                        SmlButton {
+                            id: hfr_save_button
+                            z: 100000
+                            icon_name: Settings.save_icon_name
+                            text_value: "Save"
+                            disabled: main_window.hf_saved_searches.length === 0
+                            tooltip_text: "Save the searches into a file"
+                            onClicked: hfr_save_load_dialogs.open_save()
+                        },
+
+                        SmlButton {
+                            id: hfr_load_button
+                            z: 100000
+                            icon_name: Settings.load_icon_name
+                            text_value: "Load"
+                            tooltip_text: "Load searches from a file, added to the current ones"
+                            onClicked: hfr_save_load_dialogs.open_load()
+                        }
+                    ]
                 }
 
                 SmlSaveLoadDialogs
@@ -2954,42 +2817,49 @@ Window {
                     onLoad_requested: engine.load_hf(name, "searches")
                 }
 
-                Rectangle {
+                SmlCard {
+                    id: hfr_card
                     anchors {
-                        top: hfr_back_button.bottom
-                        topMargin: Settings.spacing_big * 2
-                        left: parent.left
-                        leftMargin: Settings.spacing_big
-                        right: parent.right
-                        rightMargin: Settings.spacing_big
+                        top: hfr_header.bottom
+                        topMargin: Theme.space5
+                        horizontalCenter: parent.horizontalCenter
                         bottom: parent.bottom
-                        bottomMargin: Settings.spacing_big * 2
+                        bottomMargin: Theme.pagePadding
                     }
-                    radius: 18
-                    color: "white"
-                    border.color: Settings.app_color_green_4
-                    border.width: 2
-                    clip: true
+                    width: Math.min(parent.width - 2 * Theme.pagePadding, Theme.contentMaxWidth)
+                    title: "HF Search Results"
+                    subtitle: main_window.hf_saved_searches.length + " saved searches"
+                    icon_name: Settings.results_icon_name
+                    content_padding: Theme.space4
+
+                    // On the card itself, not in its content area (whose size it would feed back into)
+                    SmlEmptyState {
+                        parent: hfr_card
+                        anchors.centerIn: parent
+                        visible: main_window.hf_saved_searches.length === 0
+                        title: "No saved searches yet"
+                        hint: "Every Hugging Face search that returns models is kept here."
+                    }
 
                     // Clicking any blank area of this panel discards an
                     // in-progress, unsaved rename (same as the Compare screen).
                     MouseArea {
+                        parent: hfr_card
                         anchors.fill: parent
+                        z: -1
                         onClicked: main_window.hf_renaming_search_index = -1
                     }
 
                     Item {
                         anchors.fill: parent
-                        anchors.margins: Settings.spacing_big
 
                         Flickable {
                             id: hfrFlickable
                             anchors {
                                 top: parent.top
                                 left: parent.left
-                                right: hfrScrollBar.left
+                                right: parent.right
                                 bottom: parent.bottom
-                                rightMargin: 4
                             }
                             contentWidth: width
                             contentHeight: hfrMainColumn.implicitHeight
@@ -3002,12 +2872,6 @@ Window {
                                 id: hfrMainColumn
                                 width: hfrFlickable.width
                                 spacing: Settings.spacing_small
-
-                                SmlText {
-                                    text_kind: SmlText.TextKind.Header_2
-                                    text_value: "HF Search Results"
-                                    color: Settings.app_color_green_4
-                                }
 
                                 // Saved search entries
                                 Repeater {
@@ -3026,13 +2890,13 @@ Window {
                                         required property var modelData
 
                                         width: hfrMainColumn.width
-                                        height: 36
-                                        radius: 8
-                                        border.color: Settings.app_color_green_4
-                                        border.width: savedSearchRow.index === selectedIndex ? 2 : 1
+                                        height: 38
+                                        radius: Theme.radiusMd
+                                        border.color: savedSearchRow.index === selectedIndex ? Theme.brandGreen : Theme.border
+                                        border.width: 1
                                         color: savedSearchRow.index === selectedIndex
-                                            ? Settings.app_color_green_4
-                                            : "transparent"
+                                            ? Theme.accentSubtleStrong
+                                            : Theme.raised
 
                                         readonly property string displayName: (savedSearchRow.modelData.name && savedSearchRow.modelData.name.length > 0)
                                             ? savedSearchRow.modelData.name
@@ -3046,10 +2910,10 @@ Window {
                                             anchors.right: modelCountText.left
                                             anchors.rightMargin: 8
                                             elide: Text.ElideRight
-                                            font.pixelSize: 14
-                                            color: savedSearchRow.index === selectedIndex
-                                                ? Settings.app_color_light
-                                                : Settings.app_color_green_1
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
+                                            font.weight: savedSearchRow.index === selectedIndex ? Font.DemiBold : Font.Normal
+                                            color: Theme.textPrimary
                                             text: savedSearchRow.displayName
                                             visible: !renameSearchField.visible
                                         }
@@ -3068,14 +2932,11 @@ Window {
                                             anchors.rightMargin: 8
                                             clip: true
                                             selectByMouse: true
-                                            font.pixelSize: 14
-                                            color: savedSearchRow.index === selectedIndex
-                                                ? Settings.app_color_light
-                                                : Settings.app_color_green_1
-                                            selectionColor: savedSearchRow.index === selectedIndex
-                                                ? Settings.app_color_green_1
-                                                : Settings.app_color_green_4
-                                            selectedTextColor: Settings.app_color_light
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
+                                            color: Theme.textPrimary
+                                            selectionColor: Theme.accentSubtleStrong
+                                            selectedTextColor: Theme.textPrimary
 
                                             // Only Enter applies the new name; anything else (click away,
                                             // Escape) discards the edit and keeps the previous name.
@@ -3091,10 +2952,9 @@ Window {
                                             anchors.right: tsText.left
                                             anchors.rightMargin: 10
                                             text: (savedSearchRow.modelData.models ? savedSearchRow.modelData.models.length : 0) + " models"
-                                            font.pixelSize: 12
-                                            color: savedSearchRow.index === selectedIndex
-                                                ? Settings.app_color_light
-                                                : Settings.app_color_green_1
+                                            font.family: Theme.monoFontFamily
+                                            font.pixelSize: Theme.fontSizeMeta
+                                            color: Theme.textMuted
                                         }
                                         Text {
                                             id: tsText
@@ -3102,18 +2962,16 @@ Window {
                                             anchors.right: renameSearchIcon.left
                                             anchors.rightMargin: 10
                                             text: formatTs(savedSearchRow.modelData.ts)
-                                            font.pixelSize: 12
-                                            color: savedSearchRow.index === selectedIndex
-                                                ? Settings.app_color_light
-                                                : Settings.app_color_green_1
+                                            font.family: Theme.monoFontFamily
+                                            font.pixelSize: Theme.fontSizeMeta
+                                            color: Theme.textMuted
                                         }
 
                                         SmlIcon {
                                             id: renameSearchIcon
                                             name: Settings.rename_icon_name
                                             size: 16
-                                            color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
-                                            nightmode_color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
+                                            variant: Theme.iconMuted
                                             clickable_text: "Rename"
                                             anchors.verticalCenter: parent.verticalCenter
                                             anchors.right: deleteSearchIcon.left
@@ -3130,8 +2988,7 @@ Window {
                                             id: deleteSearchIcon
                                             name: Settings.delete_icon_name
                                             size: 16
-                                            color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
-                                            nightmode_color: savedSearchRow.index === selectedIndex ? Settings.app_color_light : Settings.app_color_green_4
+                                            variant: Theme.iconMuted
                                             clickable_text: "Delete"
                                             anchors.verticalCenter: parent.verticalCenter
                                             anchors.right: parent.right
@@ -3155,16 +3012,17 @@ Window {
                                     }
                                 }
 
-                                // Separator
+                                // Separator, only above the models of a selected search (as on the Compare screen)
                                 Item {
+                                    visible: selectedIndex >= 0
                                     width: hfrMainColumn.width
                                     height: Settings.spacing_normal
 
                                     Rectangle {
                                         anchors.verticalCenter: parent.verticalCenter
                                         width: parent.width
-                                        height: 2
-                                        color: Settings.app_color_green_4
+                                        height: 1
+                                        color: Theme.border
                                     }
                                 }
 
@@ -3174,10 +3032,10 @@ Window {
 
                                     delegate: Rectangle {
                                         width: hfrMainColumn.width
-                                        radius: 10
-                                        border.color: Settings.app_color_green_4
+                                        radius: Theme.radiusMd
+                                        border.color: Theme.border
                                         border.width: 1
-                                        color: "transparent"
+                                        color: Theme.raised
                                         height: 54
 
                                         property string mid: {
@@ -3197,13 +3055,16 @@ Window {
 
                                         RowLayout {
                                             anchors.fill: parent
-                                            anchors.margins: Settings.spacing_small
-                                            spacing: Settings.spacing_big
+                                            anchors.leftMargin: Theme.space4
+                                            anchors.rightMargin: Theme.space3
+                                            spacing: Theme.space5
 
                                             Text {
                                                 text: mid
+                                                font.family: Theme.uiFontFamily
                                                 font.pixelSize: 14
-                                                color: Settings.app_color_green_4
+                                                font.weight: Font.DemiBold
+                                                color: Theme.textPrimary
                                                 elide: Text.ElideRight
                                                 Layout.fillWidth: true
                                                 Layout.alignment: Qt.AlignVCenter
@@ -3212,29 +3073,21 @@ Window {
                                             Text {
                                                 text: (typeof modelData === "object" && modelData.score !== undefined)
                                                     ? ("score " + Number(modelData.score).toFixed(6)) : ""
+                                                font.family: Theme.monoFontFamily
                                                 font.pixelSize: 12
-                                                color: Settings.app_color_green_1
+                                                color: Theme.textMuted
                                                 horizontalAlignment: Text.AlignRight
                                                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
                                                 Layout.preferredWidth: 180
                                             }
 
-                                            Controls2.Button {
-                                                text: "⚡ Analyze"
+                                            SmlButton {
+                                                variant: "primary"
+                                                size: "sm"
+                                                icon_name: "zap"
+                                                text_value: "Analyze"
+                                                tooltip_text: "Evaluate this model for the problem"
                                                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                                                Layout.preferredWidth: 90
-                                                height: 32
-                                                contentItem: Text {
-                                                    text: parent.text
-                                                    font.pixelSize: 15
-                                                    color: Settings.app_color_light
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    verticalAlignment: Text.AlignVCenter
-                                                }
-                                                background: Rectangle {
-                                                    radius: 8
-                                                    color: Settings.app_color_green_4
-                                                }
                                                 onClicked: main_window.open_hf_analyze(modelData)
                                             }
                                         }
@@ -3243,117 +3096,50 @@ Window {
                             }
                         }
 
-                        Controls2.ScrollBar {
+                        // On the right edge of the screen
+                        SmlScrollBar {
                             id: hfrScrollBar
-                            policy: Controls2.ScrollBar.AlwaysOn
-                            width: 8
-                            anchors {
-                                top: parent.top
-                                bottom: parent.bottom
-                                right: parent.right
-                            }
-                            contentItem: Rectangle { radius: 4; color: Settings.app_color_green_4 }
-                            background: Rectangle { color: "transparent" }
+                            policy: Controls2.ScrollBar.AsNeeded
+                            screen_edge: hfrScreen
+                            track: hfrFlickable
                         }
                     }
 
                     // Delete confirmation dialog for saved searches
-                    Controls2.Dialog {
+                    SmlModal {
                         id: deleteSearchDialog
                         property int pendingIndex: -1
                         property string pendingName: ""
 
-                        anchors.centerIn: parent
-                        modal: true
-                        width: deleteSearchDialogContent.implicitWidth
-                        height: deleteSearchDialogContent.implicitHeight
+                        title: "Delete search result?"
+                        icon_name: Settings.delete_icon_name
+                        tone: "danger"
+                        dialog_width: 400
 
-                        background: Rectangle {
-                            anchors.fill: parent
-                            radius: 10
-                            color: Settings.app_color_light
-                            border.color: Settings.app_color_green_4
-                            border.width: 1
+                        Text {
+                            width: deleteSearchDialog.availableWidth
+                            text: "Are you sure you want to delete \"" + deleteSearchDialog.pendingName + "\"? This cannot be undone."
+                            textFormat: Text.PlainText
+                            wrapMode: Text.WordWrap
+                            lineHeight: 1.3
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeBody
+                            color: Theme.textSecondary
                         }
 
-                        header: Item { }
-
-                        Column {
-                            id: deleteSearchDialogContent
-                            spacing: 16
-                            padding: 16
-                            anchors.centerIn: parent
-
-                            Text {
-                                width: 260
-                                text: "Delete search result?"
-                                font.pixelSize: 20
-                                font.bold: true
-                                color: Settings.app_color_green_1
-                                wrapMode: Text.WordWrap
-                                horizontalAlignment: Text.AlignHCenter
+                        footer: SmlDialogButtonBox {
+                            SmlButton {
+                                id: deleteSearchCancelButton
+                                text_value: "Cancel"
+                                onClicked: deleteSearchDialog.close()
                             }
-
-                            Text {
-                                width: 260
-                                text: "Are you sure you want to delete \"" + deleteSearchDialog.pendingName + "\"? This cannot be undone."
-                                wrapMode: Text.WordWrap
-                                font.pixelSize: 15
-                                color: Settings.app_color_dark
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-
-                            Row {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                spacing: Settings.spacing_small
-
-                                Controls2.Button {
-                                    id: cancelDeleteSearchButton
-                                    height: 32
-                                    width: 80
-                                    font.pixelSize: 14
-                                    onClicked: deleteSearchDialog.close()
-
-                                    background: Rectangle {
-                                        anchors.fill: parent
-                                        radius: 5
-                                        color: Settings.app_color_light
-                                        border.color: Settings.app_color_green_1
-                                        border.width: 1
-                                    }
-                                    contentItem: Text {
-                                        text: "Cancel"
-                                        font.pixelSize: cancelDeleteSearchButton.font.pixelSize
-                                        color: Settings.app_color_green_1
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                    }
-                                }
-
-                                Controls2.Button {
-                                    id: confirmDeleteSearchButton
-                                    height: 32
-                                    width: 80
-                                    font.pixelSize: 14
-                                    onClicked: {
-                                        main_window.hf_delete_saved_search(deleteSearchDialog.pendingIndex)
-                                        deleteSearchDialog.close()
-                                    }
-
-                                    background: Rectangle {
-                                        anchors.fill: parent
-                                        radius: 5
-                                        color: Settings.app_color_green_1
-                                        border.color: Settings.app_color_green_1
-                                        border.width: 1
-                                    }
-                                    contentItem: Text {
-                                        text: "Delete"
-                                        font.pixelSize: confirmDeleteSearchButton.font.pixelSize
-                                        color: Settings.app_color_light
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                    }
+                            SmlButton {
+                                variant: "danger"
+                                icon_name: Settings.delete_icon_name
+                                text_value: "Delete"
+                                onClicked: {
+                                    main_window.hf_delete_saved_search(deleteSearchDialog.pendingIndex)
+                                    deleteSearchDialog.close()
                                 }
                             }
                         }
@@ -3391,21 +3177,18 @@ Window {
          }
     }
 
-    SmlIcon
+    // Node status (settings) button, on top of every screen, in the free right end of its header
+    SmlIconButton
     {
         id: settings_icon
-        name:   Settings.settings_icon_name
-        color:  Settings.app_color_green_1
-        color_pressed:  Settings.app_color_green_2
-        nightmode_color:  Settings.app_color_green_4
-        nightmode_color_pressed:  Settings.app_color_green_3
-        size: Settings.button_big_icon_size
-        clickable_text: "Go to Node Status screen"
+        icon_name: Settings.settings_icon_name
+        tooltip_text: "Go to Node Status screen"
+        disabled: main_window.tasking
 
-        x: parent.width - (size * 2)
+        x: parent.width - width - Theme.space4
         y: ScreenManager.current_screen === ScreenManager.Screens.Reiterate ?
-            main_window.height - 2 * Settings.spacing_big :
-            Settings.spacing_big
+            main_window.height - height - Theme.space4 :
+            (Theme.headerHeight - height) / 2
 
         onClicked: {
             // Nothing to save yet when Settings is opened from the start screen
