@@ -69,6 +69,8 @@ Item
     property string __dataset_keywords: ""
     property string __dataset_applications: ""
     property bool __refreshing: false
+    // Iteration info view (the info button of a Results row): every field is read-only and
+    // shows what that iteration ran with, and the footer actions are hidden
     property bool __reiterate: false
     property bool __initializing: true
 
@@ -124,7 +126,6 @@ Item
         string keywords,
         string applications
     )
-    signal refresh()
     signal ask_models(
         string goal_type
     )
@@ -148,15 +149,34 @@ Item
                           maximum_samples, optimize_carbon_footprint_manual,
                           previous_iteration, optimize_carbon_footprint_auto,
                           desired_carbon_footprint, geo_location_continent,
-                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type, is_reiteration)
+                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type, is_reiteration,
+                          model_selected)
         {
+            // Each form takes only its own request: the iteration info view (is_reiteration)
+            // or Back from Results (the problem definition form). Both are alive at once, and
+            // opening an iteration's info must not refill the problem definition form, lock
+            // its goal and turn its next submit into a new iteration of that problem.
+            if (is_reiteration !== root.__reiterate)
+                return
             root.__problem_short_description = problem_short_description
             root.__types = type
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
-            root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
-                    dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
+            // The info view's own copy (it is not bound to main_window's dataset metadata)
+            if (root.__reiterate)
+            {
+                root.__dataset_description = dataset_metadata_description
+                root.__dataset_topic = dataset_metadata_topic
+                root.__dataset_profile = dataset_metadata_profile
+                root.__dataset_keywords = dataset_metadata_keywords
+                root.__dataset_applications = dataset_metadata_applications
+            }
+            else
+            {
+                root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
+                        dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
+            }
             root.__minimum_samples = minimum_samples
             root.__maximum_samples = maximum_samples
             root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
@@ -178,6 +198,15 @@ Item
             // place, which is why only the CNN+FPGA flow showed this symptom.
             root.__model_selected = ""
             root.__model_selected_copy = ""
+            // The iteration info view shows exactly what was chosen (nothing is submitted from it)
+            if (root.__reiterate)
+            {
+                root.__model_selected = model_selected
+                root.__model_selected_copy = model_selected
+                root.__hardware_required = hardware_required
+                root.__num_outputs = num_outputs > 0 ? num_outputs : 1
+                num_outputs_input.text = root.__num_outputs
+            }
             // Restore the hardware on Back (after __types above, whose change resets the
             // hardware to the type's default), if it is valid for the restored type
             if (!is_reiteration && hardware_required !== "" &&
@@ -185,6 +214,14 @@ Item
                 root.__hardware_required = hardware_required
             root.__max_memory_footprint = max_memory_footprint
             // Set explicitly: Clear all assigns these texts, which removes their bindings
+            // (as does the reset after a submit for the samples), so the fields would
+            // otherwise look empty, or keep older text, while the restored values are sent
+            problem_short_description_input.text = problem_short_description
+            problem_definition_input.text = problem_definition
+            inputs_input.text = inputs
+            outputs_input.text = outputs
+            minimum_samples_input.text = minimum_samples > 1 ? minimum_samples : ""
+            maximum_samples_input.text = maximum_samples > 1 ? maximum_samples : ""
             desired_carbon_footprint_input.text = desired_carbon_footprint === 0 ? "" : desired_carbon_footprint
             max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
@@ -217,6 +254,8 @@ Item
     readonly property int __input_height: 38
     readonly property int __input_height_big: 104
     readonly property int __input_height_medium: 80
+    // Multi-line fields grow in the iteration info view to show all their text (read-only, so
+    // they cannot scroll)
     function __col(width, n) { return (width - (n - 1) * Theme.space4) / n }
     // Position of a field in the scrolled form, to bring it into view when focused
     function __form_y(item) { return item.mapToItem(scroll_view.contentItem, 0, 0).y }
@@ -225,38 +264,35 @@ Item
     SmlScreenHeader
     {
         id: header
-        title: root.__reiterate ? "Reiterate problem" : "Problem definition"
+        title: root.__reiterate ? "Iteration inputs" : "Problem definition"
         subtitle: root.__reiterate
-                  ? "Adjust the problem to evaluate a new iteration"
+                  ? "What this iteration was run with"
                   : "Describe the ML problem to find the most efficient model and hardware"
         reserved_right: root.__reiterate ? Theme.space5 : Theme.controlHeight + Theme.space4 + Theme.space3
 
         actions: [
+            // Loading indicator: shown only while the app is starting up (__initializing),
+            // never again afterwards - later refreshes (HF search, dataset metadata, U-Net
+            // list) reuse the same __refreshing flag but must not bring this back
             SmlChip
             {
                 id: loading_text
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.__refreshing || root.__initializing
-                text: root.__refreshing ? "Refreshing..." : "Initializing..."
+                visible: root.__initializing
+                text: "Initializing..."
                 tone: "accent"
                 pulse: true
             },
 
-            // Refresh button
+            // Spins while initializing, then disappears for good - not interactive, there
+            // is no click action (see loading_animation below for the spin)
             SmlIconButton
             {
                 id: refresh_button
+                visible: root.__initializing
                 icon_name: Settings.refresh_icon_name
-                tooltip_text: "Refresh information from server"
-                onClicked: root.refresh()
-            },
-
-            Rectangle
-            {
-                width: 1
-                height: 24
-                anchors.verticalCenter: parent.verticalCenter
-                color: Theme.border
+                focusPolicy: Qt.NoFocus
+                hoverEnabled: false
             },
 
             // Go results button
@@ -312,7 +348,7 @@ Item
 
     SequentialAnimation {
         id: loading_animation
-        running: root.__refreshing
+        running: root.__initializing
         loops: Animation.Infinite
         NumberAnimation {
             target: refresh_button
@@ -455,6 +491,7 @@ Item
                         SmlFieldLabel { text: "Problem short description"; active: problem_short_description_input.focus; width: parent.width }
                         SmlInput
                         {
+                            read_only: root.__reiterate
                             id: problem_short_description_input
                             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__problem_short_description
@@ -481,14 +518,15 @@ Item
                     {
                         width: parent.width
                         SmlFieldLabel { text: "Problem definition"; active: problem_definition_input.focus; width: parent.width }
-                        SmlInput
+                        SmlTextArea
                         {
+                            read_only: root.__reiterate
                             id: problem_definition_input
                             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__problem_definition
                             placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
                             width: parent.width
-                            height: root.__input_height_big
+                            height: root.__reiterate ? Math.max(root.__input_height_big, problem_definition_input.content_height) : root.__input_height_big
                             KeyNavigation.tab: types_input
                             onTextChanged:
                             {
@@ -511,6 +549,7 @@ Item
                         SmlFieldLabel { text: "Type limiter"; active: types_input.popup.visible; width: parent.width }
                         SmlCombobox
                         {
+                            read_only: root.__reiterate
                             activeFocusOnTab: true
                             focus: true
                             disabled: false
@@ -575,14 +614,15 @@ Item
                         {
                             width: root.__col(parent.width, 2)
                             SmlFieldLabel { text: "Inputs"; active: inputs_input.focus; width: parent.width }
-                            SmlInput
+                            SmlTextArea
                             {
+                                read_only: root.__reiterate
                                 id: inputs_input
                                 disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__inputs
                                 placeholder_text: "Describe a sequence of serialized batches of input data"
                                 width: parent.width
-                                height: root.__input_height_medium
+                                height: root.__reiterate ? Math.max(root.__input_height_medium, inputs_input.content_height) : root.__input_height_medium
                                 KeyNavigation.tab: outputs_input
                                 onTextChanged:
                                 {
@@ -603,14 +643,15 @@ Item
                         {
                             width: root.__col(parent.width, 2)
                             SmlFieldLabel { text: "Outputs"; active: outputs_input.focus; width: parent.width }
-                            SmlInput
+                            SmlTextArea
                             {
+                                read_only: root.__reiterate
                                 id: outputs_input
                                 disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__outputs
                                 placeholder_text: "Describe a sequence of serialized batches of output data"
                                 width: parent.width
-                                height: root.__input_height_medium
+                                height: root.__reiterate ? Math.max(root.__input_height_medium, outputs_input.content_height) : root.__input_height_medium
                                 KeyNavigation.tab: minimum_samples_input
                                 onTextChanged:
                                 {
@@ -655,6 +696,7 @@ Item
                             SmlFieldLabel { text: "Minimum samples"; active: minimum_samples_input.focus; width: parent.width }
                             SmlInput
                             {
+                                read_only: root.__reiterate
                                 id: minimum_samples_input
                                 disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
@@ -672,6 +714,9 @@ Item
                                     if (!isNaN(num)) {
                                         root.__minimum_samples = num
                                     } else {
+                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // previous number is not submitted again
+                                        root.__minimum_samples = 1
                                         text = ""
                                     }
                                 }
@@ -692,6 +737,7 @@ Item
                             SmlFieldLabel { text: "Maximum samples"; active: maximum_samples_input.focus; width: parent.width }
                             SmlInput
                             {
+                                read_only: root.__reiterate
                                 id: maximum_samples_input
                                 disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
@@ -706,6 +752,9 @@ Item
                                     if (!isNaN(num)) {
                                         root.__maximum_samples = num
                                     } else {
+                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // previous number is not submitted again
+                                        root.__maximum_samples = 1
                                         text = ""
                                     }
                                 }
@@ -726,6 +775,7 @@ Item
                             SmlFieldLabel { text: "Model goal"; active: goal_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
+                                read_only: root.__reiterate
                                 activeFocusOnTab: true
                                 focus: true
                                 id: goal_input
@@ -795,6 +845,7 @@ Item
                             SmlFieldLabel { text: "Required hardware"; active: required_hardware_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
+                                read_only: root.__reiterate
                                 activeFocusOnTab: true
                                 focus: true
                                 id: required_hardware_input
@@ -856,6 +907,7 @@ Item
                             SmlFieldLabel { text: "Model selection"; active: model_select_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
+                                read_only: root.__reiterate
                                 activeFocusOnTab: true
                                 focus: true
                                 id: model_select_input
@@ -911,6 +963,7 @@ Item
                             SmlFieldLabel { text: "Nº output models"; active: num_outputs_input.focus; width: parent.width }
                             SmlInput
                             {
+                                read_only: root.__reiterate
                                 id: num_outputs_input
                                 disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__num_outputs === 0 ? "" : root.__num_outputs
@@ -967,15 +1020,16 @@ Item
                         width: parent.width
                         visible: root.__dataset_description !== ""
                         SmlFieldLabel { text: "Dataset description"; active: dataset_metadata_description_input.focus; width: parent.width }
-                        SmlInput
+                        SmlTextArea
                         {
+                            read_only: root.__reiterate
                             id: dataset_metadata_description_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
                             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__dataset_description
                             placeholder_text: "Dataset description"
                             width: parent.width
-                            height: root.__input_height_big
+                            height: root.__reiterate ? Math.max(root.__input_height_big, dataset_metadata_description_input.content_height) : root.__input_height_big
                             KeyNavigation.tab: problem_short_description_input
                             onTextEdited:
                             {
@@ -1005,6 +1059,7 @@ Item
                             SmlFieldLabel { text: "Dataset topic"; active: dataset_metadata_topic_input.focus; width: parent.width }
                             SmlInput
                             {
+                                read_only: root.__reiterate
                                 id: dataset_metadata_topic_input
                                 visible: root.__dataset_topic !== ""
                                 // Only used to infer the goal, so ignored once a goal or a model is chosen
@@ -1036,6 +1091,7 @@ Item
                             SmlFieldLabel { text: "Dataset keywords"; active: dataset_metadata_keywords_input.focus; width: parent.width }
                             SmlInput
                             {
+                                read_only: root.__reiterate
                                 id: dataset_metadata_keywords_input
                                 visible: root.__dataset_keywords !== ""
                                 // Only used to infer the goal, so ignored once a goal or a model is chosen
@@ -1066,15 +1122,16 @@ Item
                         width: parent.width
                         visible: root.__dataset_applications !== ""
                         SmlFieldLabel { text: "Dataset applications"; active: dataset_metadata_applications_input.focus; width: parent.width }
-                        SmlInput
+                        SmlTextArea
                         {
+                            read_only: root.__reiterate
                             id: dataset_metadata_applications_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
                             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__dataset_applications
                             placeholder_text: "Dataset applications"
                             width: parent.width
-                            height: root.__input_height_medium
+                            height: root.__reiterate ? Math.max(root.__input_height_medium, dataset_metadata_applications_input.content_height) : root.__input_height_medium
                             KeyNavigation.tab: optimize_carbon_input
                             onTextEdited:
                             {
@@ -1096,15 +1153,16 @@ Item
                         width: parent.width
                         visible: root.__dataset_profile !== ""
                         SmlFieldLabel { text: "Dataset profile"; active: dataset_metadata_profile_input.focus; width: parent.width }
-                        SmlInput
+                        SmlTextArea
                         {
+                            read_only: root.__reiterate
                             id: dataset_metadata_profile_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
                             disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__dataset_profile
                             placeholder_text: "Dataset profile"
                             width: parent.width
-                            height: root.__input_height_big
+                            height: root.__reiterate ? Math.max(root.__input_height_big, dataset_metadata_profile_input.content_height) : root.__input_height_big
                             KeyNavigation.tab: optimize_carbon_input
                             onTextEdited:
                             {
@@ -1148,6 +1206,7 @@ Item
                             SmlFieldLabel { text: "Carbon footprint optimization"; active: optimize_carbon_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
+                                read_only: root.__reiterate
                                 activeFocusOnTab: true
                                 focus: true
                                 id: optimize_carbon_input
@@ -1197,6 +1256,7 @@ Item
                             SmlFieldLabel { text: "Desired carbon footprint"; active: desired_carbon_footprint_input.focus; width: parent.width }
                             SmlInput
                             {
+                                read_only: root.__reiterate
                                 id: desired_carbon_footprint_input
                                 // Only meaningful as the target of a Manual or Auto optimization
                                 disabled: root.__model_selected !== "" || root.__cnn_mode ||
@@ -1229,6 +1289,7 @@ Item
                             SmlFieldLabel { text: "Max memory footprint"; active: max_mem_footprint_input.focus; width: parent.width }
                             SmlInput
                             {
+                                read_only: root.__reiterate
                                 id: max_mem_footprint_input
                                 disabled: root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
@@ -1265,6 +1326,7 @@ Item
                             SmlFieldLabel { text: "Geo location: continent"; active: geo_location_continent_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
+                                read_only: root.__reiterate
                                 activeFocusOnTab: true
                                 id: geo_location_continent_input
                                 displayText: root.__geo_location_continent
@@ -1306,6 +1368,7 @@ Item
                             SmlFieldLabel { text: "Geo location: country"; active: geo_location_region_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
+                                read_only: root.__reiterate
                                 activeFocusOnTab: true
                                 id: geo_location_region_input
                                 disabled: root.__geo_location_continent === ""
@@ -1346,12 +1409,13 @@ Item
         }
     }
 
-    // Footer: the form's actions
+    // Footer: the form's actions (none in the iteration info view)
     Rectangle
     {
         id: footer
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: 64
+        visible: !root.__reiterate
+        height: visible ? 64 : 0
         color: Theme.surface
 
         Rectangle
@@ -1490,6 +1554,15 @@ Item
                 root.__num_outputs,
                 root.__model_selected,
                 root.__types)
+
+        // Unlike the rest of the form, which deliberately stays filled in after a submit
+        // (so a quick follow-up run can reuse most of it), the samples fields must not -
+        // this screen instance is cached and reused, so a value left here would silently
+        // carry into the next run as if the user had set it there too.
+        root.__minimum_samples = 1
+        root.__maximum_samples = 1
+        minimum_samples_input.text = ""
+        maximum_samples_input.text = ""
     }
 
     // Remove FPGA from transformers hardware list and keep only FPGA for CNNs

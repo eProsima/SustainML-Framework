@@ -611,15 +611,16 @@ Rectangle
                                 }
                             }
 
-                            // Go reiterate button
+                            // Iteration info button: opens the inputs this iteration ran with,
+                            // from where it can be reiterated
                             SmlIcon
                             {
                                 id: reiterate_button
                                 visible: column === 0
-                                name:   Settings.refresh_icon_name
+                                name:   Settings.info_icon_name
                                 size: Theme.iconSizeDefault
                                 variant: Theme.iconAccent
-                                clickable_text: "Reiterate"
+                                clickable_text: "Show the inputs of this iteration (and reiterate it)"
 
                                 anchors
                                 {

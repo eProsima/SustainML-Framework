@@ -1031,7 +1031,8 @@ void Engine::send_reiteration_inputs(
         max_memory_footprint,
         num_outputs,
         extraData["type"].toString(),
-        last_reiteration_flag_);
+        last_reiteration_flag_,
+        extraData["model_selected"].toString());
 }
 
 void Engine::user_input_request(

@@ -6,7 +6,10 @@ import eProsima.SustainML.Theme 1.0
 /*
     Text field: raised fill, 1 px outline (3:1 against the surface), 2 px outline in the
     focus colour while editing. Single-line fields centre their text; taller ones wrap
-    from the top. A disabled field is sunken, with dimmed text.
+    from the top, but Enter cannot start a new line (a TextInput is single-line): use
+    SmlTextArea for text that may need several lines. A disabled field is sunken, with
+    dimmed text. A read-only field only shows its value: sunken, full-contrast text, no
+    placeholder, no interaction.
 
     Usage:
         SmlInput {
@@ -21,6 +24,7 @@ TextInput {
     // External properties
     property string placeholder_text: ""
     property bool disabled: false
+    property bool read_only: false
     // Monospaced text, for paths and ids
     property bool monospace: false
 
@@ -37,12 +41,12 @@ TextInput {
     font.pixelSize: Theme.fontSizeBody
     wrapMode: TextInput.WordWrap
     clip: true
-    color: disabled ? Theme.textDisabled : Theme.textPrimary
+    color: !read_only && disabled ? Theme.textDisabled : Theme.textPrimary
 
     selectByMouse: true
     selectionColor: Theme.accentSubtleStrong
     selectedTextColor: Theme.textPrimary
-    enabled: !disabled
+    enabled: !disabled && !read_only
 
     Rectangle
     {
@@ -52,9 +56,9 @@ TextInput {
         z: -1
 
         radius: Theme.radiusSm
-        color: sustainml_custom_input.disabled ? Theme.sunken : Theme.raised
+        color: sustainml_custom_input.disabled || sustainml_custom_input.read_only ? Theme.sunken : Theme.raised
         border.width: sustainml_custom_input.__edited ? 2 : 1
-        border.color: sustainml_custom_input.disabled ? Theme.border
+        border.color: sustainml_custom_input.disabled || sustainml_custom_input.read_only ? Theme.border
                     : sustainml_custom_input.__edited ? Theme.focusRing
                     : hover_area.containsMouse ? Theme.brandGreen
                     : Theme.borderInput
@@ -77,7 +81,7 @@ TextInput {
             color: sustainml_custom_input.disabled ? Theme.textDisabled : Theme.textMuted
             elide: Text.ElideRight
             wrapMode: sustainml_custom_input.__multiline ? Text.WordWrap : Text.NoWrap
-            visible: sustainml_custom_input.text === ""
+            visible: sustainml_custom_input.text === "" && !sustainml_custom_input.read_only
         }
 
         MouseArea
@@ -86,7 +90,7 @@ TextInput {
             anchors.fill: parent
             hoverEnabled: true
             acceptedButtons: Qt.NoButton
-            cursorShape: Qt.IBeamCursor
+            cursorShape: sustainml_custom_input.read_only ? Qt.ArrowCursor : Qt.IBeamCursor
         }
     }
     onFocusChanged: sustainml_custom_input.__edited = focus

@@ -8,6 +8,8 @@ import eProsima.SustainML.Theme 1.0
     Drop-down choice in the style of SmlInput: raised fill, 1 px outline, 2 px focus
     outline while open, chevron indicator, and a rounded overlay popup with hover-tint
     rows and a check on the current value. searchable adds a filter field on top.
+    read_only only shows the value: sunken, full-contrast text, no placeholder or chevron,
+    and it does not open.
  */
 ComboBox {
     id: sustainml_custom_combobox
@@ -15,9 +17,10 @@ ComboBox {
     // External properties
     property string placeholder_text: ""
     property bool disabled: false
+    property bool read_only: false
     property bool searchable: false
 
-    enabled: !disabled
+    enabled: !disabled && !read_only
 
     // Internal properties
     property bool __edited: false
@@ -32,7 +35,7 @@ ComboBox {
     SmlMouseArea
     {
         anchors.fill: parent
-        enabled: !sustainml_custom_combobox.disabled  // Disable interaction when disabled is true
+        enabled: !sustainml_custom_combobox.disabled && !sustainml_custom_combobox.read_only  // No interaction when disabled or read-only
         onWheel: { } // do nothing to avoid changing values while scrolling with the mouse wheel
         onPressed:
         {
@@ -77,7 +80,7 @@ ComboBox {
         font: sustainml_custom_combobox.font
         color: sustainml_custom_combobox.disabled ? Theme.textDisabled : Theme.textMuted
         elide: Text.ElideRight
-        visible: sustainml_custom_combobox.currentIndex === -1
+        visible: sustainml_custom_combobox.currentIndex === -1 && !sustainml_custom_combobox.read_only
     }
     onCurrentIndexChanged:
     {
@@ -102,9 +105,9 @@ ComboBox {
         id: background
         anchors.fill: parent
         radius: Theme.radiusSm
-        color: sustainml_custom_combobox.disabled ? Theme.sunken : Theme.raised
+        color: sustainml_custom_combobox.disabled || sustainml_custom_combobox.read_only ? Theme.sunken : Theme.raised
         border.width: sustainml_custom_combobox.__edited || sustainml_custom_combobox.visualFocus ? 2 : 1
-        border.color: sustainml_custom_combobox.disabled ? Theme.border
+        border.color: sustainml_custom_combobox.disabled || sustainml_custom_combobox.read_only ? Theme.border
                     : sustainml_custom_combobox.__edited || sustainml_custom_combobox.visualFocus ? Theme.focusRing
                     : sustainml_custom_combobox.hovered ? Theme.brandGreen
                     : Theme.borderInput
@@ -117,10 +120,11 @@ ComboBox {
         text: sustainml_custom_combobox.displayText
         textFormat: Text.PlainText
         font: sustainml_custom_combobox.font
-        color: sustainml_custom_combobox.disabled ? Theme.textDisabled : Theme.textPrimary
+        color: !sustainml_custom_combobox.read_only && sustainml_custom_combobox.disabled ? Theme.textDisabled : Theme.textPrimary
         width: parent.width
         leftPadding: Theme.space3
-        rightPadding: sustainml_custom_combobox.indicator.width + Theme.space3 + Theme.space2
+        rightPadding: sustainml_custom_combobox.read_only ? Theme.space3
+                    : sustainml_custom_combobox.indicator.width + Theme.space3 + Theme.space2
 
         horizontalAlignment: Text.AlignLeft
         verticalAlignment: Text.AlignVCenter
@@ -311,6 +315,7 @@ ComboBox {
     // Combobox indicator
     indicator: SmlIcon {
         id: icon
+        visible: !sustainml_custom_combobox.read_only
         name: "down"
         size: Theme.iconSizeDefault
         variant: sustainml_custom_combobox.disabled ? Theme.iconMuted : Theme.iconDefault

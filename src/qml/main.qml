@@ -966,12 +966,6 @@ Window {
                             type)
                 }
 
-                onRefresh: {
-                    main_window.refreshing = true
-                    engine.request_goals()
-                    engine.request_hardwares()
-                }
-
                 onAsk_models: {
                     main_window.refreshing = true
                     engine.request_model_from_goal(goal_type)
@@ -998,7 +992,9 @@ Window {
             ListElement { label: "Suggested model"; value: "X" }
             ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
+            ListElement { label: "Carbon footprint [gCO2e]"; value: "X" }
             ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
+            ListElement { label: "Memory footprint [MB]"; value: "X" }
         }
 
         // DATASET PATH UPLOAD SCREEN
@@ -1045,8 +1041,6 @@ Window {
                         __refreshing: main_window.refreshing
                         __initializing: main_window.initializing
                         __reiterate: true
-                        __model_selected: reiterateModel.get(2).value
-                        __hardware_required: reiterateModel.get(3).value
 
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                         onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
@@ -1078,11 +1072,6 @@ Window {
                                 model_selected,
                                 type)
                         }
-                        onRefresh: {
-                            main_window.refreshing = true
-                            engine.request_goals()
-                            engine.request_hardwares()
-                        }
                     }
 
                     Rectangle {
@@ -1092,70 +1081,72 @@ Window {
                         Layout.fillHeight: true
                         color: Theme.surface
 
-                        Column {
-                            anchors.fill: parent
-                            anchors.topMargin: Theme.headerHeight
-                            spacing: 0
-                            padding: Theme.space5
+                        // The panel's part of the screen header, with the settings button at its right end
+                        SmlScreenHeader {
+                            id: previous_results_header
+                            title: "Previous Results"
+                        }
 
-                            Row {
-                                spacing: Theme.space3
-                                bottomPadding: Theme.space4
+                        // Scrolls when the results do not fit the window height
+                        Flickable {
+                            id: previous_results_flick
+                            anchors {
+                                top: previous_results_header.bottom
+                                left: parent.left
+                                right: parent.right
+                                bottom: parent.bottom
+                            }
+                            contentWidth: width
+                            contentHeight: previous_results_column.height
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
 
-                                Rectangle {
-                                    width: 32
-                                    height: 32
-                                    radius: Theme.radiusMd
-                                    color: Theme.accentFill
-                                    SmlIcon {
-                                        anchors.centerIn: parent
-                                        name: Settings.results_icon_name
-                                        size: Theme.iconSizeDefault + 2
-                                        variant: Theme.iconOnAccent
-                                    }
-                                }
-
-                                SmlText {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text_kind: SmlText.TextKind.Header_2
-                                    text_value: "Previous Results"
-                                }
+                            Controls2.ScrollBar.vertical: SmlScrollBar {
+                                policy: Controls2.ScrollBar.AsNeeded
                             }
 
-                            // Item list for the results
-                            Repeater {
-                                model: reiterateModel
-                                delegate: Column {
-                                    width: parent.width - 2 * Theme.space5
-                                    topPadding: Theme.space3
-                                    bottomPadding: Theme.space3
-                                    spacing: 2
+                            Column {
+                                id: previous_results_column
+                                width: previous_results_flick.width
+                                spacing: 0
+                                padding: Theme.space5
 
-                                    Rectangle {
-                                        width: parent.width
-                                        height: 1
-                                        color: Theme.border
-                                        visible: index > 0
-                                    }
+                                // Item list for the results
+                                Repeater {
+                                    model: reiterateModel
+                                    delegate: Column {
+                                        width: parent.width - 2 * Theme.space5
+                                        topPadding: Theme.space3
+                                        bottomPadding: Theme.space3
+                                        spacing: 2
 
-                                    Text {
-                                        topPadding: index > 0 ? Theme.space3 : 0
-                                        text: label
-                                        font.family: Theme.uiFontFamily
-                                        font.pixelSize: Theme.fontSizeMeta
-                                        color: Theme.textMuted
-                                        width: parent.width
-                                        elide: Text.ElideRight
-                                    }
+                                        Rectangle {
+                                            width: parent.width
+                                            height: 1
+                                            color: Theme.border
+                                            visible: index > 0
+                                        }
 
-                                    Text {
-                                        text: value
-                                        font.family: Theme.uiFontFamily
-                                        font.pixelSize: Theme.fontSizeBody
-                                        font.weight: Font.DemiBold
-                                        color: Theme.accentText
-                                        width: parent.width
-                                        wrapMode: Text.WrapAnywhere
+                                        Text {
+                                            topPadding: index > 0 ? Theme.space3 : 0
+                                            text: label
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeMeta
+                                            color: Theme.textMuted
+                                            width: parent.width
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            // Empty when not measured (e.g. the memory of a model that failed to load)
+                                            text: value !== "" ? value : "-"
+                                            font.family: Theme.uiFontFamily
+                                            font.pixelSize: Theme.fontSizeBody
+                                            font.weight: Font.DemiBold
+                                            color: Theme.accentText
+                                            width: parent.width
+                                            wrapMode: Text.WrapAnywhere
+                                        }
                                     }
                                 }
                             }
@@ -3186,9 +3177,7 @@ Window {
         disabled: main_window.tasking
 
         x: parent.width - width - Theme.space4
-        y: ScreenManager.current_screen === ScreenManager.Screens.Reiterate ?
-            main_window.height - height - Theme.space4 :
-            (Theme.headerHeight - height) / 2
+        y: (Theme.headerHeight - height) / 2
 
         onClicked: {
             // Nothing to save yet when Settings is opened from the start screen
@@ -3413,7 +3402,9 @@ Window {
         reiterateModel.set(2, { label: "Suggested model", value: results["Suggested model"] })
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
-        reiterateModel.set(5, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(5, { label: "Carbon footprint [gCO2e]", value: results["Carbon footprint"] })
+        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(7, { label: "Memory footprint [MB]", value: results["Memory footprint"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
         var goal_only = String(results["Problem kind"])
