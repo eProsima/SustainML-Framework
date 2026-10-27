@@ -581,6 +581,8 @@ Rectangle {
             id: sidePanel
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
+            // Nothing of it drawn while closed (its outline would show as a line on the edge)
+            visible: width > 0
             width: root.currentState === "collapsed" ? 0 : 220
             height: sideColumn.implicitHeight + 2 * Theme.space4
             color: Theme.overlay
@@ -650,20 +652,76 @@ Rectangle {
             }
         }
 
+        // Handle of the visible columns panel: a tab on the right edge (table icon, and a chevron
+        // pointing where the panel moves), which slides out with the panel. Flat on its right
+        // side, over the panel's outline, so the two read as one piece when open.
         Button {
             id: toggleButton
+            readonly property bool open_: root.currentState === "expanded"
             text: ""
-            width: 10
-            height: sidePanel.height
-            background: Rectangle {
-                color: toggleButton.hovered ? Theme.accentFillHover : Theme.accentFill
-                radius: Theme.radiusXs
-            }
+            width: 28
+            height: 60
+            hoverEnabled: true
+            focusPolicy: Qt.TabFocus
+            Accessible.name: open_ ? "Hide the visible columns" : "Choose the visible columns"
             anchors {
                 right: sidePanel.left
-                rightMargin: -2
+                rightMargin: sidePanel.visible ? -1 : 0
                 verticalCenter: sidePanel.verticalCenter
             }
+
+            background: Item {
+                clip: true
+                Rectangle {
+                    anchors { fill: parent; rightMargin: -radius }
+                    radius: Theme.radiusMd
+                    color: Theme.overlay
+                    border.width: 1
+                    border.color: toggleButton.hovered || toggleButton.visualFocus ? Theme.brandGreen : Theme.borderStrong
+                    Behavior on border.color { ColorAnimation { duration: Theme.durFast } }
+
+                    // Hover and press veil, as on the other buttons
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: toggleButton.down ? Theme.accentSubtleStrong
+                             : toggleButton.hovered ? Theme.accentSubtle : Theme.transparent
+                        Behavior on color { ColorAnimation { duration: Theme.durFast } }
+                    }
+                }
+            }
+
+            contentItem: Item {
+                Column {
+                    anchors.centerIn: parent
+                    spacing: Theme.space1
+                    SmlIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        name: "table"
+                        size: Theme.iconSizeDense
+                        variant: Theme.iconDefault
+                    }
+                    SmlIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        name: toggleButton.open_ ? "chevron_right" : "chevron_left"
+                        size: Theme.iconSizeDense
+                        variant: Theme.iconMuted
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: Qt.PointingHandCursor
+            }
+
+            SmlToolTip {
+                visible: toggleButton.hovered && !toggleButton.pressed
+                text: toggleButton.Accessible.name
+                delay: 400
+            }
+
             onClicked: {
                 root.currentState = root.currentState === "collapsed" ? "expanded" : "collapsed";
             }
