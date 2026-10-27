@@ -9,6 +9,7 @@ import QtCharts 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "../components"
@@ -22,7 +23,10 @@ Rectangle
     required property int problem_id
     required property int stack_id
 
-    color: ScreenManager.night_mode ? selected_tab_nightmode_color : selected_tab_color
+    color: Theme.surface
+
+    // Bar colours: SustainML greens, then teals and limes, distinct in both themes
+    readonly property var __bar_colors: ["#2D7D1B", "#64C537", "#1F8A70", "#A7D84A", "#145A32", "#4FB3A0", "#7A9E1F", "#2E5E4E"]
 
     // Private properties
     property var values_list: []
@@ -72,16 +76,38 @@ Rectangle
         title: ""
         anchors.fill: parent
         legend.alignment: Qt.AlignBottom
+        legend.labelColor: Theme.textSecondary
+        legend.font.family: Theme.uiFontFamily
+        legend.font.pixelSize: Theme.fontSizeMeta
         antialiasing: true
+        backgroundColor: Theme.surface
+        plotAreaColor: Theme.surface
+        backgroundRoundness: 0
+        margins { left: Theme.space4; right: Theme.space4; top: Theme.space4; bottom: Theme.space2 }
 
         BarSeries {
             id: mySeries
             labelsVisible: true
             labelsFormat: "@value"
-            axisX: BarCategoryAxis { categories: root.values_list }
+            axisX: BarCategoryAxis {
+                categories: root.values_list
+                labelsColor: Theme.textSecondary
+                labelsFont.family: Theme.uiFontFamily
+                labelsFont.pixelSize: Theme.fontSizeBody
+                color: Theme.borderStrong
+                gridVisible: false
+            }
             axisY: ValueAxis {
                 id: yAxis
                 titleText: root.getYAxisUnits()
+                titleBrush: Theme.textMuted
+                titleFont.family: Theme.uiFontFamily
+                titleFont.pixelSize: Theme.fontSizeMeta
+                labelsColor: Theme.textMuted
+                labelsFont.family: Theme.monoFontFamily
+                labelsFont.pixelSize: Theme.fontSizeMeta
+                gridLineColor: Theme.border
+                color: Theme.borderStrong
                 min: 0
                 max: 100
             }
@@ -135,7 +161,12 @@ Rectangle
                         "values": valuesArray
                     });
                 if (barSet !== null) {
-                    mySeries.append(barSet.label, barSet.values);
+                    var shown = mySeries.append(barSet.label, barSet.values);
+                    if (shown) {
+                        shown.color = root.__bar_colors[j % root.__bar_colors.length];
+                        shown.borderColor = shown.color;
+                        shown.labelColor = Theme.textPrimary;
+                    }
                     _barSets.push(barSet);
                     // console.log("BarSet created for element: " + j);
                 } else {
@@ -194,9 +225,10 @@ Rectangle
         }
     }
 
-    Menu {
+    SmlMenu {
         id: contextMenuData
-        MenuItem {
+        SmlMenuItem {
+            icon_name: "info"
             text: "More info"
             onTriggered: {
                 infoPopup.iteration = chartMouseArea.actualBarSet;
@@ -234,15 +266,17 @@ Rectangle
 
         Rectangle {
             anchors.fill: parent
-            color: "white"
-            border.color: "#cccccc"
+            color: Theme.overlay
+            border.color: Theme.borderStrong
 
-            Button {
-                text: "X"
+            SmlIconButton {
                 anchors.top: parent.top
+                anchors.topMargin: Theme.space2
                 anchors.right: parent.right
-                width: 20
-                height: 20
+                anchors.rightMargin: Theme.space2
+                button_size: Theme.controlHeightSm
+                icon_name: "cross"
+                tooltip_text: "Close"
                 onClicked: infoPopup.close()
             }
 
@@ -250,12 +284,12 @@ Rectangle
                 id: iterationTextHeader
                 anchors {
                     top: parent.top
-                    topMargin: Settings.spacing_small
-                    horizontalCenter: parent.horizontalCenter
+                    topMargin: Theme.space4
+                    left: parent.left
+                    leftMargin: Theme.space5
                 }
                 text_value: "Iteration " + infoPopup.iteration
-                text_kind: SmlText.TextKind.Header_3
-                font.bold: true
+                text_kind: SmlText.TextKind.Header_2
 
             }
 
@@ -269,8 +303,6 @@ Rectangle
                 height: parent.height - iterationTextHeader.height - Settings.spacing_small * 2
                 content_height: columnContent.implicitHeight
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_background_color: Settings.app_color_light
-                scrollbar_background_nightmodel_color: Settings.app_color_dark
 
                 Rectangle {
                     id: tableContent
@@ -282,7 +314,7 @@ Rectangle
                     anchors {
                         top: parent.top
                         left: parent.left
-                        leftMargin: Settings.spacing_normal
+                        leftMargin: Theme.space5
                     }
 
                     Column {
@@ -292,65 +324,83 @@ Rectangle
 
                         SmlText {
                             text_value: "Node ML_MODEL"
-                            font.bold: true
+                            font.weight: Font.DemiBold
+                            force_color: true
+                            forced_color: Theme.accentText
                         }
                         SmlText {
                             text_value: infoPopup.nodeText(infoPopup.jsonData.ML_MODEL)
-                            font.family: "monospace"
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
                             wrapMode: Text.WordWrap
                         }
 
                         SmlText {
                             text_value: "Node CARBON_FOOTPRINT"
-                            font.bold: true
+                            font.weight: Font.DemiBold
+                            force_color: true
+                            forced_color: Theme.accentText
                         }
                         SmlText {
                             text_value: infoPopup.nodeText(infoPopup.jsonData.CARBON_FOOTPRINT)
-                            font.family: "monospace"
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
                             wrapMode: Text.WordWrap
                         }
 
                         SmlText {
                             text_value: "Node APP_REQUIREMENTS"
-                            font.bold: true
+                            font.weight: Font.DemiBold
+                            force_color: true
+                            forced_color: Theme.accentText
                         }
 
                         SmlText {
                             text_value: infoPopup.nodeText(infoPopup.jsonData.APP_REQUIREMENTS)
-                            font.family: "monospace"
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
                             wrapMode: Text.WordWrap
                         }
 
                         SmlText {
                             text_value: "Node HW_CONSTRAINTS"
-                            font.bold: true
+                            font.weight: Font.DemiBold
+                            force_color: true
+                            forced_color: Theme.accentText
                         }
 
                         SmlText {
                             text_value: infoPopup.nodeText(infoPopup.jsonData.HW_CONSTRAINTS)
-                            font.family: "monospace"
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
                             wrapMode: Text.WordWrap
                         }
 
                         SmlText {
                             text_value: "Node HW_RESOURCES"
-                            font.bold: true
+                            font.weight: Font.DemiBold
+                            force_color: true
+                            forced_color: Theme.accentText
                         }
 
                         SmlText {
                             text_value: infoPopup.nodeText(infoPopup.jsonData.HW_RESOURCES)
-                            font.family: "monospace"
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
                             wrapMode: Text.WordWrap
                         }
 
                         SmlText {
                             text_value: "Node ML_MODEL_METADATA"
-                            font.bold: true
+                            font.weight: Font.DemiBold
+                            force_color: true
+                            forced_color: Theme.accentText
                         }
 
                         SmlText {
                             text_value: infoPopup.nodeText(infoPopup.jsonData.ML_MODEL_METADATA)
-                            font.family: "monospace"
+                            font.family: Theme.monoFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
                             wrapMode: Text.WordWrap
                         }
                     }

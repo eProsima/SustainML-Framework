@@ -86,11 +86,23 @@ int main(
     // Register project screen manager
     qmlRegisterSingletonType( QUrl("qrc:/ScreenManager"), "eProsima.SustainML.ScreenMan", 1, 0, "ScreenManager" );
 
+    // Register the design tokens (colours, type, spacing...) of the interface
+    qmlRegisterSingletonType( QUrl("qrc:/Theme"), "eProsima.SustainML.Theme", 1, 0, "Theme" );
+
     // Register TreeModel for QML
     qmlRegisterType<TreeModel>("eProsima.SustainML.Tree", 1, 0, "SustainMLTreeModel");
 
-    // Register fonts
-    QFontDatabase::addApplicationFont("qrc:/font/ArimaMadurai-ExtraBold.ttf");
+    // Register fonts: Inter for the interface (made the application font, so every
+    // Text that sets no family uses it too), JetBrains Mono for values and ids
+    QFontDatabase::addApplicationFont(":/font/ArimaMadurai-ExtraBold.ttf");
+    for (const char* font_file : {"Inter-400", "Inter-500", "Inter-600", "Inter-700",
+                                  "JetBrainsMono-400", "JetBrainsMono-600"})
+    {
+        QFontDatabase::addApplicationFont(QString(":/font/%1.ttf").arg(font_file));
+    }
+    QFont app_font("Inter");
+    app_font.setPixelSize(13);
+    QGuiApplication::setFont(app_font);
 
     // Register engine
     std::shared_ptr<Engine> engine = std::make_shared<Engine>();

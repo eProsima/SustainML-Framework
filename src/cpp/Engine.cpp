@@ -513,6 +513,10 @@ void Engine::launch_task(
         {
             extra_data["model_restrains"] = incoming["model_restrains"];
         }
+        if (incoming.contains("hf_analyze"))
+        {
+            extra_data["hf_analyze"] = incoming["hf_analyze"];
+        }
     }
     QJsonObject json_data;
     json_data["problem_short_description"] = problem_short_description;
@@ -1031,7 +1035,9 @@ void Engine::send_reiteration_inputs(
         max_memory_footprint,
         num_outputs,
         extraData["type"].toString(),
-        last_reiteration_flag_);
+        last_reiteration_flag_,
+        extraData["model_selected"].toString(),
+        extraData["hf_analyze"].toBool());
 }
 
 void Engine::user_input_request(

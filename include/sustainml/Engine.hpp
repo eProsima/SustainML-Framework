@@ -588,6 +588,8 @@ signals:
      * @param num_outputs number of outputs requested
      * @param type type of the problem
      * @param is_reiteration flag indicating if the task is a reiteration
+     * @param model_selected model chosen by the user instead of searched (empty if none)
+     * @param hf_analyze flag indicating if the task evaluated a Hugging Face model (its Analyze button)
      */
     void reiterate_user_inputs(
             const int& problem_id,
@@ -614,7 +616,9 @@ signals:
             const int& max_memory_footprint,
             const int& num_outputs,
             const QString& type,
-            bool is_reiteration);
+            bool is_reiteration,
+            const QString& model_selected,
+            bool hf_analyze);
 
     /**
      * @brief Update qml tasking bool signal as task end

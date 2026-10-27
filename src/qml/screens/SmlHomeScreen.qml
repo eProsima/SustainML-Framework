@@ -4,6 +4,7 @@ import QtQuick 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "../components"
@@ -15,225 +16,148 @@ Item
     // External signals
     signal go_problem_definition();
 
-    Rectangle
+    // Hero: what SustainML is, and the way in
+    Item
     {
-        color: "transparent"
-
-        anchors.fill: parent
-
-        // Header
-        Rectangle
+        id: body
+        width: Math.min(parent.width - 2 * Theme.space7, 1120)
+        height: Math.max(text_column.implicitHeight, logo_halo.height)
+        anchors
         {
-            id: header
-            color: "transparent"
-            height: Settings.logo_height
-            width: (eProsima_logo.width + dfki_logo.width + ibm_logo.width + inria_logo.width + ku_logo.width + rptu_logo.width + 4*Settings.spacing_normal + Settings.spacing_big - 10)
+            horizontalCenter: parent.horizontalCenter
+            verticalCenter: parent.verticalCenter
+            verticalCenterOffset: -partners.height / 2
+        }
 
+        Column
+        {
+            id: text_column
+            width: parent.width * 0.52
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.space4
 
-            // Layout constraints
-            anchors
+            // SustainML introduction text
+            SmlChip
             {
-                top: parent.top
-                topMargin: Settings.spacing_big
-                horizontalCenter: parent.horizontalCenter
+                id: subtitle_text
+                text: "Sustainable and interactive ML framework"
+                tone: "accent"
+                icon_name: Settings.bullet_point_icon_name
             }
 
-            // eProsima Logo
-            Image
+            // SustainML Title
+            SmlText
             {
-                id: eProsima_logo
+                id: sustainML_text
+                text_value: "SustainML"
+                text_kind: SmlText.App_name
+                font.pixelSize: 64
+                topPadding: Theme.space1
+            }
 
-                source: ScreenManager.night_mode ?   Settings.eProsima_nightmode_logo : Settings.eProsima_logo
+            // SustainML subtitle
+            Text
+            {
+                id: title_text
+                width: parent.width
+                text: "AI serving to reduce the footprint"
+                textFormat: Text.PlainText
+                font.family: Theme.uiFontFamily
+                font.pixelSize: 24
+                font.weight: Font.DemiBold
+                font.letterSpacing: -0.3
+                color: Theme.textPrimary
+                wrapMode: Text.WordWrap
+            }
 
-                // set image size
-                height: Settings.logo_height
+            Item { width: 1; height: Theme.space1 }
 
-                // Layout constraints
-                anchors
+            // Bullet points
+            Repeater
+            {
+                model: [
+                    "Comprehensively prioritize and advocate energy efficiency across the lifecycle of an application",
+                    "Avoid AI-waste and reduce the carbon footprint"
+                ]
+
+                delegate: Row
                 {
-                    left: parent.left
-                    top: parent.top
-                }
+                    required property string modelData
+                    spacing: Theme.space3
 
-                // Image smoothness
-                sourceSize.height: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                antialiasing: true
+                    Rectangle
+                    {
+                        width: 30
+                        height: 30
+                        radius: Theme.radiusMd
+                        color: Theme.accentSubtle
 
-                SmlMouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: Qt.openUrlExternally("https://www.eprosima.com/");
+                        SmlIcon
+                        {
+                            anchors.centerIn: parent
+                            name: Settings.bullet_point_icon_name
+                            size: Theme.iconSizeDefault
+                            variant: Theme.iconAccent
+                        }
+                    }
+
+                    Text
+                    {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: text_column.width - 30 - Theme.space3
+                        text: modelData
+                        textFormat: Text.PlainText
+                        font.family: Theme.uiFontFamily
+                        font.pixelSize: 15
+                        lineHeight: 1.25
+                        color: Theme.textSecondary
+                        wrapMode: Text.WordWrap
+                    }
                 }
             }
-            // dfki logo
-            Image
+
+            Item { width: 1; height: Theme.space3 }
+
+            // Start button
+            SmlButton
             {
-                id: dfki_logo
+                id: start_button
+                variant: "primary"
+                size: "lg"
+                icon_name: Settings.start_icon_name
+                text_value: "Start now"
+                tooltip_text: "Define a new machine learning problem"
 
-                source: ScreenManager.night_mode ?   Settings.dfki_nightmode_logo : Settings.dfki_logo
-
-                // set image size
-                height: Settings.logo_height
-
-                // Layout constraints
-                anchors
-                {
-                    left: eProsima_logo.right
-                    leftMargin: Settings.spacing_big
-                    verticalCenter: eProsima_logo.verticalCenter
-                }
-
-                // Image smoothness
-                sourceSize.height: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                antialiasing: true
-
-                SmlMouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: Qt.openUrlExternally("https://www.dfki.de/en/web");
-                }
-            }
-            // ibm logo
-            Image
-            {
-                id: ibm_logo
-
-                source: ScreenManager.night_mode ?   Settings.ibm_nightmode_logo : Settings.ibm_logo
-
-                // set image size
-                height: Settings.logo_height * 1.5
-
-                // Layout constraints
-                anchors
-                {
-                    left: dfki_logo.right
-                    leftMargin: Settings.spacing_normal
-                    verticalCenter: dfki_logo.verticalCenter
-                }
-
-                // Image smoothness
-                sourceSize.height: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                antialiasing: true
-
-                SmlMouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: Qt.openUrlExternally("https://www.ibm.com/contact/global");
-                }
-            }
-            // inria logo
-            Image
-            {
-                id: inria_logo
-
-                source: ScreenManager.night_mode ?   Settings.inria_nightmode_logo : Settings.inria_logo
-
-                // set image size
-                height: Settings.logo_height
-
-                // Layout constraints
-                anchors
-                {
-                    left: ibm_logo.right
-                    leftMargin: Settings.spacing_normal
-                    verticalCenter: ibm_logo.verticalCenter
-                }
-
-                // Image smoothness
-                sourceSize.height: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                antialiasing: true
-
-                SmlMouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: Qt.openUrlExternally("https://www.inria.fr/en");
-                }
-            }
-            // ku logo
-            Image
-            {
-                id: ku_logo
-
-                source: ScreenManager.night_mode ?   Settings.ku_nightmode_logo : Settings.ku_logo
-
-                // set image size
-                height: Settings.logo_height * 4
-
-                // Layout constraints
-                anchors
-                {
-                    left: inria_logo.right
-                    leftMargin: Settings.spacing_normal -10
-                    verticalCenter: inria_logo.verticalCenter
-                }
-
-                // Image smoothness
-                sourceSize.height: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                antialiasing: true
-
-                SmlMouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: Qt.openUrlExternally("https://www.ku.dk/english/");
-                }
-            }
-            // rptu logo
-            Image
-            {
-                id: rptu_logo
-
-                source: ScreenManager.night_mode ?   Settings.rptu_nightmode_logo : Settings.rptu_logo
-
-                // set image size
-                height: Settings.logo_height * 1.5
-
-                // Layout constraints
-                anchors
-                {
-                    left: ku_logo.right
-                    leftMargin: Settings.spacing_normal
-                    verticalCenter: ku_logo.verticalCenter
-                }
-
-                // Image smoothness
-                sourceSize.height: height
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                antialiasing: true
-
-                SmlMouseArea
-                {
-                    anchors.fill: parent
-                    onClicked: Qt.openUrlExternally("https://rptu.de/en/");
-                }
+                // Button actions
+                onClicked: root.go_problem_definition();
             }
         }
 
-        // Body
+        // SustainML Logo on a soft green halo
         Rectangle
         {
-            id: body
-            color: "transparent"
-            height: Settings.app_height / 2
-
-            // Layout constraints
+            id: logo_halo
             anchors
             {
+                right: parent.right
                 verticalCenter: parent.verticalCenter
-                horizontalCenter: parent.horizontalCenter
+            }
+            width: Math.min(parent.width * 0.42, 400)
+            height: width
+            radius: width / 2
+            color: Theme.alpha(Theme.brandGreenBright, Theme.darkMode ? 0.16 : 0.3)
+
+            Rectangle
+            {
+                anchors.centerIn: parent
+                width: parent.width * 0.82
+                height: width
+                radius: width / 2
+                color: Theme.surface
+                border.width: 1
+                border.color: Theme.alpha(Theme.brandGreen, 0.35)
             }
 
-            // SustainML Logo
             Image
             {
                 id: sustainML_logo
@@ -241,171 +165,185 @@ Item
                 source: Settings.app_logo
 
                 // set image size
-                height: parent.height * 0.9
-
-                // Layout constraints
-                anchors
-                {
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                }
+                anchors.centerIn: parent
+                width: parent.width * 0.62
+                height: width
 
                 // Image smoothness
                 sourceSize.width: width
-                sourceSize.height: height
+                sourceSize.height: height * 2   // sharp on high-DPI screens
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 antialiasing: true
             }
+        }
+    }
 
-            Rectangle
+    // Project partners, straight on the page background
+    Rectangle
+    {
+        id: partners
+        anchors
+        {
+            bottom: parent.bottom
+            bottomMargin: Theme.space5
+            horizontalCenter: parent.horizontalCenter
+        }
+        width: partners_column.implicitWidth
+        height: partners_column.implicitHeight + Theme.space4
+        color: Theme.transparent
+
+        Column
+        {
+            id: partners_column
+            anchors.centerIn: parent
+            spacing: Theme.space3
+
+            // Header
+            Row
             {
-                id: text
-                color: "transparent"
-                width: parent.width - sustainML_logo.width
-                height: parent.height
+                id: header
+                anchors.horizontalCenter: parent.horizontalCenter
+                height: Settings.logo_height
+                spacing: Theme.space6
 
-                // Layout constraints
-                anchors
+                // eProsima Logo
+                Image
                 {
-                    left: parent.left
-                    verticalCenter: parent.verticalCenter
-                }
+                    id: eProsima_logo
 
-                 // SustainML Title
-                SmlText
-                {
-                    id: sustainML_text
-                    text_value: "SustainML"
-                    text_kind: SmlText.App_name
+                    source: ScreenManager.night_mode ?   Settings.eProsima_nightmode_logo : Settings.eProsima_logo
 
-                    // Layout constraints
-                    anchors
+                    // set image size
+                    height: Settings.logo_height
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // Image smoothness
+                    sourceSize.height: height * 2   // sharp on high-DPI screens
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    antialiasing: true
+
+                    SmlMouseArea
                     {
-                        left: parent.left
-                        leftMargin: Settings.spacing_big
+                        anchors.fill: parent
+                        onClicked: Qt.openUrlExternally("https://www.eprosima.com/");
                     }
                 }
-
-                // SustainML subtitle
-                SmlText
+                // dfki logo
+                Image
                 {
-                    id: title_text
-                    text_value: "AI serving to reduce the footprint"
-                    text_kind: SmlText.Header_3
+                    id: dfki_logo
 
-                    // Layout constraints
-                    anchors
+                    source: ScreenManager.night_mode ?   Settings.dfki_nightmode_logo : Settings.dfki_logo
+
+                    // set image size
+                    height: Settings.logo_height
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // Image smoothness
+                    sourceSize.height: height * 2   // sharp on high-DPI screens
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    antialiasing: true
+
+                    SmlMouseArea
                     {
-                        top: sustainML_text.bottom
-                        topMargin: -Settings.spacing_small
-                        left: sustainML_text.left
+                        anchors.fill: parent
+                        onClicked: Qt.openUrlExternally("https://www.dfki.de/en/web");
                     }
                 }
-
-                // SustainML introduction text
-                SmlText
+                // ibm logo
+                Image
                 {
-                    id: subtitle_text
-                    text_value: "Sustainable and interactive ML framework"
-                    text_kind: SmlText.Body
+                    id: ibm_logo
 
-                    // Layout constraints
-                    anchors
+                    source: ScreenManager.night_mode ?   Settings.ibm_nightmode_logo : Settings.ibm_logo
+
+                    // set image size
+                    height: Settings.logo_height * 1.5
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // Image smoothness
+                    sourceSize.height: height * 2   // sharp on high-DPI screens
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    antialiasing: true
+
+                    SmlMouseArea
                     {
-                        top: title_text.bottom
-                        topMargin: Settings.spacing_small
-                        left: title_text.left
+                        anchors.fill: parent
+                        onClicked: Qt.openUrlExternally("https://www.ibm.com/contact/global");
                     }
                 }
-
-                // Bullet points
-                SmlIcon
+                // inria logo
+                Image
                 {
-                    id: bullet_point_1
-                    name: Settings.bullet_point_icon_name
-                    color: Settings.app_color_green_1
-                    nightmode_color: Settings.app_color_green_3
-                    size: Settings.bullet_point_icon_size
+                    id: inria_logo
 
-                    // Layout constraints
-                    anchors
+                    source: ScreenManager.night_mode ?   Settings.inria_nightmode_logo : Settings.inria_logo
+
+                    // set image size
+                    height: Settings.logo_height
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // Image smoothness
+                    sourceSize.height: height * 2   // sharp on high-DPI screens
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    antialiasing: true
+
+                    SmlMouseArea
                     {
-                        top: subtitle_text.bottom
-                        topMargin: Settings.spacing_normal
-                        left: subtitle_text.left
+                        anchors.fill: parent
+                        onClicked: Qt.openUrlExternally("https://www.inria.fr/en");
                     }
                 }
-                SmlText
+                // ku logo
+                Image
                 {
-                    id: bullet_point_1_text
-                    text_value: "Comprehensively prioritize and advocate energy\nefficiency across the  lifecycle of an application"
-                    text_kind: SmlText.Body
+                    id: ku_logo
 
-                    // Layout constraints
-                    anchors
+                    source: ScreenManager.night_mode ?   Settings.ku_nightmode_logo : Settings.ku_logo
+
+                    // set image size (a wide word mark with fine lettering: a little larger than the others)
+                    height: Settings.logo_height * 1.6
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // Image smoothness
+                    sourceSize.height: height * 2   // sharp on high-DPI screens
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    antialiasing: true
+
+                    SmlMouseArea
                     {
-                        top: bullet_point_1.top
-                        topMargin: -3
-                        left: bullet_point_1.right
-                        leftMargin: Settings.spacing_small
+                        anchors.fill: parent
+                        onClicked: Qt.openUrlExternally("https://www.ku.dk/english/");
                     }
                 }
-                SmlIcon
+                // rptu logo
+                Image
                 {
-                    id: bullet_point_2
-                    name: Settings.bullet_point_icon_name
-                    color: Settings.app_color_green_1
-                    nightmode_color: Settings.app_color_green_3
-                    size: Settings.bullet_point_icon_size
+                    id: rptu_logo
 
-                    // Layout constraints
-                    anchors
+                    source: ScreenManager.night_mode ?   Settings.rptu_nightmode_logo : Settings.rptu_logo
+
+                    // set image size
+                    height: Settings.logo_height * 1.5
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    // Image smoothness
+                    sourceSize.height: height * 2   // sharp on high-DPI screens
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    antialiasing: true
+
+                    SmlMouseArea
                     {
-                        top: bullet_point_1_text.bottom
-                        topMargin: Settings.spacing_small
-                        left: bullet_point_1.left
+                        anchors.fill: parent
+                        onClicked: Qt.openUrlExternally("https://rptu.de/en/");
                     }
-                }
-                SmlText
-                {
-                    text_value: "Avoid AI-waste and reduce the carbon footprint"
-                    text_kind: SmlText.Body
-
-                    // Layout constraints
-                    anchors
-                    {
-                        top: bullet_point_2.top
-                        topMargin: -3
-                        left: bullet_point_2.right
-                        leftMargin: Settings.spacing_small
-                    }
-                }
-
-                // Start button
-                SmlButton
-                {
-                    id: start_button
-                    icon_name: Settings.start_icon_name
-                    text_kind: SmlText.Header_2
-                    text_value: "Start now"
-                    rounded: true
-                    color: Settings.app_color_green_3
-                    color_pressed: Settings.app_color_green_1
-                    nightmode_color: Settings.app_color_green_1
-                    nightmode_color_pressed: Settings.app_color_green_3
-                    size: Settings.button_big_icon_size
-
-                    // Layout constraints
-                    anchors
-                    {
-                        top: bullet_point_2.bottom
-                        topMargin: Settings.spacing_big
-                        horizontalCenter: subtitle_text.horizontalCenter
-                    }
-
-                    // Button actions
-                    onClicked: root.go_problem_definition();
                 }
             }
         }

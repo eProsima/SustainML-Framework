@@ -10,6 +10,7 @@ import QtQuick.Layouts 1.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "../components"
@@ -25,12 +26,7 @@ Item
     signal go_back();
 
     // Internal properties
-    readonly property int __margin: Settings.spacing_big * 1
-    readonly property int __input_height: 50
-    readonly property int __input_height_big: 120
-    readonly property int __input_width: 900
-    readonly property int __input_width_split: 435
-    readonly property int __input_width_small: 293
+    readonly property int __input_height: 38
 
     property bool tasking: false
 
@@ -43,110 +39,152 @@ Item
         onClicked: focus = true
     }
 
-    // Go home button
-    SmlButton
+    SmlScreenHeader
     {
-        id: go_home_button
-        icon_name: Settings.home_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Home"
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Go to Home screen"
-        anchors
-        {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-            left: parent.left
-            leftMargin: Settings.spacing_normal
-        }
-        onClicked: root.go_home()
-
+        id: header
+        title: "Dataset selector"
+        subtitle: "Upload a dataset to fill in its metadata automatically"
+        navigation: [
+            // Go home button
+            SmlButton
+            {
+                id: go_home_button
+                icon_name: Settings.home_icon_name
+                text_value: "Home"
+                tooltip_text: "Go to Home screen"
+                onClicked: root.go_home()
+            },
+            // Go back button
+            SmlIconButton
+            {
+                id: go_back_button
+                outlined: true
+                icon_name: Settings.back_icon_name
+                tooltip_text: "Go to Problem Definition screen"
+                onClicked: root.go_back()
+            }
+        ]
     }
 
-    // Go back button
-    SmlButton
+    SmlCard
     {
-        id: go_back_button
-        icon_name: Settings.back_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: ""
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Go to Problem Definition screen"
+        id: dataset_card
         anchors
         {
-            top: go_home_button.top
-            left: go_home_button.right
-            leftMargin: Settings.spacing_small
-        }
-        onClicked: root.go_back()
-    }
-
-    SmlText {
-        id: dataset_selector
-        text_kind: SmlText.TextKind.Header_1
-        text_value: "Dataset Selector"
-        color: Settings.app_color_green_1
-        anchors
-        {
-            top: go_back_button.bottom
-            topMargin: Settings.spacing_normal
+            top: header.bottom
+            topMargin: Theme.space6
             horizontalCenter: parent.horizontalCenter
         }
-    }
+        width: Math.min(parent.width - 2 * Theme.pagePadding, 760)
+        title: "Dataset file"
+        subtitle: "CSV or JSON file with the data the model will work with"
+        icon_name: "database"
 
-    SmlInput {
-        id: dataset_path_input
-        border_color: Settings.app_color_green_4
-        border_nightmode_color: Settings.app_color_green_1
-        background_color: Settings.app_color_light
-        background_nightmode_color: Settings.app_color_dark
-        height: root.__input_height
-        width: root.__input_width
-        placeholder_text: "Select a dataset file..."
-        disabled: true
-        anchors
+        Column
         {
-            horizontalCenter: parent.horizontalCenter
-            top: dataset_selector.bottom
-            topMargin: Settings.spacing_normal
+            width: dataset_card.content_area.width
+            spacing: Theme.space5
+
+            // What happens with the dataset: plain help text, not a control
+            Row
+            {
+                width: parent.width
+                spacing: Theme.space3
+
+                SmlIcon
+                {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: "info"
+                    size: Theme.iconSizeLarge
+                    variant: Theme.iconMuted
+                }
+
+                Text
+                {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - Theme.iconSizeLarge - parent.spacing
+                    text: "Choose a dataset file with Browse. Its description, topic, keywords, applications and profile are extracted and filled in on the problem definition."
+                    textFormat: Text.PlainText
+                    font.family: Theme.uiFontFamily
+                    font.pixelSize: Theme.fontSizeBody
+                    lineHeight: 1.3
+                    color: Theme.textSecondary
+                    wrapMode: Text.WordWrap
+                }
+            }
+
+            Column
+            {
+                width: parent.width
+
+                SmlFieldLabel { text: "Dataset path"; width: parent.width }
+
+                Row
+                {
+                    width: parent.width
+                    spacing: Theme.space2
+
+                    SmlInput {
+                        id: dataset_path_input
+                        height: root.__input_height
+                        width: parent.width - browse_button.width - parent.spacing
+                        placeholder_text: "Select a dataset file..."
+                        monospace: text !== ""
+                        disabled: true
+                    }
+
+                    SmlButton {
+                        id: browse_button
+                        variant: "primary"
+                        icon_name: Settings.browse_icon_name
+                        text_value: "Browse"
+                        tooltip_text: "Browse for a dataset file"
+                        onClicked: dataset_file_dialog_loader.active = true
+                        height: root.__input_height
+                    }
+                }
+            }
+
+            // Tasking status
+            Rectangle
+            {
+                id: tasking_status
+                visible: root.tasking
+                width: parent.width
+                height: 48
+                radius: Theme.radiusMd
+                color: Theme.accentSubtle
+
+                Row
+                {
+                    anchors { left: parent.left; leftMargin: Theme.space4; verticalCenter: parent.verticalCenter }
+                    spacing: Theme.space3
+
+                    // Tasking status icon
+                    SmlGrowingLoader
+                    {
+                        id: tasking_status_icon
+                        anchors.verticalCenter: parent.verticalCenter
+                        size: Theme.iconSizeLarge
+                        running: root.tasking
+                    }
+
+                    // Tasking status text
+                    Text
+                    {
+                        id: tasking_status_text
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Extracting metadata, please wait"
+                        textFormat: Text.PlainText
+                        font.family: Theme.uiFontFamily
+                        font.pixelSize: Theme.fontSizeBody
+                        font.weight: Font.DemiBold
+                        color: Theme.accentText
+                    }
+                }
+            }
         }
     }
-
-    SmlButton {
-        id: browse_button
-        icon_name: Settings.browse_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Browse"
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Browse for a dataset file"
-        anchors
-        {
-            top: dataset_path_input.bottom
-            topMargin: Settings.spacing_normal
-            horizontalCenter: parent.horizontalCenter
-        }
-        onClicked: dataset_file_dialog_loader.active = true
-        height: root.__input_height
-    }
-
 
     // Loaded on demand (only once Browse is clicked) rather than declared
     // directly: QtQuick.Dialogs 1.x's fallback (non-native) FileDialog has a
@@ -173,53 +211,4 @@ Item
             onRejected: dataset_file_dialog_loader.active = false
         }
     }
-
-    // Tasking status text
-    SmlText
-    {
-        id: tasking_status_text
-        visible: root.tasking
-        text_kind: SmlText.TextKind.Header_3
-        font.pixelSize: 25
-        text_value: "Extracting metadata, please wait"
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-            top: browse_button.bottom
-            topMargin: Settings.spacing_big
-        }
-    }
-
-    // Tasking status icon
-    SmlIcon
-    {
-        id: tasking_status_icon
-        visible: root.tasking
-        name:   Settings.bullet_point_icon_name
-        color:  Settings.app_color_green_1
-        color_pressed:  Settings.app_color_green_2
-        nightmode_color:  Settings.app_color_green_4
-        nightmode_color_pressed:  Settings.app_color_green_3
-        size: Settings.button_icon_size
-
-        anchors{
-            verticalCenter: tasking_status_text.verticalCenter
-            left: tasking_status_text.right
-            leftMargin: Settings.spacing_normal
-        }
-    }
-
-    SequentialAnimation {
-        id: tasking_animation
-        running: root.tasking
-        loops: Animation.Infinite
-        NumberAnimation {
-            target: tasking_status_icon
-            property: "rotation"
-            to: 360
-            duration: 4000
-            easing.type: Easing.InOutQuad
-        }
-    }
-
-
 }

@@ -4,12 +4,14 @@ import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 import Qt.labs.qmlmodels 1.0
 import QtQuick.Controls 1.4 as C1
+import QtQuick.Controls.Styles 1.4 as C1Styles
 
 // Project imports
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
 import eProsima.SustainML.Tree 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "../components"
@@ -24,14 +26,19 @@ Rectangle {
 
     // width: 800
     // height: 400
-    color: ScreenManager.night_mode ?  Settings.app_color_dark : Settings.app_color_light
+    color: Theme.surface
 
     // Public signals
     signal component_signal(string viewType, string signal_kind, string id)
 
     // Property to decide the visibles columns
     property var visibleColumns: [0,1,2,3,4,5,6,7,8,9]
-    property var minColumnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185, 185]
+    // The Problem column shows the goal of each iteration, which a CNN problem never has (its
+    // U-Net is chosen directly): when the first iterations shown have none, it is hidden and
+    // left out of the visible columns panel
+    property bool __problem_kind_checked: false
+    property bool __problem_kind_empty: false
+    property var minColumnWidths: [84, 140, 170, 130, 120, 130, 130, 130, 130, 130]
     property int sumMinColumnWidths: {
         var total = 0;
         for (var i = 0; i < minColumnWidths.length; i++) {
@@ -39,13 +46,28 @@ Rectangle {
         }
         return total;
     }
-    property var columnWidths: [80, 160, 180, 150, 140, 160, 170, 170, 185, 185]
+    property var columnWidths: [84, 140, 170, 130, 120, 130, 130, 130, 130, 130]
 
     // Width of both tables, from the visible columns' widths. Set explicitly by
     // relayout_tables() rather than bound to the tables' own contentItem.childrenRect:
     // that binding made each table's width depend on its own laid-out cells, so every
     // relayout (e.g. hiding a column) changed the width it was computed from, a binding loop.
     property real __tables_width: __visible_columns_width() + 1
+
+    // Width shown for a column: 0 when hidden, else its own width, except that the last
+    // visible column also takes the room left when the visible columns together are
+    // narrower than the view (they then fill it). Pure: it never changes columnWidths, so
+    // resizing one column never moves the others.
+    function __column_width(column) {
+        if (visibleColumns.indexOf(column) === -1)
+            return 0
+        if (column === visibleColumns[visibleColumns.length - 1]) {
+            var room = scroll_view.width - 1 - __visible_columns_width()
+            if (room > 0)
+                return columnWidths[column] + room
+        }
+        return columnWidths[column]
+    }
 
     function __visible_columns_width() {
         var w = 0
@@ -54,22 +76,38 @@ Rectangle {
         return w
     }
 
-    // Relayout both tables, then size them (columnWidthProvider may update columnWidths)
+    // Relayout both tables, then size them
     function relayout_tables() {
         general_header_table.forceLayout()
         general_table.forceLayout()
-        __tables_width = __visible_columns_width() + 1
+        __tables_width = Math.max(__visible_columns_width(), scroll_view.width - 1) + 1
     }
+    // Share the spare width of the view equally among the visible columns, so no column takes
+    // all of it. Only on resizes of the view and changes of the visible columns: a column the
+    // user resized keeps its width until then.
+    function __fit_columns() {
+        var flexible = 0
+        for (var i = 0; i < visibleColumns.length; i++)
+            flexible += minColumnWidths[visibleColumns[i]]
+        var extra = scroll_view.width - flexible - 1
+        if (extra <= 0 || flexible <= 0) return
+        var share = Math.floor(extra / visibleColumns.length)
+        for (var j = 0; j < visibleColumns.length; j++) {
+            var c = visibleColumns[j]
+            columnWidths[c] = minColumnWidths[c] + share
+        }
+    }
+
     property var jsonList : []
     readonly property int fixedColumnWidth: 150
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height
     readonly property int __scroll_view_content_height: 700
-    readonly property int __header_height: 40
-    readonly property int __data_height: __header_height * 1.25
-    readonly property int __cell_padding: 10
-    readonly property string __cell_background_color: "#e0e0e0"
-    readonly property string __cell_background_nightmode_color: "#505050"
+    readonly property int __header_height: 48
+    readonly property int __data_height: 48
+    readonly property int __cell_padding: Theme.space3
+    readonly property color __cell_background_color: Theme.cardHeader
+    readonly property color __cell_background_nightmode_color: Theme.cardHeader
 
     TableModel {
         id: table_model
@@ -133,6 +171,14 @@ Rectangle {
 
             jsonList = newList;
             table_model.rows = newRows;
+            if (!root.__problem_kind_checked && newRows.length > 0) {
+                root.__problem_kind_checked = true;
+                if (!newRows.some(function(r) { return r["Problem kind"]; })) {
+                    root.__problem_kind_empty = true;
+                    visibleColumns = visibleColumns.filter(function(item) { return item !== 1; });
+                    root.__fit_columns();
+                }
+            }
             root.relayout_tables();
         }
     }
@@ -143,6 +189,7 @@ Rectangle {
     Rectangle {
         id: splitRow
         anchors.fill: parent
+        color: Theme.surface
 
         SmlScrollView
         {
@@ -155,9 +202,8 @@ Rectangle {
             content_width: general_header_table.contentWidth
             // content_height: general_header_table.height + general_table.height + 1
             layout: SmlScrollBar.ScrollBarLayout.Horizontal
-            scrollbar_background_color: Settings.app_color_light
-            scrollbar_background_nightmodel_color: Settings.app_color_dark
             interactive: false
+            onWidthChanged: root.__fit_columns()
 
             // Header
             Rectangle {
@@ -188,42 +234,7 @@ Rectangle {
                     }
 
                     boundsBehavior: Flickable.StopAtBounds
-                    columnWidthProvider: function (column) {
-                        {
-                            if (visibleColumns.indexOf(column) === -1)
-                                return 0;
-                            var idx = visibleColumns.indexOf(column);
-                            var currentWidth = columnWidths[column];
-                            if (idx === visibleColumns.length - 1 && scroll_view.width > sumMinColumnWidths) {
-                                var sum = 0;
-                                for (var i = 0; i < visibleColumns.length - 1; i++) {
-                                    sum += columnWidths[visibleColumns[i]];
-                                }
-                                var total = scroll_view.width - sum;
-                                if (total <= minColumnWidths[visibleColumns[visibleColumns.length - 1]]) {
-                                    columnWidths[column] = minColumnWidths[column];
-                                    var reduction = columnWidths[column];
-                                    var idx = visibleColumns.length - 2;
-                                    while (reduction > 0 && idx >= 0) {
-                                        var colIndex = visibleColumns[idx];
-                                        var available = columnWidths[colIndex] - minColumnWidths[colIndex];
-                                        if (available >= reduction) {
-                                            columnWidths[colIndex] -= reduction;
-                                            reduction = 0;
-                                        } else {
-                                            columnWidths[colIndex] = minColumnWidths[colIndex];
-                                            reduction -= available;
-                                        }
-                                        idx--;
-                                    }
-                                    return minColumnWidths[column];
-                                }
-                                columnWidths[visibleColumns[visibleColumns.length - 1]] = total;
-                                return total;
-                            }
-                            return currentWidth;
-                        }
-                    }
+                    columnWidthProvider: function (column) { return root.__column_width(column) }
                     width: root.__tables_width
                     contentWidth: root.__tables_width
                     // onWidthChanged: forceLayout()
@@ -261,41 +272,42 @@ Rectangle {
                         implicitHeight: __header_height
                         color: "transparent"
                         // border.width: 1
-                        SmlText
+                        Text
                         {
-                            anchors.centerIn: parent
-                            height: __header_height
-                            text_kind: SmlText.TextKind.Header_3
-                            text_value: model.display
-                            padding: __cell_padding + 1
-                            force_size: true
+                            anchors.fill: parent
+                            leftPadding: __cell_padding
+                            rightPadding: Theme.space2
+                            verticalAlignment: Text.AlignVCenter
+                            text: model.display
+                            textFormat: Text.PlainText
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
+                            font.weight: Font.DemiBold
+                            color: Theme.textSecondary
+                            wrapMode: Text.WordWrap
+                            maximumLineCount: 2
+                            elide: Text.ElideRight
                         }
 
-                        // Bottom horizontal border (dark tone)
+                        // Bottom border
                         Rectangle {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
-                            height: 0.5
-                            color: "#666666"
-                        }
-                        Rectangle {
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            height: 0.5
-                            color: "#666666"
+                            height: 1
+                            color: Theme.borderStrong
                         }
 
-                        // Right vertical border (lighter tone)
+                        // Column separator (also where the column is resized), not after the last visible column
                         Rectangle {
+                            visible: index !== visibleColumns[visibleColumns.length - 1]
                             anchors.top: parent.top
-                            anchors.topMargin: parent.height * 0.125
+                            anchors.topMargin: Theme.space3
                             anchors.bottom: parent.bottom
-                            anchors.bottomMargin: parent.height * 0.125
+                            anchors.bottomMargin: Theme.space3
                             anchors.right: parent.right
-                            width: 0.5
-                            color: "#AAAAAA"
+                            width: 1
+                            color: Theme.border
                         }
 
                         // MouseArea to capture right-click and show a context menu
@@ -315,7 +327,7 @@ Rectangle {
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                             onEntered: {
                                 if (enabled)
-                                    parent.color = "#f0f0f0" // slightly changed background color
+                                    parent.color = Theme.accentSubtle // slightly changed background color
                             }
                             onExited: {
                                 parent.color = "transparent"
@@ -327,15 +339,17 @@ Rectangle {
                             }
                         }
 
-                        Menu {
+                        SmlMenu {
                             id: contextMenu
-                            MenuItem {
+                            SmlMenuItem {
+                                icon_name: "scale"
                                 text: "Compare"
                                 onTriggered: {
                                     root.component_signal("iteration_view", "add_to_compare", model.display);
                                 }
                             }
-                            MenuItem {
+                            SmlMenuItem {
+                                icon_name: "info"
                                 text: "More info"
                                 onTriggered: {
                                     metricInfoPopup.metricName = model.display
@@ -362,7 +376,7 @@ Rectangle {
 
                             onPressed: {
                                 initialGlobalX = mapToItem(null, mouse.x, mouse.y).x;
-                                initialWidth = columnWidths[index];
+                                initialWidth = root.__column_width(index);
                             }
                             onPositionChanged: {
                                 var currentGlobalX = mapToItem(null, mouse.x, mouse.y).x;
@@ -387,8 +401,6 @@ Rectangle {
                 height: root.height - headerRect.height
                 contentHeight: general_table.contentHeight + 20
                 layout: SmlScrollBar.ScrollBarLayout.Vertical
-                scrollbar_background_color: Settings.app_color_light
-                scrollbar_background_nightmodel_color: Settings.app_color_dark
                 flickableDirection: Flickable.VerticalFlick
 
                 Rectangle {
@@ -413,42 +425,7 @@ Rectangle {
                             bottom: parent.bottom
                         }
                         rowHeightProvider: function(row) { return root.__data_height }
-                        columnWidthProvider: function (column) {
-                            {
-                                if (visibleColumns.indexOf(column) === -1)
-                                    return 0;
-                                var idx = visibleColumns.indexOf(column);
-                                var currentWidth = columnWidths[column];
-                                if (idx === visibleColumns.length - 1 && scroll_view.width > sumMinColumnWidths) {
-                                    var sum = 0;
-                                    for (var i = 0; i < visibleColumns.length - 1; i++) {
-                                        sum += columnWidths[visibleColumns[i]];
-                                    }
-                                    var total = scroll_view.width - sum;
-                                    if (total <= minColumnWidths[visibleColumns[visibleColumns.length - 1]]) {
-                                        columnWidths[column] = minColumnWidths[column];
-                                        var reduction = columnWidths[column];
-                                        var idx = visibleColumns.length - 2;
-                                        while (reduction > 0 && idx >= 0) {
-                                            var colIndex = visibleColumns[idx];
-                                            var available = columnWidths[colIndex] - minColumnWidths[colIndex];
-                                            if (available >= reduction) {
-                                                columnWidths[colIndex] -= reduction;
-                                                reduction = 0;
-                                            } else {
-                                                columnWidths[colIndex] = minColumnWidths[colIndex];
-                                                reduction -= available;
-                                            }
-                                            idx--;
-                                        }
-                                        return minColumnWidths[column];
-                                    }
-                                    columnWidths[visibleColumns[visibleColumns.length - 1]] = total;
-                                    return total;
-                                }
-                                return currentWidth;
-                            }
-                        }
+                        columnWidthProvider: function (column) { return root.__column_width(column) }
                         width: root.__tables_width
                         contentWidth: root.__tables_width
 
@@ -466,9 +443,9 @@ Rectangle {
                                 anchors.centerIn: parent
                                 text_kind: SmlText.TextKind.Body
                                 text_value: model.display
-                                padding: __cell_padding
-                                force_size: true
-                                forced_size: 14
+                                leftPadding: __cell_padding
+                                rightPadding: Theme.space2
+                                font.family: column >= 4 ? Theme.monoFontFamily : Theme.uiFontFamily
                                 wrapMode: Text.WordWrap
                             }
 
@@ -496,30 +473,20 @@ Rectangle {
                                     topPadding: 4
                                     bottomPadding: 4
 
-                                    font.family: SustainMLFont.body_font
-                                    font.pixelSize: 14
-                                    color: ScreenManager.body_font_color
+                                    font.family: Theme.uiFontFamily
+                                    font.pixelSize: Theme.fontSizeBody
+                                    font.weight: Font.DemiBold
+                                    color: Theme.textPrimary
                                 }
                             }
 
-                            // Bottom horizontal border (dark tone)
+                            // Row divider
                             Rectangle {
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.bottom: parent.bottom
-                                height: 0.5
-                                color: "#666666"
-                            }
-
-                            // Right vertical border (lighter tone)
-                            Rectangle {
-                                anchors.top: parent.top
-                                anchors.topMargin: parent.height * 0.125
-                                anchors.bottom: parent.bottom
-                                anchors.bottomMargin: parent.height * 0.125
-                                anchors.right: parent.right
-                                width: 0.5
-                                color: "#AAAAAA"
+                                height: 1
+                                color: Theme.border
                             }
 
                             // MouseArea to capture right-click and show a context menu
@@ -539,7 +506,7 @@ Rectangle {
                                 cursorShape: (column === 0 || column === 2) ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onEntered: {
                                     if (enabled)
-                                        parent.color = "#f0f0f0" // slightly changed background color
+                                        parent.color = Theme.accentSubtle // slightly changed background color
                                 }
                                 onExited: {
                                     parent.color = "transparent"
@@ -560,9 +527,10 @@ Rectangle {
                                 }
                             }
 
-                            Menu {
+                            SmlMenu {
                                 id: contextMenuData
-                                MenuItem {
+                                SmlMenuItem {
+                                    icon_name: "info"
                                     text: "More info"
                                     onTriggered: {
                                         infoPopup.iteration = iterationValue;
@@ -571,9 +539,10 @@ Rectangle {
                                 }
                             }
 
-                            Menu {
+                            SmlMenu {
                                 id: hfMenu
-                                MenuItem {
+                                SmlMenuItem {
+                                    icon_name: "external"
                                     text: "More on HF"
                                     onTriggered: {
                                         var modelName = model.display;
@@ -603,7 +572,7 @@ Rectangle {
 
                                 onPressed: {
                                     initialGlobalX = mapToItem(null, mouse.x, mouse.y).x;
-                                    initialWidth = columnWidths[column];
+                                    initialWidth = root.__column_width(column);
                                 }
                                 onPositionChanged: {
                                     var currentGlobalX = mapToItem(null, mouse.x, mouse.y).x;
@@ -625,12 +594,13 @@ Rectangle {
             id: sidePanel
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            width: root.currentState === "collapsed" ? 0 : 200
-            height: 450
-            color: "#d0d0d0"
-            opacity: 0.85
-            border.color: "#a0a0a0"
-            radius: 1
+            // Nothing of it drawn while closed (its outline would show as a line on the edge)
+            visible: width > 0
+            width: root.currentState === "collapsed" ? 0 : 220
+            height: sideColumn.implicitHeight + 2 * Theme.space4
+            color: Theme.overlay
+            border.color: Theme.borderStrong
+            radius: Theme.radiusMd
 
             Column {
                 id: sideColumn
@@ -638,10 +608,21 @@ Rectangle {
                 opacity: 0.9
                 property real offset: root.currentState === "expanded" ? 0 : 100
 
-                spacing: 5
+                spacing: Theme.space3
                 anchors {
-                    horizontalCenter: parent.horizontalCenter
+                    left: parent.left
+                    leftMargin: Theme.space4
                     verticalCenter: parent.verticalCenter
+                }
+
+                Text {
+                    text: "VISIBLE COLUMNS"
+                    font.family: Theme.uiFontFamily
+                    font.pixelSize: Theme.fontSizeMicro
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                    color: Theme.textMuted
+                    bottomPadding: Theme.space1
                 }
 
                 transform: Translate { x: sideColumn.offset }
@@ -653,12 +634,15 @@ Rectangle {
                 Repeater {
                     model: [1,2,3,4,5,6,7,8,9]
                     delegate: Row {
-                        spacing: 5
-                        CheckBox {
+                        spacing: Theme.space2
+                        visible: modelData !== 1 || !root.__problem_kind_empty
+                        SmlCheckBox {
                             id: columnCheckBox
                             checked: visibleColumns.indexOf(modelData) !== -1
-                            scale: 0.7
-                            onCheckedChanged: {
+                            // Clicks only: a change of visibleColumns from code (hiding an empty
+                            // column) updates checked through the binding above, and setting
+                            // visibleColumns again from here would loop that binding
+                            onToggled: {
                                 if (checked) {
                                     if (visibleColumns.indexOf(modelData) === -1) {
                                         visibleColumns = visibleColumns.concat([modelData]).sort(function(a, b) { return a - b; });
@@ -666,11 +650,15 @@ Rectangle {
                                 } else {
                                     visibleColumns = visibleColumns.filter(function(item) { return item !== modelData; });
                                 }
+                                root.__fit_columns();
                                 root.relayout_tables();
                             }
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeBody
+                            color: Theme.textPrimary
                             text: {
                                 var headers = ["Problem", "ML Model", "Hardware", "Latency", "Power Consumption", "Carbon Footprint", "Carbon Intensity", "Energy Consumption", "Memory Footprint"];
                                 return headers[modelData - 1];
@@ -681,23 +669,76 @@ Rectangle {
             }
         }
 
+        // Handle of the visible columns panel: a tab on the right edge (table icon, and a chevron
+        // pointing where the panel moves), which slides out with the panel. Flat on its right
+        // side, over the panel's outline, so the two read as one piece when open.
         Button {
             id: toggleButton
+            readonly property bool open_: root.currentState === "expanded"
             text: ""
-            width: 10
-            height: sidePanel.height
-            background: Rectangle {
-                color: Settings.app_color_green_1    // using app_color_green_1
-                opacity: 1
-                border.color: "#333333"
-                border.width: 1
-                radius: 4
-            }
+            width: 28
+            height: 60
+            hoverEnabled: true
+            focusPolicy: Qt.TabFocus
+            Accessible.name: open_ ? "Hide the visible columns" : "Choose the visible columns"
             anchors {
                 right: sidePanel.left
-                rightMargin: -2
+                rightMargin: sidePanel.visible ? -1 : 0
                 verticalCenter: sidePanel.verticalCenter
             }
+
+            background: Item {
+                clip: true
+                Rectangle {
+                    anchors { fill: parent; rightMargin: -radius }
+                    radius: Theme.radiusMd
+                    color: Theme.overlay
+                    border.width: 1
+                    border.color: toggleButton.hovered || toggleButton.visualFocus ? Theme.brandGreen : Theme.borderStrong
+                    Behavior on border.color { ColorAnimation { duration: Theme.durFast } }
+
+                    // Hover and press veil, as on the other buttons
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: parent.radius
+                        color: toggleButton.down ? Theme.accentSubtleStrong
+                             : toggleButton.hovered ? Theme.accentSubtle : Theme.transparent
+                        Behavior on color { ColorAnimation { duration: Theme.durFast } }
+                    }
+                }
+            }
+
+            contentItem: Item {
+                Column {
+                    anchors.centerIn: parent
+                    spacing: Theme.space1
+                    SmlIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        name: "table"
+                        size: Theme.iconSizeDense
+                        variant: Theme.iconDefault
+                    }
+                    SmlIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        name: toggleButton.open_ ? "chevron_right" : "chevron_left"
+                        size: Theme.iconSizeDense
+                        variant: Theme.iconMuted
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.NoButton
+                cursorShape: Qt.PointingHandCursor
+            }
+
+            SmlToolTip {
+                visible: toggleButton.hovered && !toggleButton.pressed
+                text: toggleButton.Accessible.name
+                delay: 400
+            }
+
             onClicked: {
                 root.currentState = root.currentState === "collapsed" ? "expanded" : "collapsed";
             }
@@ -715,7 +756,7 @@ Rectangle {
         State {
             name: "expanded"
             PropertyChanges {
-                target: sidePanel; width: 200
+                target: sidePanel; width: 220
             }
         }
     ]
@@ -751,15 +792,17 @@ Rectangle {
 
         Rectangle {
             anchors.fill: parent
-            color: "white"
-            border.color: "#cccccc"
+            color: Theme.overlay
+            border.color: Theme.borderStrong
 
-            Button {
-                text: "X"
+            SmlIconButton {
                 anchors.top: parent.top
+                anchors.topMargin: Theme.space2
                 anchors.right: parent.right
-                width: 20
-                height: 20
+                anchors.rightMargin: Theme.space2
+                button_size: Theme.controlHeightSm
+                icon_name: "cross"
+                tooltip_text: "Close"
                 onClicked: infoPopup.close()
             }
 
@@ -767,12 +810,12 @@ Rectangle {
                 id: iterationTextHeader
                 anchors {
                     top: parent.top
-                    topMargin: Settings.spacing_small
-                    horizontalCenter: parent.horizontalCenter
+                    topMargin: Theme.space4
+                    left: parent.left
+                    leftMargin: Theme.space5
                 }
                 text_value: "Iteration " + infoPopup.iteration
-                text_kind: SmlText.TextKind.Header_3
-                font.bold: true
+                text_kind: SmlText.TextKind.Header_2
 
             }
 
@@ -814,14 +857,57 @@ Rectangle {
                     left: parent.left
                     right: parent.right
                     bottom: parent.bottom
-                    topMargin: Settings.spacing_normal
-                    leftMargin: Settings.spacing_normal
-                    rightMargin: Settings.spacing_normal
+                    topMargin: Theme.space3
+                    leftMargin: Theme.space4
+                    rightMargin: Theme.space4
                 }
                 model: jsonTreeModel
                 clip: true
                 selectionMode: C1.SelectionMode.NoSelection
                 frameVisible: false
+                backgroundVisible: false
+                alternatingRowColors: false
+
+                headerDelegate: Rectangle {
+                    height: 30
+                    color: Theme.cardHeader
+                    Text {
+                        anchors.fill: parent
+                        leftPadding: Theme.space2
+                        verticalAlignment: Text.AlignVCenter
+                        text: styleData.value
+                        font.family: Theme.uiFontFamily
+                        font.pixelSize: Theme.fontSizeMeta
+                        font.weight: Font.DemiBold
+                        color: Theme.textSecondary
+                    }
+                    Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.border }
+                }
+                rowDelegate: Rectangle {
+                    height: 26
+                    color: "transparent"
+                }
+
+                // Slim green scroll bars, as everywhere else
+                style: C1Styles.TreeViewStyle {
+                    transientScrollBars: false
+                    scrollBarBackground: Item { implicitWidth: 10; implicitHeight: 10 }
+                    incrementControl: Item { }
+                    decrementControl: Item { }
+                    corner: Item { }
+                    handle: Item {
+                        implicitWidth: 10
+                        implicitHeight: 10
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 2
+                            radius: 3
+                            color: styleData.pressed ? Theme.accentFillPressed
+                                 : styleData.hovered ? Theme.accentFillHover : Theme.brandGreenBright
+                            opacity: styleData.hovered || styleData.pressed ? 1.0 : 0.75
+                        }
+                    }
+                }
 
                 itemDelegate: Item {
 
@@ -829,8 +915,10 @@ Rectangle {
                         anchors.fill: parent
                         elide: styleData.elideMode
                         text: styleData.value
-                        font.family: styleData.column === 0 ? SustainMLFont.body_font : "monospace"
-                        color: "black"
+                        verticalAlignment: Text.AlignVCenter
+                        font.family: styleData.column === 0 ? Theme.uiFontFamily : Theme.monoFontFamily
+                        font.pixelSize: Theme.fontSizeBody
+                        color: styleData.column === 0 ? Theme.textSecondary : Theme.textPrimary
                     }
                 }
 
@@ -904,25 +992,24 @@ Rectangle {
         }
 
         background: Rectangle {
-            color: "white"
-            border.color: "#888"
-            radius: 6
+            color: Theme.overlay
+            border.color: Theme.borderStrong
+            radius: Theme.radiusLg
         }
 
-        Button {
-            text: "X"
+        SmlIconButton {
             anchors.top: parent.top
             anchors.right: parent.right
-            width: 20
-            height: 20
+            button_size: Theme.controlHeightSm
+            icon_name: "cross"
+            tooltip_text: "Close"
             onClicked: metricInfoPopup.close()
         }
 
         SmlText {
             id: metricTitle
-            text_kind: SmlText.TextKind.Header_3
+            text_kind: SmlText.TextKind.Header_2
             text_value: metricInfoPopup.metricName
-            font.bold: true
             anchors {
                 top: parent.top
                 topMargin: 12
@@ -948,8 +1035,6 @@ Rectangle {
             }
             content_height: descText.implicitHeight
             layout: SmlScrollBar.ScrollBarLayout.Vertical
-            scrollbar_background_color: Settings.app_color_light
-            scrollbar_background_nightmodel_color: Settings.app_color_dark
             clip: true
 
             SmlText {

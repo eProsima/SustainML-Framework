@@ -7,6 +7,7 @@ import QtQuick.Controls 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "../components"
@@ -17,9 +18,7 @@ Item
     id: root
 
     // Internal properties
-    readonly property int __margin: Settings.spacing_big * 1
-    readonly property int __input_height: 50
-    readonly property int __input_height_big: 120
+    readonly property int __margin: Theme.space5
 
     // Input values
     property string __problem_short_description: ""
@@ -70,8 +69,24 @@ Item
     property string __dataset_keywords: ""
     property string __dataset_applications: ""
     property bool __refreshing: false
+    // Iteration info view (the info button of a Results row): every field is read-only and
+    // shows what that iteration ran with, and the footer actions are hidden
     property bool __reiterate: false
     property bool __initializing: true
+    // The iteration evaluated a Hugging Face model (its Analyze button)
+    property bool __hf_analyze: false
+    // What the info view leaves out. A HF model was found for the problem description and
+    // evaluated as is, so that description is all it shows. A model chosen from the list (always
+    // a U-Net for CNNs) is evaluated as is too: the description, inputs, outputs, samples, search,
+    // dataset and optimization fields never apply to it, so it shows the type, goal (none for
+    // CNNs), hardware, model and location
+    readonly property bool __info_hf: root.__reiterate && root.__hf_analyze
+    readonly property bool __info_chosen: root.__reiterate && !root.__hf_analyze &&
+                                          (root.__model_selected !== "" || root.__cnn_mode)
+    readonly property bool __info_cnn: root.__info_chosen && root.__cnn_mode
+    // The description the HF search used: the problem definition, else the short description
+    readonly property bool __hf_used_definition: root.__problem_definition.trim() !== "" ||
+                                                 root.__problem_short_description.trim() === ""
 
     property string __dataset_metadata_description: __dataset_description
     property string __dataset_metadata_topic: __dataset_topic
@@ -125,7 +140,6 @@ Item
         string keywords,
         string applications
     )
-    signal refresh()
     signal ask_models(
         string goal_type
     )
@@ -149,15 +163,20 @@ Item
                           maximum_samples, optimize_carbon_footprint_manual,
                           previous_iteration, optimize_carbon_footprint_auto,
                           desired_carbon_footprint, geo_location_continent,
-                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type, is_reiteration)
+                          geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type, is_reiteration,
+                          model_selected, hf_analyze)
         {
+            // Each form takes only its own request: the iteration info view (is_reiteration)
+            // or Back from Results (the problem definition form). Both are alive at once, and
+            // opening an iteration's info must not refill the problem definition form, lock
+            // its goal and turn its next submit into a new iteration of that problem.
+            if (is_reiteration !== root.__reiterate)
+                return
             root.__problem_short_description = problem_short_description
             root.__types = type
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
-            root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
-                    dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
             root.__minimum_samples = minimum_samples
             root.__maximum_samples = maximum_samples
             root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
@@ -165,36 +184,54 @@ Item
             root.__desired_carbon_footprint = desired_carbon_footprint
             root.__geo_location_continent = geo_location_continent
             root.__geo_location_region = geo_location_region
-            // Back from Results (is_reiteration false) must always land on an editable
-            // form: a restored Model goal would disable the problem description fields,
-            // so it is left empty. Re-iterating keeps the original goal.
-            root.__goal = is_reiteration ? goal : ""
-            // Not carried by this signal at all (no model_selected parameter above),
-            // so there's nothing to restore it to - but it must still be reset to ""
-            // here, otherwise a model chosen via the CNN+FPGA direct-model-selection
-            // path (see required_hardware_input above) stays stuck non-empty forever,
-            // permanently disabling every field gated by "__model_selected !== \"\""
-            // (min/max samples, num_outputs, etc.) even after going back to submit a
-            // different model. The goal-driven path never sets this in the first
-            // place, which is why only the CNN+FPGA flow showed this symptom.
-            root.__model_selected = ""
-            root.__model_selected_copy = ""
-            // Restore the hardware on Back (after __types above, whose change resets the
-            // hardware to the type's default), if it is valid for the restored type
-            if (!is_reiteration && hardware_required !== "" &&
-                    root.filteredHardwareList().indexOf(hardware_required) !== -1)
+            if (root.__reiterate)
+            {
+                // Iteration info view: exactly what the iteration was run with. Its own copy of
+                // the dataset metadata, as it is not bound to main_window's
+                root.__dataset_description = dataset_metadata_description
+                root.__dataset_topic = dataset_metadata_topic
+                root.__dataset_profile = dataset_metadata_profile
+                root.__dataset_keywords = dataset_metadata_keywords
+                root.__dataset_applications = dataset_metadata_applications
+                root.__goal = goal
+                root.__model_selected = model_selected
+                root.__model_selected_copy = model_selected
                 root.__hardware_required = hardware_required
+                root.__num_outputs = num_outputs > 0 ? num_outputs : 1
+                num_outputs_input.text = root.__num_outputs
+                root.__hf_analyze = hf_analyze
+            }
+            else
+            {
+                // Back from Results: an editable form for a new problem. A restored goal or model
+                // would disable the problem description fields, so both are left empty (a model
+                // from the CNN+FPGA direct selection would otherwise stay stuck for good,
+                // disabling every field gated by "__model_selected !== \"\"")
+                root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
+                        dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
+                root.__goal = ""
+                root.__model_selected = ""
+                root.__model_selected_copy = ""
+                // After __types above, whose change resets the hardware to the type's default;
+                // only if it is valid for the restored type
+                if (hardware_required !== "" &&
+                        root.filteredHardwareList().indexOf(hardware_required) !== -1)
+                    root.__hardware_required = hardware_required
+            }
             root.__max_memory_footprint = max_memory_footprint
             // Set explicitly: Clear all assigns these texts, which removes their bindings
+            // (as does emptying a samples field), so the fields would otherwise look empty,
+            // or keep older text, while the restored values are sent
+            problem_short_description_input.text = problem_short_description
+            problem_definition_input.text = problem_definition
+            inputs_input.text = inputs
+            outputs_input.text = outputs
+            minimum_samples_input.text = minimum_samples > 1 ? minimum_samples : ""
+            maximum_samples_input.text = maximum_samples > 1 ? maximum_samples : ""
             desired_carbon_footprint_input.text = desired_carbon_footprint === 0 ? "" : desired_carbon_footprint
             max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
             root.__previous_problem_id = 0
-            if (is_reiteration)
-            {
-                root.__previous_iteration = iteration_id
-                root.__previous_problem_id = problem_id
-            }
         }
 
         function onNotSupportProblem(error_msg)
@@ -213,1414 +250,157 @@ Item
         onClicked: focus = true
     }
 
-    // Go results button
-    SmlButton
+
+    // Widths of the form columns inside a card
+    readonly property int __input_height: 38
+    readonly property int __input_height_big: 104
+    readonly property int __input_height_medium: 80
+    // Multi-line fields grow in the iteration info view to show all their text (read-only, so
+    // they cannot scroll)
+    function __col(width, n) { return (width - (n - 1) * Theme.space4) / n }
+    // Position of a field in the scrolled form, to bring it into view when focused
+    function __form_y(item) { return item.mapToItem(scroll_view.contentItem, 0, 0).y }
+
+    // Screen header: title, refresh status and the ways out of this screen
+    SmlScreenHeader
     {
-        id: go_results
-        icon_name: Settings.results_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Results"
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Go to Results screen"
-        anchors
-        {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-            // Align with the fields below (e.g. scroll_view's left: parent.left +
-            // root.__margin), instead of the tighter spacing_normal every other
-            // top-bar button row in this app uses.
-            left: parent.left
-            leftMargin: root.__margin
-        }
-        onClicked: root.go_results()
-    }
+        id: header
+        title: root.__reiterate ? "Iteration inputs" : "Problem definition"
+        subtitle: root.__info_hf ? "The problem description the Hugging Face model was analyzed for"
+                  : root.__reiterate ? "What this iteration was run with"
+                  : "Describe the ML problem to find the most efficient model and hardware"
+        reserved_right: root.__reiterate ? Theme.space5 : Theme.controlHeight + Theme.space4 + Theme.space3
 
-    // Go dataset path button
-    SmlButton
-    {
-        id: dataset_path_button
-        visible: !root.__reiterate
-        // The dataset metadata only feeds the Transformers search
-        disabled: root.__cnn_mode
-        icon_name: Settings.upload_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Upload dataset"
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Go to Dataset Selector screen"
-        anchors
-        {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-            left: go_results.right
-            leftMargin: Settings.spacing_normal
-        }
-        onClicked: root.go_dataset_path()
-    }
-
-    // Go unet models button
-    SmlButton
-    {
-        id: unet_models_button
-        visible: !root.__reiterate
-        icon_name: Settings.start_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "U-Net models"
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Go to U-Net models screen"
-        anchors
-        {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-            left: dataset_path_button.right
-            leftMargin: Settings.spacing_normal
-        }
-        onClicked: {
-            var cfg = "U_NET_MODELS, FPGA (xczu19eg-ffvb1517-2-i), CNNs"
-            root.ask_models(cfg)
-            root.go_unet_models()
-        }
-    }
-
-
-    SmlScrollView
-    {
-        id: scroll_view
-
-        anchors
-        {
-            top: go_results.bottom
-            topMargin: Settings.spacing_normal
-            left: parent.left
-            leftMargin: root.__margin
-            right: parent.right
-            rightMargin: root.__margin
-            bottom: submit_button.top
-            bottomMargin: Settings.spacing_normal
-        }
-
-        content_height: geo_location_region_input.y + geo_location_region_input.height - problem_short_description_header.y
-
-        // Background mouse area
-        MouseArea
-        {
-            anchors.fill: parent
-            onClicked: focus = true
-        }
-
-        // Problem short description
-        SmlText
-        {
-            id: problem_short_description_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Problem short description"
-            color: problem_short_description_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
+        actions: [
+            // Loading indicator: shown only while the app is starting up (__initializing),
+            // never again afterwards - later refreshes (HF search, dataset metadata, U-Net
+            // list) reuse the same __refreshing flag but must not bring this back
+            SmlChip
             {
-            top: parent.top
-            left: parent.left
-            }
-        }
-        SmlInput
-        {
-            id: problem_short_description_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__problem_short_description
-            placeholder_text: "Resume briefly the objective of the problem"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: scroll_view.width * 0.9
-            height: root.__input_height
-            KeyNavigation.tab: problem_definition_input
-            anchors
-            {
-                top: problem_short_description_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: problem_short_description_header.left
-            }
-            onTextChanged:
-            {
-                root.__problem_short_description = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(problem_short_description_input.y - Settings.spacing_big)
-                }
-            }
-        }
+                id: loading_text
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.__initializing
+                text: "Initializing..."
+                tone: "accent"
+                pulse: true
+            },
 
-        // Problem definition
-        SmlText
-        {
-            id: problem_definition_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Problem definition"
-            color: problem_definition_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
+            // Spins while initializing, then disappears for good - not interactive, there
+            // is no click action (see loading_animation below for the spin)
+            SmlIconButton
             {
-                top: problem_short_description_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlInput
-        {
-            id: problem_definition_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__problem_definition
-            placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: scroll_view.width * 0.9
-            height: root.__input_height_big
-            KeyNavigation.tab: types_input
-            anchors
-            {
-                top: problem_definition_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: problem_definition_header.left
-            }
-            onTextChanged:
-            {
-                root.__problem_definition = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(problem_definition_input.y - Settings.spacing_big)
-                }
-            }
-        }
+                id: refresh_button
+                visible: root.__initializing
+                icon_name: Settings.refresh_icon_name
+                focusPolicy: Qt.NoFocus
+                hoverEnabled: false
+            },
 
-         // Types
-        SmlText
-        {
-            id: types_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Type limiter"
-            color: types_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
+            // Go results button
+            SmlButton
             {
-                top: problem_definition_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            focus: true
-            disabled: false
-            id: types_input
-            displayText: root.__types
-            placeholder_text: displayText !== "" ? "" : "Select type limiter"
-            model: ["Transformers", "CNNs"]
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: scroll_view.width * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: inputs_input
-            anchors
+                id: go_results
+                icon_name: Settings.results_icon_name
+                text_value: "Results"
+                tooltip_text: "Go to Results screen"
+                onClicked: root.go_results()
+            },
+
+            // Go dataset path button
+            SmlButton
             {
-                top: types_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: types_header.left
-            }
-            onModelChanged:
+                id: dataset_path_button
+                visible: !root.__reiterate
+                // The dataset metadata only feeds the Transformers search
+                disabled: root.__cnn_mode
+                icon_name: Settings.upload_icon_name
+                text_value: "Upload dataset"
+                tooltip_text: "Go to Dataset Selector screen"
+                onClicked: root.go_dataset_path()
+            },
+
+            // Go unet models button
+            SmlButton
             {
-                types_input.currentIndex = -1
-            }
-            onText_changed:
-            {
-                root.__types = text
-
-                // A model chosen for the previous type (e.g. a U-Net for CNNs) does not apply
-                // to the new one, and while set it disables the goal and description fields
-                if (text !== "") {
-                    root.__model_selected = ""
-                    root.__model_selected_copy = ""
-                    model_select_input.currentIndex = -1
-                }
-
-                if (text.toLowerCase() === "cnns") {
-                    // Default hardware to FPGA when CNNs are selected
-                    root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
-                    required_hardware_input.currentIndex = -1    // use displayText
-
-                    // CNN + FPGA → U-NET fast path: clear goal & request models
-                    // (goal_input.disabled follows from __types/__hardware_required declaratively)
-                    root.__goal = ""
-
-                    var cfg = "U_NET_MODELS, " +
-                            root.__hardware_required + ", " + text
+                id: unet_models_button
+                visible: !root.__reiterate
+                icon_name: "network"
+                text_value: "U-Net models"
+                tooltip_text: "Go to U-Net models screen"
+                onClicked: {
+                    var cfg = "U_NET_MODELS, FPGA (xczu19eg-ffvb1517-2-i), CNNs"
                     root.ask_models(cfg)
+                    root.go_unet_models()
                 }
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    // Enabling selecting the same item in 2 consecutive runs
-                    types_input.currentIndex = -1
-                    types_input.open()
-                    types_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                inputs_input.focus = true
-            }
-        }
+            },
 
-        // Inputs
-        SmlText
-        {
-            id: inputs_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Inputs"
-            color: inputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: types_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlInput
-        {
-            id: inputs_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__inputs
-            placeholder_text: "Describe a sequence of serialized batches of input data"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height_big * 0.75
-            KeyNavigation.tab: outputs_input
-            anchors
-            {
-                top: inputs_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: inputs_header.left
-            }
-            onTextChanged:
-            {
-                root.__inputs = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(inputs_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Outputs
-        SmlText
-        {
-            id: outputs_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Outputs"
-            color: outputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: inputs_header.top
-                left: inputs_input.right
-                leftMargin: Settings.spacing_big
-            }
-        }
-        SmlInput
-        {
-            id: outputs_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__outputs
-            placeholder_text: "Describe a sequence of serialized batches of output data"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height_big * 0.75
-            KeyNavigation.tab: minimum_samples_input
-            anchors
-            {
-                top: outputs_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: outputs_header.left
-            }
-            onTextChanged:
-            {
-                root.__outputs = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(outputs_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Minimum samples
-        SmlText
-        {
-            id: minimum_samples_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Minimum samples"
-            color: minimum_samples_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: outputs_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlInput
-        {
-            id: minimum_samples_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
-            // Not IntValidator: it's locale-aware and treats the locale's group
-            // separator (a comma, in many locales) as acceptable input. A plain
-            // digit-only pattern has no such leniency.
-            validator: RegExpValidator { regExp: /^[0-9]*$/ }
-            placeholder_text: "Min samples required (only numbers)"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
-            height: root.__input_height
-            KeyNavigation.tab: maximum_samples_input
-            anchors
-            {
-                top: minimum_samples_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: minimum_samples_header.left
-            }
-            onTextChanged:
-            {
-                var num = parseInt(text)
-                if (!isNaN(num)) {
-                    root.__minimum_samples = num
-                } else {
-                    text = ""
-                }
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(minimum_samples_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Maximum samples
-        SmlText
-        {
-            id: maximum_samples_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Maximum samples"
-            color: maximum_samples_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: minimum_samples_header.top
-                left: minimum_samples_input.right
-                leftMargin: Settings.spacing_small
-            }
-        }
-        SmlInput
-        {
-            id: maximum_samples_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
-            validator: RegExpValidator { regExp: /^[0-9]*$/ }
-            placeholder_text: "Max samples required (only numbers)"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
-            height: root.__input_height
-            KeyNavigation.tab: goal_input
-            anchors
-            {
-                top: maximum_samples_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: maximum_samples_header.left
-            }
-            onTextChanged:
-            {
-                var num = parseInt(text)
-                if (!isNaN(num)) {
-                    root.__maximum_samples = num
-                } else {
-                    text = ""
-                }
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(maximum_samples_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Goal selection
-        SmlText
-        {
-            id: goal_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Model goal"
-            color: goal_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: maximum_samples_header.top
-                left: maximum_samples_input.right
-                leftMargin: Settings.spacing_small
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            focus: true
-            id: goal_input
-            // Expressed fully declaratively (rather than toggled imperatively from
-            // required_hardware_input.onText_changed below) so this can never get
-            // permanently stuck: a direct "goal_input.disabled = ..." assignment
-            // would sever this binding for good, the same way direct assignments to
-            // the dataset-metadata properties elsewhere in this file used to.
-            disabled: root.__reiterate || root.__model_selected !== "" ||
-                (root.__types.toLowerCase() === "cnns" && root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)")
-            displayText: root.__goal
-            placeholder_text: displayText !== "" ? "" : "Select your model goal"
-            model: root.__goal_list
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9 + 1
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: required_hardware_input
-            anchors
-            {
-                top: goal_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: goal_header.left
-            }
-            onModelChanged:
-            {
-                goal_input.currentIndex = -1
-            }
-            onText_changed:
-            {
-                if (text === "(empty)") text = ""
-                root.__goal = text
-
-                // Reset any previously selected model when the goal changes so
-                // dependent fields recompute their disabled state correctly.
-                root.__model_selected = ""
-                root.__model_selected_copy = ""
-                model_select_input.currentIndex = -1
-
-                if (text !== "")
-                {
-                    if(root.__types !== "")
-                        root.ask_models(text + ", " + root.__types)
-                    else
-                        root.ask_models(text)
-                }
-                // When goal is empty we clear the selected model but keep the
-                // __model_list binding coming from the main window so that
-                // backend updates can populate it when available.
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    // Enabling selecting the same item in 2 consecutive runs
-                    goal_input.currentIndex = -1
-                    goal_input.open()
-                    goal_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                required_hardware_input.focus = true
-            }
-        }
-
-        // Hardware required
-        SmlText
-        {
-            id: required_hardware_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Required hardware"
-            color: required_hardware_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: goal_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            focus: true
-            id: required_hardware_input
-            searchable: true
-            displayText: root.__hardware_required
-            placeholder_text: displayText !== "" ? "" : "Select hardware"
-            model: filteredHardwareList()
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: model_select_input
-            anchors
-            {
-                top: required_hardware_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: required_hardware_header.left
-            }
-            onText_changed:
-            {
-                root.__hardware_required = text
-
-                // Detect CNN + FPGA combo
-                if (root.__types.toLowerCase() === "cnns" &&
-                    text === "FPGA (xczu19eg-ffvb1517-2-i)") {
-
-                    // Clear goal if set (goal_input.disabled reacts on its own,
-                    // declaratively, to __types/__hardware_required above)
-                    root.__goal = ""
-
-                    // Ask backend for U-Net models directly
-                    // The backend already supports this string
-                    var cfg = "U_NET_MODELS, " + text + ", " + root.__types
-                    root.ask_models(cfg)
-                }
-            }
-            onModelChanged:
-            {
-                if(!root.__reiterate)
-                {
-                    required_hardware_input.currentIndex = -1
-                    if (root.__types && root.__types.toLowerCase() === "cnns") {
-                        root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
-                    } else {
-                        root.__hardware_required = "PIM-AI-1chip"
-        }
-                }
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    // Enabling selecting the same item in 2 consecutive runs
-                    required_hardware_input.currentIndex = -1
-                    required_hardware_input.open()
-                    required_hardware_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                model_select_input.focus = true
-            }
-        }
-
-        // Model selector
-        SmlText
-        {
-            id: model_select_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Model selection"
-            color: model_select_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: required_hardware_header.top
-                left: required_hardware_input.right
-                leftMargin: Settings.spacing_small
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            focus: true
-            id: model_select_input
-            searchable: true
-            // Disable model selection if the goal is not selected unless CNNs + FPGA combo
-            disabled: root.__reiterate ||
-                (root.__goal === "" &&
-                !(root.__types && root.__types.toLowerCase() === "cnns" &&
-                    root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)"))
-            displayText: root.__model_selected
-            placeholder_text: displayText !== "" ? "" : (root.__cnn_mode ? "Select a U-Net model (required for CNNs)" : "Select the ml model")
-            model: root.__model_list
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: num_outputs_input
-            anchors
-            {
-                top: model_select_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: model_select_header.left
-            }
-            onText_changed: {
-                if (text === "(empty)" || text === "") {
-                    // No model selected
-                    root.__model_selected = ""
-                    root.__model_selected_copy = ""
-                    // Keep __num_outputs as-is; user can type whatever they want
-                } else {
-                    // A specific model has been chosen
-                    root.__model_selected = text
-                    root.__model_selected_copy = text
-                    // Force num_outputs to 1 and show it in the box
-                    root.__num_outputs = 1
-                    num_outputs_input.text = "1"
-                }
-            }
-            onModelChanged:
-            {
-                model_select_input.currentIndex = -1
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    // Enabling selecting the same item in 2 consecutive runs
-                    model_select_input.currentIndex = -1
-                    model_select_input.open()
-                    model_select_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                num_outputs_input.focus = true
-            }
-        }
-
-        // Number of outputs
-        SmlText
-        {
-            id: num_outputs_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Nº output models"
-            color: num_outputs_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: required_hardware_header.top
-                left: model_select_input.right
-                leftMargin: Settings.spacing_small
-            }
-        }
-        SmlInput
-        {
-            id: num_outputs_input
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__num_outputs === 0 ? "" : root.__num_outputs
-            validator: RegExpValidator { regExp: /^[0-9]*$/ }
-            placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - 2 * Settings.spacing_small) / 3 * 0.9
-            height: root.__input_height
-            KeyNavigation.tab: optimize_carbon_input
-            anchors
-            {
-                top: num_outputs_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: num_outputs_header.left
-            }
-            onTextChanged:
-            {
-                var num = parseInt(text)
-                if (!isNaN(num)) {
-                    root.__num_outputs = num
-                } else {
-                    text = ""
-                }
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    scroll_view.scroll_to(num_outputs_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Dataset description
-        SmlText
-        {
-            id: dataset_metadata_description_header
-            visible: root.__dataset_description !== ""
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset description"
-            color: dataset_metadata_description_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: num_outputs_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-
-        SmlInput
-        {
-            id: dataset_metadata_description_input
-            visible: root.__dataset_description !== ""
-            // Only used to infer the goal, so ignored once a goal or a model is chosen
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__dataset_description
-            placeholder_text: "Dataset description"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: scroll_view.width * 0.9
-            height: root.__input_height_big
-            KeyNavigation.tab: problem_short_description_input
-            anchors
-            {
-                top: dataset_metadata_description_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: dataset_metadata_description_header.left
-            }
-            onTextEdited:
-            {
-                root.__dataset_metadata_description = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        //Dataset Topic
-
-        SmlText
-        {
-            id: dataset_metadata_topic_header
-            visible: root.__dataset_topic !== ""
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset topic"
-            color: dataset_metadata_topic_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: dataset_metadata_description_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-
-        SmlInput
-        {
-            id: dataset_metadata_topic_input
-            visible: root.__dataset_topic !== ""
-            // Only used to infer the goal, so ignored once a goal or a model is chosen
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__dataset_topic
-            placeholder_text: "Dataset description"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height:root.__input_height
-            KeyNavigation.tab: problem_short_description_input
-            anchors
-            {
-                top: dataset_metadata_topic_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: dataset_metadata_description_header.left
-            }
-            onTextEdited:
-            {
-                root.__dataset_metadata_topic = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Dataset Keywords
-        SmlText
-        {
-            id: dataset_metadata_keywords_header
-            visible: root.__dataset_keywords !== ""
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset keywords"
-            color: dataset_metadata_keywords_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: dataset_metadata_description_input.bottom
-                topMargin: Settings.spacing_small
-                left: dataset_metadata_topic_input.right
-                leftMargin: Settings.spacing_big
-            }
-        }
-        SmlInput
-        {
-            id: dataset_metadata_keywords_input
-            visible: root.__dataset_keywords !== ""
-            // Only used to infer the goal, so ignored once a goal or a model is chosen
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__dataset_keywords
-            placeholder_text: "Dataset keywords"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height
-            KeyNavigation.tab: optimize_carbon_input
-            anchors
-            {
-                top: dataset_metadata_keywords_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: dataset_metadata_keywords_header.left
-            }
-            onTextEdited:
-            {
-                root.__dataset_metadata_keywords = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        //Dataset Applications
-        SmlText
-        {
-            id: dataset_metadata_applications_header
-            visible: root.__dataset_applications !== ""
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset applications"
-            color: dataset_metadata_applications_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: dataset_metadata_keywords_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlInput
-        {
-            id: dataset_metadata_applications_input
-            visible: root.__dataset_applications !== ""
-            // Only used to infer the goal, so ignored once a goal or a model is chosen
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__dataset_applications
-            placeholder_text: "Dataset applications"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: scroll_view.width * 0.9
-            height: root.__input_height * 2
-            KeyNavigation.tab: optimize_carbon_input
-            anchors
-            {
-                top: dataset_metadata_applications_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: dataset_metadata_applications_header.left
-            }
-            onTextEdited:
-            {
-                root.__dataset_metadata_applications = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Dataset Profile
-
-        SmlText
-        {
-            id: dataset_metadata_profile_header
-            visible: root.__dataset_profile !== ""
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Dataset profile"
-            color: dataset_metadata_profile_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: dataset_metadata_applications_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlInput
-        {
-            id: dataset_metadata_profile_input
-            visible: root.__dataset_profile !== ""
-            // Only used to infer the goal, so ignored once a goal or a model is chosen
-            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
-            text: root.__dataset_profile
-            placeholder_text: "Dataset profile"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: scroll_view.width * 0.9
-            height: root.__input_height_big
-            KeyNavigation.tab: optimize_carbon_input
-            anchors
-            {
-                top: dataset_metadata_profile_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: dataset_metadata_profile_header.left
-            }
-            onTextEdited:
-            {
-                root.__dataset_metadata_profile = text
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(dataset_metadata_description_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-
-        // Carbon footprint optimization
-        SmlText
-        {
-            id: optimize_carbon_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Carbon footprint optimization"
-            color: optimize_carbon_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: dataset_metadata_profile_input.visible ? dataset_metadata_profile_input.bottom : num_outputs_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            focus: true
-            id: optimize_carbon_input
-            // A selected model is used as is: there is no search to optimize
-            disabled: root.__model_selected !== "" || root.__cnn_mode
-            displayText: root.__optimize_carbon_footprint_manual ? "Manual" : (root.__optimize_carbon_footprint_auto ? "Auto" : "")
-            placeholder_text: displayText !== "" ? "" : "Select optimization iteration method"
-            model: ["(empty)", "Manual", "Auto"]
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: scroll_view.width * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: desired_carbon_footprint_input
-            anchors
-            {
-                top: optimize_carbon_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: optimize_carbon_header.left
-            }
-            onText_changed:
-            {
-                if (text === "Manual")
-                {
-                    root.__optimize_carbon_footprint_auto = false
-                    root.__optimize_carbon_footprint_manual = true
-                }
-                else if (text === "Auto")
-                {
-                    root.__optimize_carbon_footprint_auto = true
-                    root.__optimize_carbon_footprint_manual = false
-                }
-                else if (text === "(empty)")
-                {
-                    root.__optimize_carbon_footprint_auto = false
-                    root.__optimize_carbon_footprint_manual = false
-                }
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    optimize_carbon_input.currentIndex = -1
-                    optimize_carbon_input.open()
-                    optimize_carbon_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                desired_carbon_footprint_input.focus = true
-            }
-        }
-
-        // Desired carbon footprint
-        SmlText
-        {
-            id: desired_carbon_footprint_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Desired carbon footprint"
-            color: desired_carbon_footprint_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: optimize_carbon_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlInput
-        {
-            id: desired_carbon_footprint_input
-            // Only meaningful as the target of a Manual or Auto optimization
-            disabled: root.__model_selected !== "" || root.__cnn_mode ||
-                      (!root.__optimize_carbon_footprint_manual && !root.__optimize_carbon_footprint_auto)
-            text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
-            validator: RegExpValidator { regExp: /^[0-9]*\.?[0-9]*$/ }
-            placeholder_text: disabled ? "Select an optimization method first" : "Target per inference in gCO2e (only numbers)"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height
-            KeyNavigation.tab: max_mem_footprint_input
-            anchors
-            {
-                top: desired_carbon_footprint_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: desired_carbon_footprint_header.left
-            }
-            onTextChanged:
-            {
-                var num = parseFloat(text)
-                root.__desired_carbon_footprint = isNaN(num) ? 0.0 : num
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(desired_carbon_footprint_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Max mem footprint
-        SmlText
-        {
-            id: max_mem_footprint_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Max memory footprint"
-            color: max_mem_footprint_input.focus ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: desired_carbon_footprint_header.top
-                left: desired_carbon_footprint_input.right
-                leftMargin: Settings.spacing_big
-            }
-        }
-        SmlInput
-        {
-            id: max_mem_footprint_input
-            disabled: root.__model_selected !== "" || root.__cnn_mode
-            text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
-            validator: RegExpValidator { regExp: /^[0-9]*$/ }
-            placeholder_text: "Maximum model memory in MB, empty for no limit (only numbers)"
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height
-            KeyNavigation.tab: geo_location_continent_input
-            anchors
-            {
-                top: max_mem_footprint_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: max_mem_footprint_header.left
-            }
-            onTextChanged:
-            {
-                var num = parseInt(text)
-                root.__max_memory_footprint = isNaN(num) ? 0 : num
-            }
-            onFocusChanged:
-            {
-                if(focus === true)
-                {
-                    scroll_view.scroll_to(max_mem_footprint_input.y - Settings.spacing_big)
-                }
-            }
-        }
-
-        // Geo location: continent
-        SmlText
-        {
-            id: geo_location_continent_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Geo location: continent"
-            color: geo_location_continent_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: max_mem_footprint_input.bottom
-                topMargin: Settings.spacing_small
-                left: parent.left
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            id: geo_location_continent_input
-            displayText: root.__geo_location_continent
-            placeholder_text: displayText !== "" ? "" : "Select continent where the model will run"
-            model: ["(empty)"].concat(Countries.continents)
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: geo_location_region_input
-            anchors
-            {
-                top: geo_location_continent_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: geo_location_continent_header.left
-            }
-            onText_changed:
-            {
-                if (text === "(empty)")
-                {
-                    root.__geo_location_continent = ""
-                    root.__geo_location_region = ""
-                }
-                else if (Countries.continents.indexOf(text) !== -1 && text !== root.__geo_location_continent)
-                {
-                    root.__geo_location_continent = text
-                    root.__geo_location_region = ""
-                }
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    geo_location_continent_input.currentIndex = -1
-                    geo_location_continent_input.open()
-                    geo_location_continent_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                geo_location_region_input.focus = true
-            }
-        }
-
-        // Geo location: country. Stored as its ISO alpha-2 code, used for the grid carbon intensity
-        SmlText
-        {
-            id: geo_location_region_header
-            text_kind: SmlText.TextKind.Header_3
-            text_value: "Geo location: country"
-            color: geo_location_region_input.popup.visible ? Settings.app_color_blue : Settings.app_color_green_1
-            anchors
-            {
-                top: geo_location_continent_header.top
-                left: geo_location_continent_input.right
-                leftMargin: Settings.spacing_big
-            }
-        }
-        SmlCombobox
-        {
-            activeFocusOnTab: true
-            id: geo_location_region_input
-            disabled: root.__geo_location_continent === ""
-            searchable: true
-            displayText: Countries.name(root.__geo_location_continent, root.__geo_location_region)
-            placeholder_text: displayText !== "" ? "" : (disabled ? "Select a continent first" : "Select country where the model will run")
-            model: ["(empty)"].concat(Countries.names(root.__geo_location_continent))
-            border_color: Settings.app_color_green_4
-            border_editting_color: Settings.app_color_blue
-            border_nightmode_color: Settings.app_color_green_1
-            border_nightmode_editting_color: Settings.app_color_green_2
-            background_color: Settings.app_color_light
-            background_nightmode_color: Settings.app_color_dark
-            width: (scroll_view.width - Settings.spacing_big) / 2 * 0.9
-            height: root.__input_height
-            rounded_radius: Settings.input_default_rounded_radius
-            KeyNavigation.tab: problem_short_description_input
-            anchors
-            {
-                top: geo_location_region_header.bottom
-                topMargin: -Settings.spacing_small * 0.25
-                left: geo_location_region_header.left
-            }
-            onText_changed:
-            {
-                if (text === "(empty)")
-                    root.__geo_location_region = ""
-                var code = Countries.code(root.__geo_location_continent, text)
-                if (code !== "")
-                    root.__geo_location_region = code
-            }
-            onModelChanged:
-            {
-                geo_location_region_input.currentIndex = -1
-            }
-            onFocusChanged: {
-                if(focus === true){
-                    geo_location_region_input.currentIndex = -1
-                    geo_location_region_input.open()
-                    geo_location_region_input.focus = true
-                }
-            }
-            onTab_pressed: {
-                problem_short_description_input.focus = true
-            }
-        }
+            // HF models button
+            SmlButton
+            {
+                id: hf_search_button
+                visible: !root.__reiterate
+                icon_name: "sparkles"
+                text_value: "HF models"
+                tooltip_text: "Find best Hugging Face models for this description"
+                onClicked: hf_choice_popup.open()
+            }
+        ]
     }
 
-    // HF models button (top row, next to U-Net)
-    SmlButton
-    {
-        id: hf_search_button
-        visible: !root.__reiterate
-        icon_name: Settings.start_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "HF models"
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Find best Hugging Face models for this description"
-
-        anchors
-        {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-            left: unet_models_button.right
-            leftMargin: Settings.spacing_normal
+    SequentialAnimation {
+        id: loading_animation
+        running: root.__initializing
+        loops: Animation.Infinite
+        NumberAnimation {
+            target: refresh_button
+            property: "icon_rotation"
+            from: 0
+            to: 360
+            duration: 1200
         }
-
-        onClicked: hf_choice_popup.open()
+        onStopped: refresh_button.icon_rotation = 0
     }
 
     Popup {
         id: hf_choice_popup
         parent: hf_search_button
-        y: hf_search_button.height + 8
-        x: (hf_search_button.width - width) / 2
-        padding: Settings.spacing_normal
+        y: hf_search_button.height + Theme.space1
+        x: hf_search_button.width - width
+        padding: Theme.space1
         modal: false
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
+        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.durFast } }
+        exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Theme.durFast } }
+
         background: Rectangle {
-            radius: 8
-            color: Settings.app_color_light
-            border.color: Settings.app_color_green_4
+            radius: Theme.radiusMd
+            color: Theme.overlay
+            border.color: Theme.borderStrong
             border.width: 1
+
+            Rectangle {
+                z: -1
+                anchors.fill: parent
+                anchors.topMargin: 3
+                anchors.bottomMargin: -3
+                radius: parent.radius
+                color: Theme.shadow
+            }
         }
 
-        Row {
-            spacing: Settings.spacing_small
+        Column {
+            width: 220
+            spacing: 2
 
             SmlButton {
-                text_kind: SmlText.TextKind.Header_2
+                width: parent.width
+                variant: "ghost"
+                align_left: true
                 text_value: "Search"
                 icon_name: Settings.search_icon_name
-                rounded: true
+                tooltip_text: "Search Hugging Face models for the problem description"
                 disabled: root.__cnn_mode || (root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === "")
-                color: Settings.app_color_green_4
-                color_pressed: Settings.app_color_green_1
-                color_text: Settings.app_color_green_3
-                nightmode_color: Settings.app_color_green_2
-                nightmode_color_pressed: Settings.app_color_green_3
-                nightmode_color_text: Settings.app_color_green_1
                 onClicked: {
                     hf_choice_popup.close()
                     var q = root.__problem_definition
@@ -1632,17 +412,13 @@ Item
             }
 
             SmlButton {
-                text_kind: SmlText.TextKind.Header_2
+                width: parent.width
+                variant: "ghost"
+                align_left: true
                 text_value: "Results"
                 icon_name: Settings.results_icon_name
-                rounded: true
+                tooltip_text: "Saved Hugging Face searches"
                 disabled: !root.hf_results_available
-                color: Settings.app_color_green_4
-                color_pressed: Settings.app_color_green_1
-                color_text: Settings.app_color_green_3
-                nightmode_color: Settings.app_color_green_2
-                nightmode_color_pressed: Settings.app_color_green_3
-                nightmode_color_text: Settings.app_color_green_1
                 onClicked: {
                     hf_choice_popup.close()
                     root.go_hf_results()
@@ -1650,17 +426,13 @@ Item
             }
 
             SmlButton {
-                text_kind: SmlText.TextKind.Header_2
+                width: parent.width
+                variant: "ghost"
+                align_left: true
                 text_value: "Comparisons"
                 icon_name: Settings.comparisons_icon_name
-                rounded: true
+                tooltip_text: "Saved Hugging Face model comparisons"
                 disabled: root.hf_comparisons_count === 0
-                color: Settings.app_color_green_4
-                color_pressed: Settings.app_color_green_1
-                color_text: Settings.app_color_green_3
-                nightmode_color: Settings.app_color_green_2
-                nightmode_color_pressed: Settings.app_color_green_3
-                nightmode_color_text: Settings.app_color_green_1
                 onClicked: {
                     hf_choice_popup.close()
                     root.go_hf_comparisons()
@@ -1669,64 +441,1048 @@ Item
         }
     }
 
-    // Submit button
-    SmlButton
+    SmlScrollView
     {
-        id: submit_button
-        icon_name: Settings.check_icon_name
-        text_kind: SmlText.TextKind.Header_3
-        text_value: "Submit"
-        disabled: root.__refreshing || root.__initializing ||
-            (root.__cnn_mode && root.__model_selected === "") ||
-            (root.__problem_definition.trim() === "" &&
-             root.__problem_short_description.trim() === "" &&
-             root.__model_selected === "" &&
-             root.__dataset_description === "")
-        rounded: true
-        color: Settings.app_color_light
-        color_pressed: Settings.app_color_green_1
-        nightmode_color: Settings.app_color_dark
-        nightmode_color_pressed: Settings.app_color_green_3
-        tooltip_text: "Submit the problem and start task"
+        id: scroll_view
+
         anchors
         {
-            bottom: parent.bottom
-            bottomMargin: root.__margin - Settings.spacing_small
-            horizontalCenter: parent.horizontalCenter
-            horizontalCenterOffset: - (submit_button.width + 2 * Settings.spacing_small) / 2
+            top: header.bottom
+            left: parent.left
+            right: parent.right
+            bottom: footer.top
         }
-        onClicked:
+
+        content_height: form_column.implicitHeight + 2 * Theme.space5
+
+        // Background mouse area
+        MouseArea
         {
-            focus = true
-            root.prepare_task()
+            anchors.fill: parent
+            onClicked: focus = true
+        }
+
+        Column
+        {
+            id: form_column
+            y: Theme.space5
+            width: Math.min(scroll_view.width - 2 * Theme.pagePadding, Theme.contentMaxWidth)
+            x: (scroll_view.width - width) / 2
+            spacing: Theme.space6
+
+            // ---------------------------------------------------------------- Problem
+            SmlCard
+            {
+                id: problem_card
+                width: parent.width
+                title: "Problem"
+                subtitle: root.__info_hf ? "What the model has to do"
+                          : root.__info_chosen ? "The kind of model"
+                          : "What the model has to do, and the data it works with"
+                icon_name: "file"
+
+                Column
+                {
+                    id: problem_fields
+                    width: problem_card.content_area.width
+                    spacing: Theme.space4
+
+                    // Problem short description
+                    Column
+                    {
+                        width: parent.width
+                        visible: !root.__info_chosen && !(root.__info_hf && root.__hf_used_definition)
+                        SmlFieldLabel { text: "Problem short description"; active: problem_short_description_input.focus; width: parent.width }
+                        SmlInput
+                        {
+                            read_only: root.__reiterate
+                            id: problem_short_description_input
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            text: root.__problem_short_description
+                            placeholder_text: "Resume briefly the objective of the problem"
+                            width: parent.width
+                            height: root.__input_height
+                            KeyNavigation.tab: problem_definition_input
+                            onTextChanged:
+                            {
+                                root.__problem_short_description = text
+                            }
+                            onFocusChanged:
+                            {
+                                if(focus === true)
+                                {
+                                    scroll_view.scroll_to(root.__form_y(problem_short_description_input) - Theme.space6)
+                                }
+                            }
+                        }
+                    }
+
+                    // Problem definition
+                    Column
+                    {
+                        width: parent.width
+                        visible: !root.__info_chosen && !(root.__info_hf && !root.__hf_used_definition)
+                        SmlFieldLabel { text: "Problem definition"; active: problem_definition_input.focus; width: parent.width }
+                        SmlTextArea
+                        {
+                            read_only: root.__reiterate
+                            id: problem_definition_input
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            text: root.__problem_definition
+                            placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
+                            width: parent.width
+                            height: root.__reiterate ? Math.max(root.__input_height_big, problem_definition_input.content_height) : root.__input_height_big
+                            KeyNavigation.tab: types_input
+                            onTextChanged:
+                            {
+                                root.__problem_definition = text
+                            }
+                            onFocusChanged:
+                            {
+                                if(focus === true)
+                                {
+                                    scroll_view.scroll_to(root.__form_y(problem_definition_input) - Theme.space6)
+                                }
+                            }
+                        }
+                    }
+
+                    // Types
+                    Column
+                    {
+                        width: root.__col(parent.width, 3)
+                        visible: !root.__info_hf
+                        SmlFieldLabel { text: "Type limiter"; active: types_input.popup.visible; width: parent.width }
+                        SmlCombobox
+                        {
+                            read_only: root.__reiterate
+                            activeFocusOnTab: true
+                            focus: true
+                            disabled: false
+                            id: types_input
+                            displayText: root.__types
+                            placeholder_text: displayText !== "" ? "" : "Select type limiter"
+                            model: ["Transformers", "CNNs"]
+                            width: parent.width
+                            height: root.__input_height
+                            KeyNavigation.tab: inputs_input
+                            onModelChanged:
+                            {
+                                types_input.currentIndex = -1
+                            }
+                            onText_changed:
+                            {
+                                root.__types = text
+
+                                // A model chosen for the previous type (e.g. a U-Net for CNNs) does not apply
+                                // to the new one, and while set it disables the goal and description fields
+                                if (text !== "") {
+                                    root.__model_selected = ""
+                                    root.__model_selected_copy = ""
+                                    model_select_input.currentIndex = -1
+                                }
+
+                                if (text.toLowerCase() === "cnns") {
+                                    // Default hardware to FPGA when CNNs are selected
+                                    root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
+                                    required_hardware_input.currentIndex = -1    // use displayText
+
+                                    // CNN + FPGA → U-NET fast path: clear goal & request models
+                                    // (goal_input.disabled follows from __types/__hardware_required declaratively)
+                                    root.__goal = ""
+
+                                    var cfg = "U_NET_MODELS, " +
+                                            root.__hardware_required + ", " + text
+                                    root.ask_models(cfg)
+                                }
+                            }
+                            onFocusChanged: {
+                                if(focus === true){
+                                    // Enabling selecting the same item in 2 consecutive runs
+                                    types_input.currentIndex = -1
+                                    types_input.open()
+                                    types_input.focus = true
+                                }
+                            }
+                            onTab_pressed: {
+                                inputs_input.focus = true
+                            }
+                        }
+                    }
+
+                    Row
+                    {
+                        width: parent.width
+                        spacing: Theme.space4
+                        visible: !root.__info_hf && !root.__info_chosen
+
+                        // Inputs
+                        Column
+                        {
+                            width: root.__col(parent.width, 2)
+                            SmlFieldLabel { text: "Inputs"; active: inputs_input.focus; width: parent.width }
+                            SmlTextArea
+                            {
+                                read_only: root.__reiterate
+                                id: inputs_input
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__inputs
+                                placeholder_text: "Describe a sequence of serialized batches of input data"
+                                width: parent.width
+                                height: root.__reiterate ? Math.max(root.__input_height_medium, inputs_input.content_height) : root.__input_height_medium
+                                KeyNavigation.tab: outputs_input
+                                onTextChanged:
+                                {
+                                    root.__inputs = text
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(inputs_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Outputs
+                        Column
+                        {
+                            width: root.__col(parent.width, 2)
+                            SmlFieldLabel { text: "Outputs"; active: outputs_input.focus; width: parent.width }
+                            SmlTextArea
+                            {
+                                read_only: root.__reiterate
+                                id: outputs_input
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__outputs
+                                placeholder_text: "Describe a sequence of serialized batches of output data"
+                                width: parent.width
+                                height: root.__reiterate ? Math.max(root.__input_height_medium, outputs_input.content_height) : root.__input_height_medium
+                                KeyNavigation.tab: minimum_samples_input
+                                onTextChanged:
+                                {
+                                    root.__outputs = text
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(outputs_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---------------------------------------------------------------- Model and data
+            SmlCard
+            {
+                id: model_card
+                width: parent.width
+                visible: !root.__info_hf
+                title: "Model and data"
+                subtitle: root.__info_cnn ? "Model and hardware of the problem"
+                          : root.__info_chosen ? "Goal, model and hardware of the problem"
+                          : "Goal, model, hardware and dataset of the problem"
+                icon_name: "cpu"
+
+                Column
+                {
+                    width: model_card.content_area.width
+                    spacing: Theme.space4
+
+                    Row
+                    {
+                        width: parent.width
+                        spacing: Theme.space4
+                        visible: !root.__info_cnn
+
+                        // Minimum samples
+                        Column
+                        {
+                            width: root.__col(parent.width, 3)
+                            visible: !root.__info_chosen
+                            SmlFieldLabel { text: "Minimum samples"; active: minimum_samples_input.focus; width: parent.width }
+                            SmlInput
+                            {
+                                read_only: root.__reiterate
+                                id: minimum_samples_input
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
+                                // Not IntValidator: it's locale-aware and treats the locale's group
+                                // separator (a comma, in many locales) as acceptable input. A plain
+                                // digit-only pattern has no such leniency.
+                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                placeholder_text: "Min samples required (only numbers)"
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: maximum_samples_input
+                                onTextChanged:
+                                {
+                                    var num = parseInt(text)
+                                    if (!isNaN(num)) {
+                                        root.__minimum_samples = num
+                                    } else {
+                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // previous number is not submitted again
+                                        root.__minimum_samples = 1
+                                        text = ""
+                                    }
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(minimum_samples_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Maximum samples
+                        Column
+                        {
+                            width: root.__col(parent.width, 3)
+                            visible: !root.__info_chosen
+                            SmlFieldLabel { text: "Maximum samples"; active: maximum_samples_input.focus; width: parent.width }
+                            SmlInput
+                            {
+                                read_only: root.__reiterate
+                                id: maximum_samples_input
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
+                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                placeholder_text: "Max samples required (only numbers)"
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: goal_input
+                                onTextChanged:
+                                {
+                                    var num = parseInt(text)
+                                    if (!isNaN(num)) {
+                                        root.__maximum_samples = num
+                                    } else {
+                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // previous number is not submitted again
+                                        root.__maximum_samples = 1
+                                        text = ""
+                                    }
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(maximum_samples_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Goal selection
+                        Column
+                        {
+                            width: root.__col(parent.width, root.__info_chosen ? 2 : 3)
+                            SmlFieldLabel { text: "Model goal"; active: goal_input.popup.visible; width: parent.width }
+                            SmlCombobox
+                            {
+                                read_only: root.__reiterate
+                                activeFocusOnTab: true
+                                focus: true
+                                id: goal_input
+                                // Expressed fully declaratively (rather than toggled imperatively from
+                                // required_hardware_input.onText_changed below) so this can never get
+                                // permanently stuck: a direct "goal_input.disabled = ..." assignment
+                                // would sever this binding for good, the same way direct assignments to
+                                // the dataset-metadata properties elsewhere in this file used to.
+                                disabled: root.__model_selected !== "" ||
+                                    (root.__types.toLowerCase() === "cnns" && root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)")
+                                displayText: root.__goal
+                                placeholder_text: displayText !== "" ? "" : "Select your model goal"
+                                model: root.__goal_list
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: required_hardware_input
+                                onModelChanged:
+                                {
+                                    goal_input.currentIndex = -1
+                                }
+                                onText_changed:
+                                {
+                                    if (text === "(empty)") text = ""
+                                    root.__goal = text
+
+                                    // Reset any previously selected model when the goal changes so
+                                    // dependent fields recompute their disabled state correctly.
+                                    root.__model_selected = ""
+                                    root.__model_selected_copy = ""
+                                    model_select_input.currentIndex = -1
+
+                                    if (text !== "")
+                                    {
+                                        if(root.__types !== "")
+                                            root.ask_models(text + ", " + root.__types)
+                                        else
+                                            root.ask_models(text)
+                                    }
+                                    // When goal is empty we clear the selected model but keep the
+                                    // __model_list binding coming from the main window so that
+                                    // backend updates can populate it when available.
+                                }
+                                onFocusChanged: {
+                                    if(focus === true){
+                                        // Enabling selecting the same item in 2 consecutive runs
+                                        goal_input.currentIndex = -1
+                                        goal_input.open()
+                                        goal_input.focus = true
+                                    }
+                                }
+                                onTab_pressed: {
+                                    required_hardware_input.focus = true
+                                }
+                            }
+                        }
+                    }
+
+                    Row
+                    {
+                        width: parent.width
+                        spacing: Theme.space4
+
+                        // Hardware required
+                        Column
+                        {
+                            width: root.__col(parent.width, root.__info_chosen ? 2 : 3)
+                            SmlFieldLabel { text: "Required hardware"; active: required_hardware_input.popup.visible; width: parent.width }
+                            SmlCombobox
+                            {
+                                read_only: root.__reiterate
+                                activeFocusOnTab: true
+                                focus: true
+                                id: required_hardware_input
+                                searchable: true
+                                displayText: root.__hardware_required
+                                placeholder_text: displayText !== "" ? "" : "Select hardware"
+                                model: filteredHardwareList()
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: model_select_input
+                                onText_changed:
+                                {
+                                    root.__hardware_required = text
+
+                                    // Detect CNN + FPGA combo
+                                    if (root.__types.toLowerCase() === "cnns" &&
+                                        text === "FPGA (xczu19eg-ffvb1517-2-i)") {
+
+                                        // Clear goal if set (goal_input.disabled reacts on its own,
+                                        // declaratively, to __types/__hardware_required above)
+                                        root.__goal = ""
+
+                                        // Ask backend for U-Net models directly
+                                        // The backend already supports this string
+                                        var cfg = "U_NET_MODELS, " + text + ", " + root.__types
+                                        root.ask_models(cfg)
+                                    }
+                                }
+                                onModelChanged:
+                                {
+                                    if(!root.__reiterate)
+                                    {
+                                        required_hardware_input.currentIndex = -1
+                                        if (root.__types && root.__types.toLowerCase() === "cnns") {
+                                            root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
+                                        } else {
+                                            root.__hardware_required = "PIM-AI-1chip"
+                                        }
+                                    }
+                                }
+                                onFocusChanged: {
+                                    if(focus === true){
+                                        // Enabling selecting the same item in 2 consecutive runs
+                                        required_hardware_input.currentIndex = -1
+                                        required_hardware_input.open()
+                                        required_hardware_input.focus = true
+                                    }
+                                }
+                                onTab_pressed: {
+                                    model_select_input.focus = true
+                                }
+                            }
+                        }
+
+                        // Model selector
+                        Column
+                        {
+                            width: root.__col(parent.width, root.__info_chosen ? 2 : 3)
+                            SmlFieldLabel { text: "Model selection"; active: model_select_input.popup.visible; width: parent.width }
+                            SmlCombobox
+                            {
+                                read_only: root.__reiterate
+                                activeFocusOnTab: true
+                                focus: true
+                                id: model_select_input
+                                searchable: true
+                                // Disable model selection if the goal is not selected unless CNNs + FPGA combo
+                                disabled: (root.__goal === "" &&
+                                    !(root.__types && root.__types.toLowerCase() === "cnns" &&
+                                        root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)"))
+                                displayText: root.__model_selected
+                                placeholder_text: displayText !== "" ? "" : (root.__cnn_mode ? "Select a U-Net model (required for CNNs)" : "Select the ml model")
+                                model: root.__model_list
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: num_outputs_input
+                                onText_changed: {
+                                    if (text === "(empty)" || text === "") {
+                                        // No model selected
+                                        root.__model_selected = ""
+                                        root.__model_selected_copy = ""
+                                        // Keep __num_outputs as-is; user can type whatever they want
+                                    } else {
+                                        // A specific model has been chosen
+                                        root.__model_selected = text
+                                        root.__model_selected_copy = text
+                                        // Force num_outputs to 1 and show it in the box
+                                        root.__num_outputs = 1
+                                        num_outputs_input.text = "1"
+                                    }
+                                }
+                                onModelChanged:
+                                {
+                                    model_select_input.currentIndex = -1
+                                }
+                                onFocusChanged: {
+                                    if(focus === true){
+                                        // Enabling selecting the same item in 2 consecutive runs
+                                        model_select_input.currentIndex = -1
+                                        model_select_input.open()
+                                        model_select_input.focus = true
+                                    }
+                                }
+                                onTab_pressed: {
+                                    num_outputs_input.focus = true
+                                }
+                            }
+                        }
+
+                        // Number of outputs
+                        Column
+                        {
+                            width: root.__col(parent.width, 3)
+                            visible: !root.__info_chosen
+                            SmlFieldLabel { text: "Nº output models"; active: num_outputs_input.focus; width: parent.width }
+                            SmlInput
+                            {
+                                read_only: root.__reiterate
+                                id: num_outputs_input
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__num_outputs === 0 ? "" : root.__num_outputs
+                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: optimize_carbon_input
+                                onTextChanged:
+                                {
+                                    var num = parseInt(text)
+                                    if (!isNaN(num)) {
+                                        root.__num_outputs = num
+                                    } else {
+                                        text = ""
+                                    }
+                                }
+                                onFocusChanged: {
+                                    if(focus === true){
+                                        scroll_view.scroll_to(root.__form_y(num_outputs_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Dataset metadata, shown once a dataset has been uploaded
+                    Rectangle
+                    {
+                        width: parent.width
+                        height: 1
+                        color: Theme.border
+                        visible: dataset_title.visible
+                    }
+
+                    Text
+                    {
+                        id: dataset_title
+                        visible: !root.__info_chosen && (root.__dataset_description !== "" || root.__dataset_topic !== ""
+                                 || root.__dataset_keywords !== "" || root.__dataset_applications !== ""
+                                 || root.__dataset_profile !== "")
+                        text: "UPLOADED DATASET"
+                        textFormat: Text.PlainText
+                        font.family: Theme.uiFontFamily
+                        font.pixelSize: Theme.fontSizeMicro
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 0.8
+                        color: Theme.textMuted
+                    }
+
+                    // Dataset description
+                    Column
+                    {
+                        width: parent.width
+                        visible: !root.__info_chosen && root.__dataset_description !== ""
+                        SmlFieldLabel { text: "Dataset description"; active: dataset_metadata_description_input.focus; width: parent.width }
+                        SmlTextArea
+                        {
+                            read_only: root.__reiterate
+                            id: dataset_metadata_description_input
+                            // Only used to infer the goal, so ignored once a goal or a model is chosen
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            text: root.__dataset_description
+                            placeholder_text: "Dataset description"
+                            width: parent.width
+                            height: root.__reiterate ? Math.max(root.__input_height_big, dataset_metadata_description_input.content_height) : root.__input_height_big
+                            KeyNavigation.tab: problem_short_description_input
+                            onTextEdited:
+                            {
+                                root.__dataset_metadata_description = text
+                            }
+                            onFocusChanged:
+                            {
+                                if(focus === true)
+                                {
+                                    scroll_view.scroll_to(root.__form_y(dataset_metadata_description_input) - Theme.space6)
+                                }
+                            }
+                        }
+                    }
+
+                    Row
+                    {
+                        width: parent.width
+                        spacing: Theme.space4
+                        visible: !root.__info_chosen && (root.__dataset_topic !== "" || root.__dataset_keywords !== "")
+
+                        //Dataset Topic
+                        Column
+                        {
+                            width: root.__col(parent.width, 2)
+                            opacity: root.__dataset_topic !== "" ? 1 : 0
+                            SmlFieldLabel { text: "Dataset topic"; active: dataset_metadata_topic_input.focus; width: parent.width }
+                            SmlInput
+                            {
+                                read_only: root.__reiterate
+                                id: dataset_metadata_topic_input
+                                visible: root.__dataset_topic !== ""
+                                // Only used to infer the goal, so ignored once a goal or a model is chosen
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__dataset_topic
+                                placeholder_text: "Dataset description"
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: problem_short_description_input
+                                onTextEdited:
+                                {
+                                    root.__dataset_metadata_topic = text
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(dataset_metadata_description_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Dataset Keywords
+                        Column
+                        {
+                            width: root.__col(parent.width, 2)
+                            opacity: root.__dataset_keywords !== "" ? 1 : 0
+                            SmlFieldLabel { text: "Dataset keywords"; active: dataset_metadata_keywords_input.focus; width: parent.width }
+                            SmlInput
+                            {
+                                read_only: root.__reiterate
+                                id: dataset_metadata_keywords_input
+                                visible: root.__dataset_keywords !== ""
+                                // Only used to infer the goal, so ignored once a goal or a model is chosen
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__dataset_keywords
+                                placeholder_text: "Dataset keywords"
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: optimize_carbon_input
+                                onTextEdited:
+                                {
+                                    root.__dataset_metadata_keywords = text
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(dataset_metadata_description_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    //Dataset Applications
+                    Column
+                    {
+                        width: parent.width
+                        visible: !root.__info_chosen && root.__dataset_applications !== ""
+                        SmlFieldLabel { text: "Dataset applications"; active: dataset_metadata_applications_input.focus; width: parent.width }
+                        SmlTextArea
+                        {
+                            read_only: root.__reiterate
+                            id: dataset_metadata_applications_input
+                            // Only used to infer the goal, so ignored once a goal or a model is chosen
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            text: root.__dataset_applications
+                            placeholder_text: "Dataset applications"
+                            width: parent.width
+                            height: root.__reiterate ? Math.max(root.__input_height_medium, dataset_metadata_applications_input.content_height) : root.__input_height_medium
+                            KeyNavigation.tab: optimize_carbon_input
+                            onTextEdited:
+                            {
+                                root.__dataset_metadata_applications = text
+                            }
+                            onFocusChanged:
+                            {
+                                if(focus === true)
+                                {
+                                    scroll_view.scroll_to(root.__form_y(dataset_metadata_description_input) - Theme.space6)
+                                }
+                            }
+                        }
+                    }
+
+                    // Dataset Profile
+                    Column
+                    {
+                        width: parent.width
+                        visible: !root.__info_chosen && root.__dataset_profile !== ""
+                        SmlFieldLabel { text: "Dataset profile"; active: dataset_metadata_profile_input.focus; width: parent.width }
+                        SmlTextArea
+                        {
+                            read_only: root.__reiterate
+                            id: dataset_metadata_profile_input
+                            // Only used to infer the goal, so ignored once a goal or a model is chosen
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            text: root.__dataset_profile
+                            placeholder_text: "Dataset profile"
+                            width: parent.width
+                            height: root.__reiterate ? Math.max(root.__input_height_big, dataset_metadata_profile_input.content_height) : root.__input_height_big
+                            KeyNavigation.tab: optimize_carbon_input
+                            onTextEdited:
+                            {
+                                root.__dataset_metadata_profile = text
+                            }
+                            onFocusChanged:
+                            {
+                                if(focus === true)
+                                {
+                                    scroll_view.scroll_to(root.__form_y(dataset_metadata_description_input) - Theme.space6)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---------------------------------------------------------------- Sustainability
+            SmlCard
+            {
+                id: sustainability_card
+                width: parent.width
+                visible: !root.__info_hf
+                title: "Sustainability targets"
+                subtitle: root.__info_chosen ? "Where the model will run" : "Carbon footprint, memory and where the model will run"
+                icon_name: "leaf"
+
+                Column
+                {
+                    width: sustainability_card.content_area.width
+                    spacing: Theme.space4
+
+                    Row
+                    {
+                        width: parent.width
+                        spacing: Theme.space4
+                        visible: !root.__info_chosen
+
+                        // Carbon footprint optimization
+                        Column
+                        {
+                            width: root.__col(parent.width, 3)
+                            SmlFieldLabel { text: "Carbon footprint optimization"; active: optimize_carbon_input.popup.visible; width: parent.width }
+                            SmlCombobox
+                            {
+                                read_only: root.__reiterate
+                                activeFocusOnTab: true
+                                focus: true
+                                id: optimize_carbon_input
+                                // A selected model is used as is: there is no search to optimize
+                                disabled: root.__model_selected !== "" || root.__cnn_mode
+                                displayText: root.__optimize_carbon_footprint_manual ? "Manual" : (root.__optimize_carbon_footprint_auto ? "Auto" : "")
+                                placeholder_text: displayText !== "" ? "" : "Select optimization iteration method"
+                                model: ["(empty)", "Manual", "Auto"]
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: desired_carbon_footprint_input
+                                onText_changed:
+                                {
+                                    if (text === "Manual")
+                                    {
+                                        root.__optimize_carbon_footprint_auto = false
+                                        root.__optimize_carbon_footprint_manual = true
+                                    }
+                                    else if (text === "Auto")
+                                    {
+                                        root.__optimize_carbon_footprint_auto = true
+                                        root.__optimize_carbon_footprint_manual = false
+                                    }
+                                    else if (text === "(empty)")
+                                    {
+                                        root.__optimize_carbon_footprint_auto = false
+                                        root.__optimize_carbon_footprint_manual = false
+                                    }
+                                }
+                                onFocusChanged: {
+                                    if(focus === true){
+                                        optimize_carbon_input.currentIndex = -1
+                                        optimize_carbon_input.open()
+                                        optimize_carbon_input.focus = true
+                                    }
+                                }
+                                onTab_pressed: {
+                                    desired_carbon_footprint_input.focus = true
+                                }
+                            }
+                        }
+
+                        // Desired carbon footprint
+                        Column
+                        {
+                            width: root.__col(parent.width, 3)
+                            SmlFieldLabel { text: "Desired carbon footprint"; active: desired_carbon_footprint_input.focus; width: parent.width }
+                            SmlInput
+                            {
+                                read_only: root.__reiterate
+                                id: desired_carbon_footprint_input
+                                // Only meaningful as the target of a Manual or Auto optimization
+                                disabled: root.__model_selected !== "" || root.__cnn_mode ||
+                                          (!root.__optimize_carbon_footprint_manual && !root.__optimize_carbon_footprint_auto)
+                                text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
+                                validator: RegExpValidator { regExp: /^[0-9]*\.?[0-9]*$/ }
+                                placeholder_text: disabled ? "Select an optimization method first" : "Target per inference in gCO2e (only numbers)"
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: max_mem_footprint_input
+                                onTextChanged:
+                                {
+                                    var num = parseFloat(text)
+                                    root.__desired_carbon_footprint = isNaN(num) ? 0.0 : num
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(desired_carbon_footprint_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Max mem footprint
+                        Column
+                        {
+                            width: root.__col(parent.width, 3)
+                            SmlFieldLabel { text: "Max memory footprint"; active: max_mem_footprint_input.focus; width: parent.width }
+                            SmlInput
+                            {
+                                read_only: root.__reiterate
+                                id: max_mem_footprint_input
+                                disabled: root.__model_selected !== "" || root.__cnn_mode
+                                text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
+                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                placeholder_text: "Maximum model memory in MB, empty for no limit (only numbers)"
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: geo_location_continent_input
+                                onTextChanged:
+                                {
+                                    var num = parseInt(text)
+                                    root.__max_memory_footprint = isNaN(num) ? 0 : num
+                                }
+                                onFocusChanged:
+                                {
+                                    if(focus === true)
+                                    {
+                                        scroll_view.scroll_to(root.__form_y(max_mem_footprint_input) - Theme.space6)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Row
+                    {
+                        width: parent.width
+                        spacing: Theme.space4
+
+                        // Geo location: continent
+                        Column
+                        {
+                            width: root.__col(parent.width, 2)
+                            SmlFieldLabel { text: "Geo location: continent"; active: geo_location_continent_input.popup.visible; width: parent.width }
+                            SmlCombobox
+                            {
+                                read_only: root.__reiterate
+                                activeFocusOnTab: true
+                                id: geo_location_continent_input
+                                displayText: root.__geo_location_continent
+                                placeholder_text: displayText !== "" ? "" : "Select continent where the model will run"
+                                model: ["(empty)"].concat(Countries.continents)
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: geo_location_region_input
+                                onText_changed:
+                                {
+                                    if (text === "(empty)")
+                                    {
+                                        root.__geo_location_continent = ""
+                                        root.__geo_location_region = ""
+                                    }
+                                    else if (Countries.continents.indexOf(text) !== -1 && text !== root.__geo_location_continent)
+                                    {
+                                        root.__geo_location_continent = text
+                                        root.__geo_location_region = ""
+                                    }
+                                }
+                                onFocusChanged: {
+                                    if(focus === true){
+                                        geo_location_continent_input.currentIndex = -1
+                                        geo_location_continent_input.open()
+                                        geo_location_continent_input.focus = true
+                                    }
+                                }
+                                onTab_pressed: {
+                                    geo_location_region_input.focus = true
+                                }
+                            }
+                        }
+
+                        // Geo location: country. Stored as its ISO alpha-2 code, used for the grid carbon intensity
+                        Column
+                        {
+                            width: root.__col(parent.width, 2)
+                            SmlFieldLabel { text: "Geo location: country"; active: geo_location_region_input.popup.visible; width: parent.width }
+                            SmlCombobox
+                            {
+                                read_only: root.__reiterate
+                                activeFocusOnTab: true
+                                id: geo_location_region_input
+                                disabled: root.__geo_location_continent === ""
+                                searchable: true
+                                displayText: Countries.name(root.__geo_location_continent, root.__geo_location_region)
+                                placeholder_text: displayText !== "" ? "" : (disabled ? "Select a continent first" : "Select country where the model will run")
+                                model: ["(empty)"].concat(Countries.names(root.__geo_location_continent))
+                                width: parent.width
+                                height: root.__input_height
+                                KeyNavigation.tab: problem_short_description_input
+                                onText_changed:
+                                {
+                                    if (text === "(empty)")
+                                        root.__geo_location_region = ""
+                                    var code = Countries.code(root.__geo_location_continent, text)
+                                    if (code !== "")
+                                        root.__geo_location_region = code
+                                }
+                                onModelChanged:
+                                {
+                                    geo_location_region_input.currentIndex = -1
+                                }
+                                onFocusChanged: {
+                                    if(focus === true){
+                                        geo_location_region_input.currentIndex = -1
+                                        geo_location_region_input.open()
+                                        geo_location_region_input.focus = true
+                                    }
+                                }
+                                onTab_pressed: {
+                                    problem_short_description_input.focus = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    // Clear all button (next to Submit)
-    SmlButton
+    // Footer: the form's actions (none in the iteration info view)
+    Rectangle
     {
-        id: clear_all_button
-        icon_name: Settings.clear_icon_name
-        text_kind: SmlText.TextKind.Header_3
-        text_value: "Clear all"
-        rounded: true
-        color: Settings.app_color_light
-        color_pressed: Settings.app_color_green_1
-        nightmode_color: Settings.app_color_dark
-        nightmode_color_pressed: Settings.app_color_green_3
-        tooltip_text: "Clear all fields and dataset metadata"
-        width: submit_button.width
-        anchors
+        id: footer
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+        visible: !root.__reiterate
+        height: visible ? 64 : 0
+        color: Theme.surface
+
+        Rectangle
         {
-            bottom: parent.bottom
-            bottomMargin: root.__margin - Settings.spacing_small
-            left: submit_button.right
-            leftMargin: Settings.spacing_small
-            horizontalCenter: parent.horizontalCenter
-            horizontalCenterOffset: (submit_button.width + 2 * Settings.spacing_small) / 2
+            anchors { left: parent.left; right: parent.right; top: parent.top }
+            height: 1
+            color: Theme.border
         }
-        onClicked: root.clear_all()
+
+        Row
+        {
+            anchors
+            {
+                right: parent.right
+                rightMargin: Math.max(Theme.pagePadding, (parent.width - Theme.contentMaxWidth) / 2)
+                verticalCenter: parent.verticalCenter
+            }
+            spacing: Theme.space2
+
+            // Clear all button
+            SmlButton
+            {
+                id: clear_all_button
+                icon_name: Settings.clear_icon_name
+                text_value: "Clear all"
+                tooltip_text: "Clear all fields and dataset metadata"
+                onClicked: root.clear_all()
+            }
+
+            // Submit button
+            SmlButton
+            {
+                id: submit_button
+                variant: "primary"
+                icon_name: Settings.check_icon_name
+                text_value: "Submit"
+                disabled: root.__refreshing || root.__initializing ||
+                    (root.__cnn_mode && root.__model_selected === "") ||
+                    (root.__problem_definition.trim() === "" &&
+                     root.__problem_short_description.trim() === "" &&
+                     root.__model_selected === "" &&
+                     root.__dataset_description === "")
+                tooltip_text: "Submit the problem and start task"
+                onClicked:
+                {
+                    focus = true
+                    root.prepare_task()
+                }
+            }
+        }
     }
+
 
     function clear_all()
     {
@@ -1838,142 +1594,13 @@ Item
         return root.__hardware_list || [];
     }
 
-    // Refresh button
-    SmlIcon
-    {
-        id: refresh_button
-        name:   Settings.refresh_icon_name
-        color:  Settings.app_color_green_1
-        color_pressed:  Settings.app_color_green_2
-        nightmode_color:  Settings.app_color_green_4
-        nightmode_color_pressed:  Settings.app_color_green_3
-        size: Settings.button_icon_size
-        clickable_text: "Refresh information from server"
-
-        x: scroll_view.width - size/2 - Settings.spacing_big * 2
-        y: Settings.spacing_big + size/2
-
-        onClicked: root.refresh()
-    }
-
-    SequentialAnimation {
-        id: loading_animation
-        running: root.__refreshing
-        loops: Animation.Infinite
-        NumberAnimation {
-            target: refresh_button
-            property: "rotation"
-            to: 360
-            duration: 4000
-            easing.type: Easing.InOutQuad
-        }
-    }
-
-    SmlText
-    {
-        id: loading_text
-        visible: root.__refreshing
-        font.pixelSize: 14
-        color: Settings.app_color_green_2
-        text_value: "Refreshing..."
-        anchors
-        {
-            right: refresh_button.left
-            rightMargin: Settings.spacing_small
-            verticalCenter: refresh_button.verticalCenter
-        }
-    }
-
-    SmlText
-    {
-        id: initializing_text
-        visible: !root.__refreshing && root.__initializing
-        font.pixelSize: 14
-        color: Settings.app_color_green_2
-        text_value: "Initializing..."
-        anchors
-        {
-            right: refresh_button.left
-            rightMargin: Settings.spacing_small
-            verticalCenter: refresh_button.verticalCenter
-        }
-    }
 
     // Error message dialog
     SmlDialog
     {
         id: notSupportDialog
-        placeholder_text: "WARNING!!"
+        placeholder_text: "Problem not supported"
         text_value: notSupportProblemMessage
-        background_color: Settings.app_color_light
-        border_color: Settings.app_color_green_4
-        border_width: 1
-        rounded: true
-        placeholder_text_color: Settings.app_color_blue
-        text_color: Settings.app_color_blue
+        tone: "warning"
     }
-
-    // Dialog {
-    //     id: notSupportDialog
-    //     anchors.centerIn: parent
-    //     modal: true
-
-    //     width: contentColumn.implicitWidth
-    //     height: contentColumn.implicitHeight
-
-    //     background: Rectangle {
-    //         anchors.fill: parent
-    //         radius: 10
-    //         color: Settings.app_color_light
-    //         border.color: Settings.app_color_green_4
-    //         border.width: 1
-    //     }
-
-    //     header: Item { }
-
-    //     Column {
-    //         id: contentColumn
-    //         spacing: 16
-    //         padding: 16
-    //         anchors.centerIn: parent
-
-    //         Text {
-    //             text: "WARNING!!"
-    //             font.pixelSize: 20
-    //             font.bold: true
-    //             color: Settings.app_color_blue
-    //             horizontalAlignment: Text.AlignHCenter
-    //         }
-
-    //         Text {
-    //             text: notSupportProblemMessage
-    //             wrapMode: Text.WordWrap
-    //             font.pixelSize: 16
-    //             color: Settings.app_color_blue
-    //             horizontalAlignment: Text.AlignHCenter
-    //         }
-
-    //         Button {
-    //             anchors.right: parent.right
-    //             anchors.rightMargin: Settings.spacing_small
-    //             font.pixelSize: 14
-    //             height: 32
-    //             width: 80
-    //             onClicked: notSupportDialog.close()
-
-    //             background: Rectangle {
-    //                 anchors.fill: parent
-    //                 radius: 5
-    //                 color: Settings.app_color_green_1
-    //             }
-    //             contentItem: Text {
-    //                 text: "Ok"
-    //                 font.pixelSize: parent.font.pixelSize
-    //                 color: Settings.app_color_light
-    //                 horizontalAlignment: Text.AlignHCenter
-    //                 verticalAlignment: Text.AlignVCenter
-    //             }
-    //         }
-    //     }
-    // }
 }

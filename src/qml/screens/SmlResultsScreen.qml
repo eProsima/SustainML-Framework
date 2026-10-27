@@ -7,6 +7,7 @@ import QtQuick.Controls 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 // Component imports
 import "../components"
@@ -247,203 +248,127 @@ Item
     //     }
     // }
 
-    // Go home button
-    SmlButton
+    SmlScreenHeader
     {
-        id: go_home_button
-        icon_name: Settings.home_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Home"
-        disabled: root.tasking
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Go to Home screen"
+        id: header
+        title: "Results"
+        subtitle: "Model, hardware and footprint of every evaluated problem"
+
+        navigation: [
+            // Go home button
+            SmlButton
+            {
+                id: go_home_button
+                icon_name: Settings.home_icon_name
+                text_value: "Home"
+                disabled: root.tasking
+                tooltip_text: "Go to Home screen"
+                onClicked: root.go_home()
+            },
+
+            // Button for new problem with previous problem data
+            SmlIconButton
+            {
+                id: new_previous_problem_button
+                outlined: true
+                icon_name: Settings.back_icon_name
+                disabled: root.tasking
+                tooltip_text: "Back to the previous screen (Problem Definition keeps the previous input)"
+                onClicked: root.go_back_previous_input()
+            }
+        ]
+
+        actions: [
+            // Tasking status
+            SmlChip
+            {
+                id: tasking_status_text
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.tasking
+                text: "Working on task, please wait"
+                tone: "accent"
+                pulse: true
+            },
+
+            // Button for new problem from zero
+            SmlButton
+            {
+                id: new_problem_button
+                icon_name: Settings.add_tab_icon_name
+                text_value: "New problem"
+                disabled: root.tasking
+                tooltip_text: "New Problem from Scratch"
+                onClicked: root.go_back_empty_input()
+            },
+
+            // Button to stop the current tasking
+            SmlButton
+            {
+                id: stop_button
+                variant: "danger"
+                icon_name: Settings.stop_icon_name
+                text_value: "Stop"
+                disabled: !root.tasking
+                tooltip_text: "Stop Current Task"
+                onClicked: {
+                    engine.request_for_cancel()
+                }
+            },
+
+            Rectangle
+            {
+                width: 1
+                height: 24
+                anchors.verticalCenter: parent.verticalCenter
+                color: Theme.border
+            },
+
+            // Button to save currently open results into a named file
+            SmlButton
+            {
+                id: save_results_button
+                icon_name: Settings.save_icon_name
+                text_value: "Save"
+                disabled: list_of_ready_problems.length === 0
+                tooltip_text: "Save currently open results into a named file"
+                onClicked: save_load_dialogs.open_save()
+            },
+
+            // Button to load results from a previously saved file
+            SmlButton
+            {
+                id: load_results_button
+                icon_name: Settings.load_icon_name
+                text_value: "Load"
+                tooltip_text: "Load results from a previously saved file"
+                onClicked: save_load_dialogs.open_load()
+            }
+        ]
+    }
+
+    // Content card the problem tabs sit on: rounded corners, except the top-left one while the
+    // first tab is selected, square so that tab joins it cleanly at the left end
+    Rectangle
+    {
         anchors
         {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-            left: parent.left
-            leftMargin: Settings.spacing_normal
+            fill: tab_view
+            topMargin: 38
         }
-        onClicked: root.go_home()
-    }
+        radius: Theme.radiusSm
+        color: Theme.surface
+        border.width: 1
+        border.color: Theme.borderStrong
 
-    // Button for new problem with previous problem data
-    SmlButton
-    {
-        id: new_previous_problem_button
-        icon_name: Settings.back_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: ""
-        disabled: root.tasking
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Back to the previous screen (Problem Definition keeps the previous input)"
-        anchors
+        Item
         {
-            top: go_home_button.top
-            left: go_home_button.right
-            leftMargin: Settings.spacing_small
-        }
-        onClicked: root.go_back_previous_input()
-    }
-
-    // Button for new problem from zero
-    SmlButton
-    {
-        id: new_problem_button
-        icon_name: Settings.add_tab_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: ""
-        disabled: root.tasking
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "New Problem from Scratch"
-        anchors
-        {
-            top: go_home_button.top
-            left: new_previous_problem_button.right
-            leftMargin: Settings.spacing_small
-        }
-        onClicked: root.go_back_empty_input()
-    }
-
-    // Button to stop the current tasking
-    SmlButton
-    {
-        id: stop_button
-        icon_name: Settings.stop_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: ""
-        disabled: !root.tasking
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Stop Current Task"
-        anchors
-        {
-            top: go_home_button.top
-            left: new_problem_button.right
-            leftMargin: Settings.spacing_small
-        }
-        onClicked: {
-            engine.request_for_cancel()
-        }
-    }
-
-    // Button to save currently open results into a named file
-    SmlButton
-    {
-        id: save_results_button
-        icon_name: Settings.save_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Save"
-        disabled: list_of_ready_problems.length === 0
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Save currently open results into a named file"
-        anchors
-        {
-            top: go_home_button.top
-            left: stop_button.right
-            leftMargin: Settings.spacing_small
-        }
-        onClicked: save_load_dialogs.open_save()
-    }
-
-    // Button to load results from a previously saved file
-    SmlButton
-    {
-        id: load_results_button
-        icon_name: Settings.load_icon_name
-        text_kind: SmlText.TextKind.Header_2
-        text_value: "Load"
-        rounded: true
-        color: Settings.app_color_green_4
-        color_pressed: Settings.app_color_green_1
-        color_text: Settings.app_color_green_3
-        nightmode_color: Settings.app_color_green_2
-        nightmode_color_pressed: Settings.app_color_green_3
-        nightmode_color_text: Settings.app_color_green_1
-        tooltip_text: "Load results from a previously saved file"
-        anchors
-        {
-            top: go_home_button.top
-            left: save_results_button.right
-            leftMargin: Settings.spacing_small
-        }
-        onClicked: save_load_dialogs.open_load()
-    }
-
-    // Tasking status text
-    SmlText
-    {
-        id: tasking_status_text
-        visible: root.tasking
-        text_kind: SmlText.TextKind.Header_3
-        font.pixelSize: 25
-        text_value: "Working on task, please wait"
-        // Center when there's room, but never let it overlap the button row on narrow windows
-        x: Math.max((parent.width - width) / 2, load_results_button.x + load_results_button.width + Settings.spacing_big)
-        anchors {
-            top: parent.top
-            topMargin: Settings.spacing_normal
-        }
-    }
-
-    // Tasking status icon
-    SmlIcon
-    {
-        id: tasking_status_icon
-        visible: root.tasking
-        name:   Settings.bullet_point_icon_name
-        color:  Settings.app_color_green_1
-        color_pressed:  Settings.app_color_green_2
-        nightmode_color:  Settings.app_color_green_4
-        nightmode_color_pressed:  Settings.app_color_green_3
-        size: Settings.button_icon_size
-
-        anchors{
-            verticalCenter: tasking_status_text.verticalCenter
-            left: tasking_status_text.right
-            leftMargin: Settings.spacing_normal
-        }
-    }
-
-    SequentialAnimation {
-        id: tasking_animation
-        running: root.tasking
-        loops: Animation.Infinite
-        NumberAnimation {
-            target: tasking_status_icon
-            property: "rotation"
-            to: 360
-            duration: 4000
-            easing.type: Easing.InOutQuad
+            visible: tab_view.__current_tab === 0
+            anchors { top: parent.top; left: parent.left }
+            width: parent.radius
+            height: parent.radius
+            Rectangle { anchors.fill: parent; color: parent.parent.color }
+            Rectangle { anchors { top: parent.top; left: parent.left; right: parent.right } height: 1; color: parent.parent.border.color }
+            Rectangle { anchors { top: parent.top; bottom: parent.bottom; left: parent.left } width: 1; color: parent.parent.border.color }
         }
     }
 
@@ -452,14 +377,15 @@ Item
         id: tab_view
         anchors
         {
-            horizontalCenter: parent.horizontalCenter
-            top: go_home_button.bottom
-            topMargin: Settings.spacing_normal
+            top: header.bottom
+            topMargin: Theme.space4
+            left: parent.left
+            leftMargin: Theme.pagePadding
+            right: parent.right
+            rightMargin: Theme.pagePadding
             bottom: parent.bottom
+            bottomMargin: Theme.pagePadding
         }
-
-        width: parent.width
-        height: parent.height * 0.75
         clip: true
 
         allowed_stack_components: {"problem_view": "qrc:/qml/fragments/SmlProblemFragment.qml"}
@@ -510,14 +436,9 @@ Item
 SmlDialog
 {
     id: errorDialog
-    placeholder_text: "ERROR!!"
+    placeholder_text: "Error"
+    tone: "danger"
     text_value: errorMessage
-    background_color: Settings.app_color_light
-    border_color: Settings.app_color_green_4
-    border_width: 1
-    rounded: true
-    placeholder_text_color: Settings.app_color_blue
-    text_color: Settings.app_color_blue
 
     // Optional: clear the state when leaving
     onClosed: {

@@ -1,101 +1,93 @@
 import QtQuick 2.15
 
 // Project imports
-import eProsima.SustainML.Settings 1.0
-import eProsima.SustainML.Font 1.0
-import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
+/*
+    Single-line text field: raised fill, 1 px outline (3:1 against the surface), 2 px outline
+    in the focus colour while editing. For text that may need several lines (Enter starting
+    a new one) use SmlTextArea. A disabled field is sunken, with dimmed text. A read-only field only shows its value: sunken, full-contrast text, no
+    placeholder, no interaction.
+
+    Usage:
+        SmlInput {
+            placeholder_text: "Briefly describe the objective of the problem"
+            height: Theme.controlHeight
+            onTextChanged: ...
+        }
+ */
 TextInput {
     id: sustainml_custom_input
 
     // External properties
-    property bool rounded: true
-    property int border_width: Settings.input_default_border_width
-    property string background_color: ""
-    property string background_nightmode_color: ""
-    property string background_disable_color: Settings.app_color_disable
-    property string border_color: ""
-    property string border_editting_color: ""
-    property string border_nightmode_color: ""
-    property string border_nightmode_editting_color: ""
     property string placeholder_text: ""
     property bool disabled: false
+    property bool read_only: false
+    // Monospaced text, for paths and ids
+    property bool monospace: false
 
     // Internal properties
     property bool __edited: false
-    readonly property int __radius: Settings.input_default_rounded_radius
-    readonly property string __font_family: SustainMLFont.body_font
-    readonly property string __font_size:   Settings.body_font_size
-    readonly property string __font_color: ScreenManager.body_font_color
 
-    padding: Settings.spacing_normal
-    font.family: sustainml_custom_input.__font_family
-    font.pixelSize: sustainml_custom_input.__font_size
-    wrapMode: TextEdit.WordWrap
-    color: sustainml_custom_input.__font_color
+    leftPadding: Theme.space3
+    rightPadding: Theme.space3
+    topPadding: 0
+    bottomPadding: 0
+    verticalAlignment: TextInput.AlignVCenter
+    font.family: monospace ? Theme.monoFontFamily : Theme.uiFontFamily
+    font.pixelSize: Theme.fontSizeBody
+    wrapMode: TextInput.WordWrap
+    clip: true
+    color: !read_only && disabled ? Theme.textDisabled : Theme.textPrimary
 
-    //focus: sustainml_custom_input.focus
     selectByMouse: true
-    selectionColor: ScreenManager.night_mode ? Settings.app_color_green_2 : Settings.app_color_green_4
-    enabled: !disabled
+    selectionColor: Theme.accentSubtleStrong
+    selectedTextColor: Theme.textPrimary
+    enabled: !disabled && !read_only
 
     Rectangle
     {
         id: background
 
         anchors.fill: parent
-        z:-1
+        z: -1
 
-        radius: rounded ? sustainml_custom_input.__radius : 0
-        color: ScreenManager.night_mode
-                ? sustainml_custom_input.background_nightmode_color
-                : sustainml_custom_input.disabled
-                ? sustainml_custom_input.background_disable_color
-                : sustainml_custom_input.background_color
-        border.color: ScreenManager.night_mode ? sustainml_custom_input.__edited
-                    ? sustainml_custom_input.border_nightmode_editting_color
-                    : sustainml_custom_input.border_nightmode_color
-                : sustainml_custom_input.__edited
-                    ? sustainml_custom_input.border_editting_color
-                    : sustainml_custom_input.border_color
-        border.width: sustainml_custom_input.border_width
+        radius: Theme.radiusSm
+        color: sustainml_custom_input.disabled || sustainml_custom_input.read_only ? Theme.sunken : Theme.raised
+        border.width: sustainml_custom_input.__edited ? 2 : 1
+        border.color: sustainml_custom_input.disabled || sustainml_custom_input.read_only ? Theme.border
+                    : sustainml_custom_input.__edited ? Theme.focusRing
+                    : hover_area.containsMouse ? Theme.brandGreen
+                    : Theme.borderInput
+        Behavior on border.color { ColorAnimation { duration: Theme.durFast } }
 
-
-        // Custom placeholder field
-        SmlText
+        // Placeholder, shown while the field is empty
+        Text
         {
             id: placeholder_text
-            text_value: sustainml_custom_input.placeholder_text
-
-            width: sustainml_custom_input.width
-            leftPadding: sustainml_custom_input.padding
-            topPadding: sustainml_custom_input.padding
-
-            force_color: true
-            forced_color: sustainml_custom_input.disabled ? "#888" : "#aaa"
-            visible: sustainml_custom_input.text === ""
-
-            SmlMouseArea
-            {
-                anchors.fill: parent
-                custom_cursor_shape: Qt.IBeamCursor
-
-                onPressed:  { sustainml_custom_input.forceActiveFocus(); }
-                onClicked: { sustainml_custom_input.forceActiveFocus(); }
-                onDoubleClicked: { sustainml_custom_input.forceActiveFocus(); }
-            }
-        }
-        SmlMouseArea
-        {
             anchors.fill: parent
-            custom_cursor_shape: Qt.IBeamCursor
-            propagateComposedEvents: true
+            leftPadding: sustainml_custom_input.leftPadding
+            rightPadding: sustainml_custom_input.rightPadding
+            topPadding: sustainml_custom_input.topPadding
+            bottomPadding: sustainml_custom_input.bottomPadding
+            verticalAlignment: Text.AlignVCenter
+            text: sustainml_custom_input.placeholder_text
+            textFormat: Text.PlainText
+            font.family: Theme.uiFontFamily
+            font.pixelSize: Theme.fontSizeBody
+            color: sustainml_custom_input.disabled ? Theme.textDisabled : Theme.textMuted
+            elide: Text.ElideRight
+            wrapMode: Text.NoWrap
+            visible: sustainml_custom_input.text === "" && !sustainml_custom_input.read_only
+        }
 
-            onPressed:  { mouse.accepted = false; }
-            onReleased: { mouse.accepted = false; }
-            onPressAndHold: { mouse.accepted = false; }
-            onClicked: { mouse.accepted = false; }
-            onDoubleClicked: { mouse.accepted = false; }
+        MouseArea
+        {
+            id: hover_area
+            anchors.fill: parent
+            hoverEnabled: true
+            acceptedButtons: Qt.NoButton
+            cursorShape: sustainml_custom_input.read_only ? Qt.ArrowCursor : Qt.IBeamCursor
         }
     }
     onFocusChanged: sustainml_custom_input.__edited = focus

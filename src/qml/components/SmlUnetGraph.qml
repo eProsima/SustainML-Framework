@@ -10,6 +10,7 @@ import QtQuick.Controls 2.15
 import eProsima.SustainML.Settings 1.0
 import eProsima.SustainML.Font 1.0
 import eProsima.SustainML.ScreenMan 1.0
+import eProsima.SustainML.Theme 1.0
 
 import "../utils/UnetModel.js" as UnetModel
 
@@ -30,28 +31,28 @@ Item {
 
     // Palette (light / night)
     readonly property bool __night: ScreenManager.night_mode
-    readonly property color c_card:         __night ? "#303030" : "white"
-    readonly property color c_surface:      __night ? "#3a3f3a" : "#eef1ee"
-    readonly property color c_border:       __night ? "#4a524a" : "#d3dbd2"
-    readonly property color c_text:         __night ? "#e6ebe5" : "#263026"
-    readonly property color c_muted:        __night ? "#a3b0a2" : "#5d6b5d"
+    readonly property color c_card:         Theme.surface
+    readonly property color c_surface:      Theme.sunken
+    readonly property color c_border:       Theme.border
+    readonly property color c_text:         Theme.textPrimary
+    readonly property color c_muted:        Theme.textMuted
     readonly property color c_map_fill:     __night ? "#34512a" : "#d7ecc9"
     readonly property color c_map_stroke:   __night ? "#9fd97e" : "#3f6a2b"
     readonly property color c_bottleneck:   __night ? "#4b7a36" : "#a9d68f"
-    readonly property color c_input_fill:   __night ? "#3a4450" : "#dfe4ea"
-    readonly property color c_input_stroke: __night ? "#a8b6c6" : "#5b6b7d"
-    readonly property color c_output_fill:  __night ? "#b6d816" : Settings.app_color_green_3
-    readonly property color c_output_stroke:__night ? "#e6ebe5" : Settings.app_color_dark
-    readonly property color c_k3:           __night ? "#6fa8e0" : Settings.app_color_blue
+    readonly property color c_input_fill:   __night ? "#2C3A31" : "#E3E9DF"
+    readonly property color c_input_stroke: __night ? "#A7B2AA" : "#5E6B62"
+    readonly property color c_output_fill:  Theme.brandLime
+    readonly property color c_output_stroke:Theme.textPrimary
+    readonly property color c_k3:           __night ? "#C4A3F5" : "#6D3FB5"   // violet: no blue in SustainML
     readonly property color c_k5:           __night ? "#f0a040" : "#c26a00"
     readonly property color c_pool:         __night ? "#ef6f66" : "#b3261e"
     readonly property color c_up:           __night ? "#7cc257" : "#3d8a1f"
     readonly property color c_skip:         __night ? "#7a857a" : "#9aa39a"
     readonly property color c_1x1:          __night ? "#4fc4c4" : "#0f7c7c"
-    readonly property color c_bar:          Settings.app_color_green_2
-    readonly property color c_link:         __night ? "#9fd97e" : "#3d8a1f"   // same green as highlighted values; links are underlined
-    readonly property color c_diff:         __night ? "#9fd97e" : "#3d8a1f"   // values that differ from the original U-Net
-    readonly property color c_highlight:    Settings.app_color_green_3
+    readonly property color c_bar:          Theme.brandGreen
+    readonly property color c_link:         Theme.accentText   // same green as highlighted values; links are underlined
+    readonly property color c_diff:         Theme.accentText   // values that differ from the original U-Net
+    readonly property color c_highlight:    Theme.brandLime
 
     readonly property int __gap: Settings.spacing_normal
     property bool layers_expanded: false
@@ -162,7 +163,7 @@ Item {
     // Reusable pieces
     component Card: Rectangle {
         color: root.c_card
-        radius: 14
+        radius: Theme.radiusLg
         border.color: root.c_border
         border.width: 1
         default property alias contents: card_column.data
@@ -179,7 +180,7 @@ Item {
     component Heading: Text {
         color: root.c_text
         font.family: SustainMLFont.title_font
-        font.pixelSize: Settings.header3_font_size
+        font.pixelSize: Theme.fontSizeCardTitle
         font.bold: true
         width: parent ? parent.width : implicitWidth
         wrapMode: Text.WordWrap
@@ -188,7 +189,7 @@ Item {
     component Body: Text {
         color: root.c_text
         font.family: SustainMLFont.body_font
-        font.pixelSize: Settings.body_font_size
+        font.pixelSize: Theme.fontSizeBody
         width: parent ? parent.width : implicitWidth
         wrapMode: Text.WordWrap
         textFormat: Text.StyledText
@@ -233,7 +234,7 @@ Item {
                     text: root.model ? root.model.name : ""
                     color: root.c_text
                     font.family: SustainMLFont.title_font
-                    font.pixelSize: Settings.header2_font_size
+                    font.pixelSize: 24
                     font.bold: true
                 }
 
@@ -252,7 +253,7 @@ Item {
                             required property var modelData
                             height: 24
                             width: chip_text.implicitWidth + 20
-                            radius: 12
+                            radius: Theme.radiusLg
                             color: root.c_surface
                             border.color: root.c_border
                             Text {
@@ -273,16 +274,8 @@ Item {
                 id: browser_button
                 anchors.right: parent.right
                 anchors.top: parent.top
-                icon_name: Settings.browse_icon_name
-                text_kind: SmlText.TextKind.Header_2
+                icon_name: "external"
                 text_value: "Open in browser"
-                rounded: true
-                color: Settings.app_color_green_4
-                color_pressed: Settings.app_color_green_1
-                color_text: Settings.app_color_green_3
-                nightmode_color: Settings.app_color_green_2
-                nightmode_color_pressed: Settings.app_color_green_3
-                nightmode_color_text: Settings.app_color_green_1
                 tooltip_text: "Open this visualization as a web page, e.g. to share or print it"
                 onClicked: if (root.model) root.open_in_browser(root.model.name)
             }
@@ -588,7 +581,7 @@ Item {
                     required property var modelData
                     width: tiles.tile_w
                     height: tile_col.implicitHeight + 24
-                    radius: 12
+                    radius: Theme.radiusLg
                     color: root.c_card
                     border.color: root.c_border
                     Column {
@@ -885,6 +878,6 @@ Item {
         text: "No architecture information available for this model."
         color: root.c_muted
         font.family: SustainMLFont.body_font
-        font.pixelSize: Settings.body_font_size
+        font.pixelSize: Theme.fontSizeBody
     }
 }
