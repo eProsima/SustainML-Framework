@@ -73,6 +73,20 @@ Item
     // shows what that iteration ran with, and the footer actions are hidden
     property bool __reiterate: false
     property bool __initializing: true
+    // The iteration evaluated a Hugging Face model (its Analyze button)
+    property bool __hf_analyze: false
+    // What the info view leaves out. A HF model was found for the problem description and
+    // evaluated as is, so that description is all it shows. A model chosen from the list (always
+    // a U-Net for CNNs) is evaluated as is too: the description, inputs, outputs, samples, search,
+    // dataset and optimization fields never apply to it, so it shows the type, goal (none for
+    // CNNs), hardware, model and location
+    readonly property bool __info_hf: root.__reiterate && root.__hf_analyze
+    readonly property bool __info_chosen: root.__reiterate && !root.__hf_analyze &&
+                                          (root.__model_selected !== "" || root.__cnn_mode)
+    readonly property bool __info_cnn: root.__info_chosen && root.__cnn_mode
+    // The description the HF search used: the problem definition, else the short description
+    readonly property bool __hf_used_definition: root.__problem_definition.trim() !== "" ||
+                                                 root.__problem_short_description.trim() === ""
 
     property string __dataset_metadata_description: __dataset_description
     property string __dataset_metadata_topic: __dataset_topic
@@ -150,7 +164,7 @@ Item
                           previous_iteration, optimize_carbon_footprint_auto,
                           desired_carbon_footprint, geo_location_continent,
                           geo_location_region, goal, hardware_required, max_memory_footprint, num_outputs, type, is_reiteration,
-                          model_selected)
+                          model_selected, hf_analyze)
         {
             // Each form takes only its own request: the iteration info view (is_reiteration)
             // or Back from Results (the problem definition form). Both are alive at once, and
@@ -163,20 +177,6 @@ Item
             root.__problem_definition = problem_definition
             root.__inputs = inputs
             root.__outputs = outputs
-            // The info view's own copy (it is not bound to main_window's dataset metadata)
-            if (root.__reiterate)
-            {
-                root.__dataset_description = dataset_metadata_description
-                root.__dataset_topic = dataset_metadata_topic
-                root.__dataset_profile = dataset_metadata_profile
-                root.__dataset_keywords = dataset_metadata_keywords
-                root.__dataset_applications = dataset_metadata_applications
-            }
-            else
-            {
-                root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
-                        dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
-            }
             root.__minimum_samples = minimum_samples
             root.__maximum_samples = maximum_samples
             root.__optimize_carbon_footprint_manual = optimize_carbon_footprint_manual
@@ -184,38 +184,44 @@ Item
             root.__desired_carbon_footprint = desired_carbon_footprint
             root.__geo_location_continent = geo_location_continent
             root.__geo_location_region = geo_location_region
-            // Back from Results (is_reiteration false) must always land on an editable
-            // form: a restored Model goal would disable the problem description fields,
-            // so it is left empty. Re-iterating keeps the original goal.
-            root.__goal = is_reiteration ? goal : ""
-            // Not carried by this signal at all (no model_selected parameter above),
-            // so there's nothing to restore it to - but it must still be reset to ""
-            // here, otherwise a model chosen via the CNN+FPGA direct-model-selection
-            // path (see required_hardware_input above) stays stuck non-empty forever,
-            // permanently disabling every field gated by "__model_selected !== \"\""
-            // (min/max samples, num_outputs, etc.) even after going back to submit a
-            // different model. The goal-driven path never sets this in the first
-            // place, which is why only the CNN+FPGA flow showed this symptom.
-            root.__model_selected = ""
-            root.__model_selected_copy = ""
-            // The iteration info view shows exactly what was chosen (nothing is submitted from it)
             if (root.__reiterate)
             {
+                // Iteration info view: exactly what the iteration was run with. Its own copy of
+                // the dataset metadata, as it is not bound to main_window's
+                root.__dataset_description = dataset_metadata_description
+                root.__dataset_topic = dataset_metadata_topic
+                root.__dataset_profile = dataset_metadata_profile
+                root.__dataset_keywords = dataset_metadata_keywords
+                root.__dataset_applications = dataset_metadata_applications
+                root.__goal = goal
                 root.__model_selected = model_selected
                 root.__model_selected_copy = model_selected
                 root.__hardware_required = hardware_required
                 root.__num_outputs = num_outputs > 0 ? num_outputs : 1
                 num_outputs_input.text = root.__num_outputs
+                root.__hf_analyze = hf_analyze
             }
-            // Restore the hardware on Back (after __types above, whose change resets the
-            // hardware to the type's default), if it is valid for the restored type
-            if (!is_reiteration && hardware_required !== "" &&
-                    root.filteredHardwareList().indexOf(hardware_required) !== -1)
-                root.__hardware_required = hardware_required
+            else
+            {
+                // Back from Results: an editable form for a new problem. A restored goal or model
+                // would disable the problem description fields, so both are left empty (a model
+                // from the CNN+FPGA direct selection would otherwise stay stuck for good,
+                // disabling every field gated by "__model_selected !== \"\"")
+                root.dataset_metadata_reiterated(dataset_metadata_description, dataset_metadata_topic,
+                        dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
+                root.__goal = ""
+                root.__model_selected = ""
+                root.__model_selected_copy = ""
+                // After __types above, whose change resets the hardware to the type's default;
+                // only if it is valid for the restored type
+                if (hardware_required !== "" &&
+                        root.filteredHardwareList().indexOf(hardware_required) !== -1)
+                    root.__hardware_required = hardware_required
+            }
             root.__max_memory_footprint = max_memory_footprint
             // Set explicitly: Clear all assigns these texts, which removes their bindings
-            // (as does the reset after a submit for the samples), so the fields would
-            // otherwise look empty, or keep older text, while the restored values are sent
+            // (as does emptying a samples field), so the fields would otherwise look empty,
+            // or keep older text, while the restored values are sent
             problem_short_description_input.text = problem_short_description
             problem_definition_input.text = problem_definition
             inputs_input.text = inputs
@@ -226,11 +232,6 @@ Item
             max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
             root.__previous_problem_id = 0
-            if (is_reiteration)
-            {
-                root.__previous_iteration = iteration_id
-                root.__previous_problem_id = problem_id
-            }
         }
 
         function onNotSupportProblem(error_msg)
@@ -265,8 +266,8 @@ Item
     {
         id: header
         title: root.__reiterate ? "Iteration inputs" : "Problem definition"
-        subtitle: root.__reiterate
-                  ? "What this iteration was run with"
+        subtitle: root.__info_hf ? "The problem description the Hugging Face model was analyzed for"
+                  : root.__reiterate ? "What this iteration was run with"
                   : "Describe the ML problem to find the most efficient model and hardware"
         reserved_right: root.__reiterate ? Theme.space5 : Theme.controlHeight + Theme.space4 + Theme.space3
 
@@ -475,7 +476,9 @@ Item
                 id: problem_card
                 width: parent.width
                 title: "Problem"
-                subtitle: "What the model has to do, and the data it works with"
+                subtitle: root.__info_hf ? "What the model has to do"
+                          : root.__info_chosen ? "The kind of model"
+                          : "What the model has to do, and the data it works with"
                 icon_name: "file"
 
                 Column
@@ -488,12 +491,13 @@ Item
                     Column
                     {
                         width: parent.width
+                        visible: !root.__info_chosen && !(root.__info_hf && root.__hf_used_definition)
                         SmlFieldLabel { text: "Problem short description"; active: problem_short_description_input.focus; width: parent.width }
                         SmlInput
                         {
                             read_only: root.__reiterate
                             id: problem_short_description_input
-                            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__problem_short_description
                             placeholder_text: "Resume briefly the objective of the problem"
                             width: parent.width
@@ -517,12 +521,13 @@ Item
                     Column
                     {
                         width: parent.width
+                        visible: !root.__info_chosen && !(root.__info_hf && !root.__hf_used_definition)
                         SmlFieldLabel { text: "Problem definition"; active: problem_definition_input.focus; width: parent.width }
                         SmlTextArea
                         {
                             read_only: root.__reiterate
                             id: problem_definition_input
-                            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__problem_definition
                             placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
                             width: parent.width
@@ -546,6 +551,7 @@ Item
                     Column
                     {
                         width: root.__col(parent.width, 3)
+                        visible: !root.__info_hf
                         SmlFieldLabel { text: "Type limiter"; active: types_input.popup.visible; width: parent.width }
                         SmlCombobox
                         {
@@ -608,6 +614,7 @@ Item
                     {
                         width: parent.width
                         spacing: Theme.space4
+                        visible: !root.__info_hf && !root.__info_chosen
 
                         // Inputs
                         Column
@@ -618,7 +625,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: inputs_input
-                                disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__inputs
                                 placeholder_text: "Describe a sequence of serialized batches of input data"
                                 width: parent.width
@@ -647,7 +654,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: outputs_input
-                                disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__outputs
                                 placeholder_text: "Describe a sequence of serialized batches of output data"
                                 width: parent.width
@@ -675,8 +682,11 @@ Item
             {
                 id: model_card
                 width: parent.width
+                visible: !root.__info_hf
                 title: "Model and data"
-                subtitle: "Goal, model, hardware and dataset of the problem"
+                subtitle: root.__info_cnn ? "Model and hardware of the problem"
+                          : root.__info_chosen ? "Goal, model and hardware of the problem"
+                          : "Goal, model, hardware and dataset of the problem"
                 icon_name: "cpu"
 
                 Column
@@ -688,17 +698,19 @@ Item
                     {
                         width: parent.width
                         spacing: Theme.space4
+                        visible: !root.__info_cnn
 
                         // Minimum samples
                         Column
                         {
                             width: root.__col(parent.width, 3)
+                            visible: !root.__info_chosen
                             SmlFieldLabel { text: "Minimum samples"; active: minimum_samples_input.focus; width: parent.width }
                             SmlInput
                             {
                                 read_only: root.__reiterate
                                 id: minimum_samples_input
-                                disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
                                 // Not IntValidator: it's locale-aware and treats the locale's group
                                 // separator (a comma, in many locales) as acceptable input. A plain
@@ -734,12 +746,13 @@ Item
                         Column
                         {
                             width: root.__col(parent.width, 3)
+                            visible: !root.__info_chosen
                             SmlFieldLabel { text: "Maximum samples"; active: maximum_samples_input.focus; width: parent.width }
                             SmlInput
                             {
                                 read_only: root.__reiterate
                                 id: maximum_samples_input
-                                disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
                                 validator: RegExpValidator { regExp: /^[0-9]*$/ }
                                 placeholder_text: "Max samples required (only numbers)"
@@ -771,7 +784,7 @@ Item
                         // Goal selection
                         Column
                         {
-                            width: root.__col(parent.width, 3)
+                            width: root.__col(parent.width, root.__info_chosen ? 2 : 3)
                             SmlFieldLabel { text: "Model goal"; active: goal_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
@@ -784,7 +797,7 @@ Item
                                 // permanently stuck: a direct "goal_input.disabled = ..." assignment
                                 // would sever this binding for good, the same way direct assignments to
                                 // the dataset-metadata properties elsewhere in this file used to.
-                                disabled: root.__reiterate || root.__model_selected !== "" ||
+                                disabled: root.__model_selected !== "" ||
                                     (root.__types.toLowerCase() === "cnns" && root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)")
                                 displayText: root.__goal
                                 placeholder_text: displayText !== "" ? "" : "Select your model goal"
@@ -841,7 +854,7 @@ Item
                         // Hardware required
                         Column
                         {
-                            width: root.__col(parent.width, 3)
+                            width: root.__col(parent.width, root.__info_chosen ? 2 : 3)
                             SmlFieldLabel { text: "Required hardware"; active: required_hardware_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
@@ -903,7 +916,7 @@ Item
                         // Model selector
                         Column
                         {
-                            width: root.__col(parent.width, 3)
+                            width: root.__col(parent.width, root.__info_chosen ? 2 : 3)
                             SmlFieldLabel { text: "Model selection"; active: model_select_input.popup.visible; width: parent.width }
                             SmlCombobox
                             {
@@ -913,8 +926,7 @@ Item
                                 id: model_select_input
                                 searchable: true
                                 // Disable model selection if the goal is not selected unless CNNs + FPGA combo
-                                disabled: root.__reiterate ||
-                                    (root.__goal === "" &&
+                                disabled: (root.__goal === "" &&
                                     !(root.__types && root.__types.toLowerCase() === "cnns" &&
                                         root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)"))
                                 displayText: root.__model_selected
@@ -960,12 +972,13 @@ Item
                         Column
                         {
                             width: root.__col(parent.width, 3)
+                            visible: !root.__info_chosen
                             SmlFieldLabel { text: "Nº output models"; active: num_outputs_input.focus; width: parent.width }
                             SmlInput
                             {
                                 read_only: root.__reiterate
                                 id: num_outputs_input
-                                disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__num_outputs === 0 ? "" : root.__num_outputs
                                 validator: RegExpValidator { regExp: /^[0-9]*$/ }
                                 placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
@@ -1002,9 +1015,9 @@ Item
                     Text
                     {
                         id: dataset_title
-                        visible: root.__dataset_description !== "" || root.__dataset_topic !== ""
+                        visible: !root.__info_chosen && (root.__dataset_description !== "" || root.__dataset_topic !== ""
                                  || root.__dataset_keywords !== "" || root.__dataset_applications !== ""
-                                 || root.__dataset_profile !== ""
+                                 || root.__dataset_profile !== "")
                         text: "UPLOADED DATASET"
                         textFormat: Text.PlainText
                         font.family: Theme.uiFontFamily
@@ -1018,14 +1031,14 @@ Item
                     Column
                     {
                         width: parent.width
-                        visible: root.__dataset_description !== ""
+                        visible: !root.__info_chosen && root.__dataset_description !== ""
                         SmlFieldLabel { text: "Dataset description"; active: dataset_metadata_description_input.focus; width: parent.width }
                         SmlTextArea
                         {
                             read_only: root.__reiterate
                             id: dataset_metadata_description_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
-                            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__dataset_description
                             placeholder_text: "Dataset description"
                             width: parent.width
@@ -1049,7 +1062,7 @@ Item
                     {
                         width: parent.width
                         spacing: Theme.space4
-                        visible: root.__dataset_topic !== "" || root.__dataset_keywords !== ""
+                        visible: !root.__info_chosen && (root.__dataset_topic !== "" || root.__dataset_keywords !== "")
 
                         //Dataset Topic
                         Column
@@ -1063,7 +1076,7 @@ Item
                                 id: dataset_metadata_topic_input
                                 visible: root.__dataset_topic !== ""
                                 // Only used to infer the goal, so ignored once a goal or a model is chosen
-                                disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__dataset_topic
                                 placeholder_text: "Dataset description"
                                 width: parent.width
@@ -1095,7 +1108,7 @@ Item
                                 id: dataset_metadata_keywords_input
                                 visible: root.__dataset_keywords !== ""
                                 // Only used to infer the goal, so ignored once a goal or a model is chosen
-                                disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                                 text: root.__dataset_keywords
                                 placeholder_text: "Dataset keywords"
                                 width: parent.width
@@ -1120,14 +1133,14 @@ Item
                     Column
                     {
                         width: parent.width
-                        visible: root.__dataset_applications !== ""
+                        visible: !root.__info_chosen && root.__dataset_applications !== ""
                         SmlFieldLabel { text: "Dataset applications"; active: dataset_metadata_applications_input.focus; width: parent.width }
                         SmlTextArea
                         {
                             read_only: root.__reiterate
                             id: dataset_metadata_applications_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
-                            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__dataset_applications
                             placeholder_text: "Dataset applications"
                             width: parent.width
@@ -1151,14 +1164,14 @@ Item
                     Column
                     {
                         width: parent.width
-                        visible: root.__dataset_profile !== ""
+                        visible: !root.__info_chosen && root.__dataset_profile !== ""
                         SmlFieldLabel { text: "Dataset profile"; active: dataset_metadata_profile_input.focus; width: parent.width }
                         SmlTextArea
                         {
                             read_only: root.__reiterate
                             id: dataset_metadata_profile_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
-                            disabled: root.__reiterate || root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
                             text: root.__dataset_profile
                             placeholder_text: "Dataset profile"
                             width: parent.width
@@ -1185,8 +1198,9 @@ Item
             {
                 id: sustainability_card
                 width: parent.width
+                visible: !root.__info_hf
                 title: "Sustainability targets"
-                subtitle: "Carbon footprint, memory and where the model will run"
+                subtitle: root.__info_chosen ? "Where the model will run" : "Carbon footprint, memory and where the model will run"
                 icon_name: "leaf"
 
                 Column
@@ -1198,6 +1212,7 @@ Item
                     {
                         width: parent.width
                         spacing: Theme.space4
+                        visible: !root.__info_chosen
 
                         // Carbon footprint optimization
                         Column
@@ -1554,15 +1569,6 @@ Item
                 root.__num_outputs,
                 root.__model_selected,
                 root.__types)
-
-        // Unlike the rest of the form, which deliberately stays filled in after a submit
-        // (so a quick follow-up run can reuse most of it), the samples fields must not -
-        // this screen instance is cached and reused, so a value left here would silently
-        // carry into the next run as if the user had set it there too.
-        root.__minimum_samples = 1
-        root.__maximum_samples = 1
-        minimum_samples_input.text = ""
-        maximum_samples_input.text = ""
     }
 
     // Remove FPGA from transformers hardware list and keep only FPGA for CNNs

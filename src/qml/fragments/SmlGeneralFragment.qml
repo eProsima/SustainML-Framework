@@ -37,16 +37,27 @@ Rectangle
     }
     property var columnWidths: [44, 40, 84, 140, 170, 130, 130, 130, 130, 130]
 
+    // The Problem column shows the goal of each iteration, which a CNN problem never has (its
+    // U-Net is chosen directly): hidden once the problem has results and none of them has a goal
+    property bool __problem_kind_hidden: false
+    on__Problem_kind_hiddenChanged: __fit_columns()
+
+    function __column_shown(column) {
+        return column !== __problem_kind_column || !__problem_kind_hidden
+    }
+
     // Width of both tables, from the columns' widths. Set explicitly by relayout_tables()
     // rather than bound to the tables' own contentItem.childrenRect: that binding made each
     // table's width depend on its own laid-out cells, so every relayout changed the width it
     // was computed from, a binding loop.
     property real __tables_width: __columns_width() + 1
 
-    // Width shown for a column: its own width, except that the last column also takes the
-    // room left when all of them together are narrower than the view (they then fill it).
-    // Pure: it never changes columnWidths, so resizing one column never moves the others.
+    // Width shown for a column: 0 when hidden, else its own width, except that the last column
+    // also takes the room left when all of them together are narrower than the view (they then
+    // fill it). Pure: it never changes columnWidths, so resizing one column never moves the others.
     function __column_width(column) {
+        if (!__column_shown(column))
+            return 0
         if (column === columnWidths.length - 1) {
             var room = scroll_view.width - 1 - __columns_width()
             if (room > 0)
@@ -58,7 +69,8 @@ Rectangle
     function __columns_width() {
         var w = 0
         for (var i = 0; i < columnWidths.length; i++)
-            w += columnWidths[i]
+            if (__column_shown(i))
+                w += columnWidths[i]
         return w
     }
 
@@ -75,16 +87,20 @@ Rectangle
     // view: a column the user resized keeps its width until then.
     function __fit_columns() {
         var first = __iteration_column
-        var fixed = 0, flexible = 0
+        var fixed = 0, flexible = 0, count = 0
         for (var i = 0; i < minColumnWidths.length; i++) {
             if (i < first) fixed += columnWidths[i]
-            else flexible += minColumnWidths[i]
+            else if (__column_shown(i)) {
+                flexible += minColumnWidths[i]
+                count++
+            }
         }
         var extra = scroll_view.width - fixed - flexible - 1
         if (extra <= 0) return
-        var share = Math.floor(extra / (minColumnWidths.length - first))
+        var share = Math.floor(extra / count)
         for (var j = first; j < minColumnWidths.length; j++)
-            columnWidths[j] = minColumnWidths[j] + share
+            if (__column_shown(j))
+                columnWidths[j] = minColumnWidths[j] + share
     }
     readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height - __summary_height
@@ -236,6 +252,7 @@ Rectangle
                     table_model.setData(table_model.index(row, __columns[key]), "display", values[key])
             }
         }
+        root.__problem_kind_hidden = !table_model.rows.some(function(r) { return r["Problem kind"] !== "" })
         Qt.callLater(root.relayout_tables)
     }
 

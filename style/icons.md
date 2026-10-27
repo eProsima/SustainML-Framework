@@ -38,16 +38,14 @@ then generate. To **change** one, change its Lucide name and regenerate; no QML 
 | `dark` | `#15201A` |
 | `light` | `#E4EAE5` |
 | `muted` | `#6F7B72` |
-| `accent` | `#2D7D1B` |
+| `accent` | `#21780A` |
 | `accent_dark` | `#9BE070` |
 | `white` | `#FFFFFF` |
-| `ink` | `#0F2408` |
-| `lime` | `#CBEE19` |
 | `danger` | `#B91C1C` |
 | `danger_dark` | `#F87171` |
 | `warning` | `#A44B07` |
 | `warning_dark` | `#FBBF24` |
-| `success` | `#15803D` |
+| `success` | `#11652F` |
 | `success_dark` | `#4ADE80` |
 
 ## Icon names
@@ -55,33 +53,25 @@ then generate. To **change** one, change its Lucide name and regenerate; no QML 
 | Name | Lucide |
 |---|---|
 | `back` | `arrow-left` |
-| `box` | `box` |
-| `chart` | `chart-column` |
 | `check` | `check` |
 | `checklist` | `list-checks` |
 | `chevron_left` | `chevron-left` |
 | `chevron_right` | `chevron-right` |
-| `circle_dot` | `circle-dot` |
 | `cpu` | `cpu` |
 | `cross` | `x` |
 | `database` | `database` |
 | `down` | `chevron-down` |
-| `earth` | `earth` |
 | `error` | `circle-x` |
 | `external` | `external-link` |
 | `file` | `file-text` |
 | `folder` | `folder-open` |
-| `gauge` | `gauge` |
 | `gear` | `settings` |
 | `history` | `history` |
 | `home` | `house` |
 | `info` | `info` |
-| `layers` | `layers` |
 | `leaf` | `leaf` |
 | `load` | `folder-down` |
-| `loader` | `loader-circle` |
 | `mop` | `brush-cleaning` |
-| `moon` | `moon` |
 | `network` | `network` |
 | `pencil` | `pencil` |
 | `plus` | `plus` |
@@ -91,6 +81,15 @@ then generate. To **change** one, change its Lucide name and regenerate; no QML 
 | `search` | `search` |
 | `sparkles` | `sparkles` |
 | `sprout` | `sprout` |
+| `square` | `square` |
+| `success` | `circle-check` |
+| `table` | `table-2` |
+| `trash` | `trash-2` |
+| `up` | `chevron-up` |
+| `upload` | `upload` |
+| `warning` | `triangle-alert` |
+| `workflow` | `workflow` |
+| `zap` | `zap` |
 | `square` | `square (filled)` |
 | `success` | `circle-check` |
 | `sun` | `sun` |

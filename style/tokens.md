@@ -63,7 +63,7 @@ with another opacity.
 | Screen titles (header) | - | 17 px DemiBold |
 | Page titles | `fontSizePageTitle` | 20 px DemiBold |
 
-`SmlText` / `SmlTextNoSelectable` map their `TextKind` onto these: `Header_1` page title,
+`SmlText` maps its `TextKind` onto these: `Header_1` page title,
 `Header_2` card title, `Header_3` field label, `Body` body.
 
 ## Shape and spacing

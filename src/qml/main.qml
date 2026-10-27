@@ -569,6 +569,8 @@ Window {
         var extraObj = {}
         try { extraObj = extra ? JSON.parse(extra) : {} } catch(e) { extraObj = {} }
         extraObj["model_restrains"] = [id]
+        // Kept with the iteration's inputs, so its info view shows only the problem description
+        extraObj["hf_analyze"] = true
         var extraJson = JSON.stringify(extraObj)
 
         // The HF model is evaluated as a chosen model: once, with no search to optimize
@@ -1035,43 +1037,10 @@ Window {
                         Layout.preferredWidth: parent.width * 0.75
                         Layout.fillHeight: true
 
-                        __goal_list: main_window.goal_list
-                        __hardware_list: main_window.hardware_list
-                        __model_list: main_window.model_list
-                        __refreshing: main_window.refreshing
                         __initializing: main_window.initializing
                         __reiterate: true
 
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
-                        onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
-                        onSend_task: {
-                            engine.launch_task(
-                                problem_short_description,
-                                problem_definition,
-                                inputs,
-                                outputs,
-                                dataset_metadata_description,
-                                dataset_metadata_topic,
-                                dataset_metadata_profile,
-                                dataset_metadata_keywords,
-                                dataset_metadata_applications,
-                                minimum_samples,
-                                maximum_samples,
-                                optimize_carbon_footprint_auto,
-                                goal,
-                                optimize_carbon_footprint_manual,
-                                previous_iteration,
-                                desired_carbon_footprint,
-                                max_memory_footprint,
-                                hardware_required,
-                                geo_location_continent,
-                                geo_location_region,
-                                extra_data,
-                                previous_problem_id,
-                                num_outputs,
-                                model_selected,
-                                type)
-                        }
                     }
 
                     Rectangle {
@@ -1116,6 +1085,8 @@ Window {
                                     model: reiterateModel
                                     delegate: Column {
                                         width: parent.width - 2 * Theme.space5
+                                        // No problem kind (goal) in a CNN iteration, as in the Results table
+                                        visible: !(label === "Problem Kind" && value === "")
                                         topPadding: Theme.space3
                                         bottomPadding: Theme.space3
                                         spacing: 2
@@ -1961,6 +1932,7 @@ Window {
                                             // (checkbox has its own MouseArea that absorbs clicks)
                                             MouseArea {
                                                 anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
                                                 onClicked: {
                                                     if (!mid) return
                                                     Qt.openUrlExternally("https://huggingface.co/" + mid)
@@ -2075,7 +2047,9 @@ Window {
                                                         font.family: Theme.uiFontFamily
                                                         font.pixelSize: 14
                                                         font.weight: Font.DemiBold
-                                                        color: Theme.textPrimary
+                                                        // A link to the model's Hugging Face page (the whole card opens it)
+                                                        font.underline: true
+                                                        color: Theme.accentText
                                                         elide: Text.ElideRight
                                                         Layout.fillWidth: true
                                                         Layout.alignment: Qt.AlignVCenter
@@ -2296,10 +2270,7 @@ Window {
                             height: parent.height
                             clip: true
 
-                            // The scrollbar is on the screen edge, outside the content
-                            property int sbSpace: 0
-
-                            contentWidth: width - sbSpace
+                            contentWidth: width
                             contentHeight: cmpContent.implicitHeight
 
 
@@ -2307,7 +2278,7 @@ Window {
 
                             Column {
                                 id: cmpContent
-                                width: cmpScroll.width - cmpScroll.sbSpace
+                                width: cmpScroll.width
                                 spacing: 18
 
                                 Text {
@@ -3041,6 +3012,7 @@ Window {
 
                                         MouseArea {
                                             anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
                                             onClicked: { if (mid) Qt.openUrlExternally("https://huggingface.co/" + mid) }
                                         }
 
@@ -3050,12 +3022,14 @@ Window {
                                             anchors.rightMargin: Theme.space3
                                             spacing: Theme.space5
 
+                                            // A link to the model's Hugging Face page (the whole card opens it)
                                             Text {
                                                 text: mid
                                                 font.family: Theme.uiFontFamily
                                                 font.pixelSize: 14
                                                 font.weight: Font.DemiBold
-                                                color: Theme.textPrimary
+                                                font.underline: true
+                                                color: Theme.accentText
                                                 elide: Text.ElideRight
                                                 Layout.fillWidth: true
                                                 Layout.alignment: Qt.AlignVCenter
@@ -3169,9 +3143,11 @@ Window {
     }
 
     // Node status (settings) button, on top of every screen, in the free right end of its header
+    // (not on the iteration info view, opened from Results only to show an iteration)
     SmlIconButton
     {
         id: settings_icon
+        visible: ScreenManager.current_screen !== ScreenManager.Screens.Reiterate
         icon_name: Settings.settings_icon_name
         tooltip_text: "Go to Node Status screen"
         disabled: main_window.tasking
@@ -3406,13 +3382,6 @@ Window {
         reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
         reiterateModel.set(7, { label: "Memory footprint [MB]", value: results["Memory footprint"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
-        var goal_and_tag = String(results["Problem kind"]) + "," + "transformers"
-        var goal_only = String(results["Problem kind"])
-        var defInstance = _screenInst[ScreenManager.Screens.Definition]
-        var fam = (defInstance && defInstance.__types) ? defInstance.__types : "Transformers"
-        engine.request_model_from_goal(goal_only + ", " + fam)
-        engine.request_model_from_goal(goal_only)
-        main_window.refreshing = true
         load_screen(ScreenManager.Screens.Reiterate)
     }
 }

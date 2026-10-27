@@ -17,7 +17,7 @@ destructive actions use `danger`; icon-only buttons always have a `tooltip_text`
 
 | Component | Use it for |
 |---|---|
-| `SmlInput` | Text field (a `TextInput`): raised fill, `borderInput` outline, 2 px `focusRing` while editing; taller than 44 px it wraps from the top. `placeholder_text`, `disabled`, `read_only`, `monospace` |
+| `SmlInput` | Single-line text field (a `TextInput`): raised fill, `borderInput` outline, 2 px `focusRing` while editing. `placeholder_text`, `disabled`, `read_only`, `monospace` |
 | `SmlTextArea` | Multi-line text field in the same style (a `TextEdit`): Enter starts a new line, scrolls inside once full, Tab moves to the next field. `placeholder_text`, `disabled`, `read_only`, `content_height` |
 | `SmlCombobox` | Drop-down choice: chevron, overlay popup with green hover rows and a check on the current value; `searchable` adds a filter field, `read_only` only shows the value |
 | `SmlCheckBox` | Check box: bright green with a dark check when checked |
@@ -48,5 +48,5 @@ destructive actions use `danger`; icon-only buttons always have a `tooltip_text`
 |---|---|
 | `SmlChip` | A short status in a tinted pill with a dot or icon (`tone`, `pulse` for live states) |
 | `SmlIcon` | An icon (`name`, `variant` from `Theme.icon*`, `size`) |
-| `SmlText` / `SmlTextNoSelectable` | Text in the type roles of the theme |
+| `SmlText` | Text in the type roles of the theme |
 | `SmlFocusRing` | Keyboard focus outline inside a custom control |

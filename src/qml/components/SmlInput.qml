@@ -4,11 +4,9 @@ import QtQuick 2.15
 import eProsima.SustainML.Theme 1.0
 
 /*
-    Text field: raised fill, 1 px outline (3:1 against the surface), 2 px outline in the
-    focus colour while editing. Single-line fields centre their text; taller ones wrap
-    from the top, but Enter cannot start a new line (a TextInput is single-line): use
-    SmlTextArea for text that may need several lines. A disabled field is sunken, with
-    dimmed text. A read-only field only shows its value: sunken, full-contrast text, no
+    Single-line text field: raised fill, 1 px outline (3:1 against the surface), 2 px outline
+    in the focus colour while editing. For text that may need several lines (Enter starting
+    a new one) use SmlTextArea. A disabled field is sunken, with dimmed text. A read-only field only shows its value: sunken, full-contrast text, no
     placeholder, no interaction.
 
     Usage:
@@ -30,13 +28,12 @@ TextInput {
 
     // Internal properties
     property bool __edited: false
-    readonly property bool __multiline: height > Theme.controlHeightLg
 
     leftPadding: Theme.space3
     rightPadding: Theme.space3
-    topPadding: __multiline ? Theme.space2 + 2 : 0
-    bottomPadding: __multiline ? Theme.space2 + 2 : 0
-    verticalAlignment: __multiline ? TextInput.AlignTop : TextInput.AlignVCenter
+    topPadding: 0
+    bottomPadding: 0
+    verticalAlignment: TextInput.AlignVCenter
     font.family: monospace ? Theme.monoFontFamily : Theme.uiFontFamily
     font.pixelSize: Theme.fontSizeBody
     wrapMode: TextInput.WordWrap
@@ -73,14 +70,14 @@ TextInput {
             rightPadding: sustainml_custom_input.rightPadding
             topPadding: sustainml_custom_input.topPadding
             bottomPadding: sustainml_custom_input.bottomPadding
-            verticalAlignment: sustainml_custom_input.__multiline ? Text.AlignTop : Text.AlignVCenter
+            verticalAlignment: Text.AlignVCenter
             text: sustainml_custom_input.placeholder_text
             textFormat: Text.PlainText
             font.family: Theme.uiFontFamily
             font.pixelSize: Theme.fontSizeBody
             color: sustainml_custom_input.disabled ? Theme.textDisabled : Theme.textMuted
             elide: Text.ElideRight
-            wrapMode: sustainml_custom_input.__multiline ? Text.WordWrap : Text.NoWrap
+            wrapMode: Text.NoWrap
             visible: sustainml_custom_input.text === "" && !sustainml_custom_input.read_only
         }
 

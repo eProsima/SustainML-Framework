@@ -6,11 +6,12 @@ How each part of the application is built. A new screen should follow the closes
 
 - `SmlScreenHeader` at the top: navigation (Home, Back) on the left, then the title and a
   one-line subtitle, the screen's actions on the right. The global Node status (gear)
-  button sits at the right end of every header.
+  button sits at the right end of every header, except on the iteration info view.
 - Below it, the content straight on the uniform `Theme.appBackground`, `Theme.pagePadding`
   from the edges and at most `Theme.contentMaxWidth` wide, in `SmlCard` sections (heading +
   divider, no box). Framed panels are used only where tabs switch between pages (Results,
-  U-Net graphs). The organic background shapes are off (`Theme.decorationOpacity` 0).
+  U-Net graphs). The organic background shapes appear only behind the Start screen
+  (`Theme.decorationOpacity`).
 - Long forms keep their main action in a fixed footer bar (Problem definition: Clear all,
   Submit).
 

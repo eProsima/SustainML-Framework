@@ -49,7 +49,6 @@ QtObject {
         headerTint: "#EAF7DF",
         scrim: "#59000000",
         shadow: "#14000000",
-        decoration: "#64C537",
         decorationOpacity: 0.5
     })
 
@@ -80,7 +79,6 @@ QtObject {
         headerTint: "#12261A",
         scrim: "#99000000",
         shadow: "#40000000",
-        decoration: "#64C537",
         decorationOpacity: 0.13
     })
 
@@ -127,7 +125,6 @@ QtObject {
     readonly property color accentText:         palette_.accentText
     readonly property color focusRing:          palette_.focusRing
     // Decorative organic shapes behind the start screen (the other screens keep a uniform background)
-    readonly property color decoration:         palette_.decoration
     readonly property real  decorationOpacity:  palette_.decorationOpacity
 
     // -- Status: always shown with an icon or text too, never by colour alone --------------

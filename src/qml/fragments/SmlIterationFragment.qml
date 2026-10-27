@@ -33,6 +33,11 @@ Rectangle {
 
     // Property to decide the visibles columns
     property var visibleColumns: [0,1,2,3,4,5,6,7,8,9]
+    // The Problem column shows the goal of each iteration, which a CNN problem never has (its
+    // U-Net is chosen directly): when the first iterations shown have none, it is hidden and
+    // left out of the visible columns panel
+    property bool __problem_kind_checked: false
+    property bool __problem_kind_empty: false
     property var minColumnWidths: [84, 140, 170, 130, 120, 130, 130, 130, 130, 130]
     property int sumMinColumnWidths: {
         var total = 0;
@@ -166,6 +171,14 @@ Rectangle {
 
             jsonList = newList;
             table_model.rows = newRows;
+            if (!root.__problem_kind_checked && newRows.length > 0) {
+                root.__problem_kind_checked = true;
+                if (!newRows.some(function(r) { return r["Problem kind"]; })) {
+                    root.__problem_kind_empty = true;
+                    visibleColumns = visibleColumns.filter(function(item) { return item !== 1; });
+                    root.__fit_columns();
+                }
+            }
             root.relayout_tables();
         }
     }
@@ -622,10 +635,14 @@ Rectangle {
                     model: [1,2,3,4,5,6,7,8,9]
                     delegate: Row {
                         spacing: Theme.space2
+                        visible: modelData !== 1 || !root.__problem_kind_empty
                         SmlCheckBox {
                             id: columnCheckBox
                             checked: visibleColumns.indexOf(modelData) !== -1
-                            onCheckedChanged: {
+                            // Clicks only: a change of visibleColumns from code (hiding an empty
+                            // column) updates checked through the binding above, and setting
+                            // visibleColumns again from here would loop that binding
+                            onToggled: {
                                 if (checked) {
                                     if (visibleColumns.indexOf(modelData) === -1) {
                                         visibleColumns = visibleColumns.concat([modelData]).sort(function(a, b) { return a - b; });
