@@ -41,8 +41,18 @@ Item
     property int __previous_problem_id: 0
     property int __num_outputs: 1
     property string __model_selected: ""
-    // CNNs only run as a U-Net chosen by hand: the search, and so every field feeding it, is Transformers only
-    readonly property bool __cnn_mode: root.__types.toLowerCase() === "cnns"
+    // CNNs run on two boards, each with its own models. On the FPGA they only run as a U-Net chosen
+    // by hand, so the search, and every field feeding it, does not apply
+    readonly property string __fpga_hw: "FPGA (xczu19eg-ffvb1517-2-i)"
+    readonly property string __axelera_hw: "Axelera Edge 130p"
+    readonly property bool __is_cnn: root.__types.toLowerCase() === "cnns"
+    readonly property bool __unet_mode: root.__is_cnn && root.__hardware_required !== root.__axelera_hw
+    // On the Axelera board they are the YOLO models measured on it: the goal is one of their vision
+    // tasks (chosen here, or inferred from the description) and the model is picked for that goal.
+    // Same names as the goals in sustainml-wp2/hw_provider_axelera/yolo_models.json
+    readonly property bool __yolo_mode: root.__is_cnn && root.__hardware_required === root.__axelera_hw
+    readonly property var __yolo_goals: ["object-detection", "oriented-object-detection",
+        "instance-segmentation", "semantic-segmentation", "keypoint-detection"]
     on__Model_selectedChanged:
     {
         // A selected model skips the search, so its optimization fields no longer apply
@@ -77,13 +87,13 @@ Item
     property bool __hf_analyze: false
     // What the info view leaves out. A HF model was found for the problem description and
     // evaluated as is, so that description is all it shows. A model chosen from the list (always
-    // a U-Net for CNNs) is evaluated as is too: the description, inputs, outputs, samples, search,
-    // dataset and optimization fields never apply to it, so it shows the type, goal (none for
-    // CNNs), hardware, model and location
+    // a U-Net for CNNs on the FPGA) is evaluated as is too: the description, inputs, outputs,
+    // samples, search, dataset and optimization fields never apply to it, so it shows the type,
+    // goal (none for a U-Net), hardware, model and location
     readonly property bool __info_hf: root.__reiterate && root.__hf_analyze
     readonly property bool __info_chosen: root.__reiterate && !root.__hf_analyze &&
-                                          (root.__model_selected !== "" || root.__cnn_mode)
-    readonly property bool __info_cnn: root.__info_chosen && root.__cnn_mode
+                                          (root.__model_selected !== "" || root.__unet_mode)
+    readonly property bool __info_unet: root.__info_chosen && root.__unet_mode
     // The description the HF search used: the problem definition, else the short description
     readonly property bool __hf_used_definition: root.__problem_definition.trim() !== "" ||
                                                  root.__problem_short_description.trim() === ""
@@ -312,7 +322,7 @@ Item
                 id: dataset_path_button
                 visible: !root.__reiterate
                 // The dataset metadata only feeds the Transformers search
-                disabled: root.__cnn_mode
+                disabled: root.__unet_mode
                 icon_name: Settings.upload_icon_name
                 text_value: "Upload dataset"
                 tooltip_text: "Go to Dataset Selector screen"
@@ -400,7 +410,8 @@ Item
                 text_value: "Search"
                 icon_name: Settings.search_icon_name
                 tooltip_text: "Search Hugging Face models for the problem description"
-                disabled: root.__cnn_mode || (root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === "")
+                // Hugging Face models are Transformers
+                disabled: root.__is_cnn || (root.__problem_definition.trim() === "" && root.__problem_short_description.trim() === "")
                 onClicked: {
                     hf_choice_popup.close()
                     var q = root.__problem_definition
@@ -497,7 +508,10 @@ Item
                         {
                             read_only: root.__reiterate
                             id: problem_short_description_input
-                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            // With a goal chosen, the description no longer picks the goal, but for the YOLO
+                            // models of the Axelera board it still picks the model (its accuracy, speed or
+                            // energy needs), so it stays editable there
+                            disabled: (root.__goal !== "" && !root.__yolo_mode) || root.__model_selected !== "" || root.__unet_mode
                             text: root.__problem_short_description
                             placeholder_text: "Resume briefly the objective of the problem"
                             width: parent.width
@@ -527,7 +541,7 @@ Item
                         {
                             read_only: root.__reiterate
                             id: problem_definition_input
-                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: (root.__goal !== "" && !root.__yolo_mode) || root.__model_selected !== "" || root.__unet_mode
                             text: root.__problem_definition
                             placeholder_text: "Define as precisely as possible the machine learning problem to be evaluated"
                             width: parent.width
@@ -572,6 +586,7 @@ Item
                             }
                             onText_changed:
                             {
+                                var was_yolo = root.__yolo_mode
                                 root.__types = text
 
                                 // A model chosen for the previous type (e.g. a U-Net for CNNs) does not apply
@@ -581,10 +596,13 @@ Item
                                     root.__model_selected_copy = ""
                                     model_select_input.currentIndex = -1
                                 }
+                                // Nor does a YOLO vision goal, which is not a Transformers goal
+                                if (was_yolo && !root.__is_cnn)
+                                    root.__goal = ""
 
                                 if (text.toLowerCase() === "cnns") {
                                     // Default hardware to FPGA when CNNs are selected
-                                    root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
+                                    root.__hardware_required = root.__fpga_hw
                                     required_hardware_input.currentIndex = -1    // use displayText
 
                                     // CNN + FPGA → U-NET fast path: clear goal & request models
@@ -625,7 +643,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: inputs_input
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: (root.__goal !== "" && !root.__yolo_mode) || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__inputs
                                 placeholder_text: "Describe a sequence of serialized batches of input data"
                                 width: parent.width
@@ -654,7 +672,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: outputs_input
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: (root.__goal !== "" && !root.__yolo_mode) || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__outputs
                                 placeholder_text: "Describe a sequence of serialized batches of output data"
                                 width: parent.width
@@ -684,7 +702,7 @@ Item
                 width: parent.width
                 visible: !root.__info_hf
                 title: "Model and data"
-                subtitle: root.__info_cnn ? "Model and hardware of the problem"
+                subtitle: root.__info_unet ? "Model and hardware of the problem"
                           : root.__info_chosen ? "Goal, model and hardware of the problem"
                           : "Goal, model, hardware and dataset of the problem"
                 icon_name: "cpu"
@@ -698,7 +716,7 @@ Item
                     {
                         width: parent.width
                         spacing: Theme.space4
-                        visible: !root.__info_cnn
+                        visible: !root.__info_unet
 
                         // Minimum samples
                         Column
@@ -710,7 +728,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: minimum_samples_input
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
                                 // Not IntValidator: it's locale-aware and treats the locale's group
                                 // separator (a comma, in many locales) as acceptable input. A plain
@@ -752,7 +770,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: maximum_samples_input
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
                                 validator: RegExpValidator { regExp: /^[0-9]*$/ }
                                 placeholder_text: "Max samples required (only numbers)"
@@ -797,11 +815,10 @@ Item
                                 // permanently stuck: a direct "goal_input.disabled = ..." assignment
                                 // would sever this binding for good, the same way direct assignments to
                                 // the dataset-metadata properties elsewhere in this file used to.
-                                disabled: root.__model_selected !== "" ||
-                                    (root.__types.toLowerCase() === "cnns" && root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)")
+                                disabled: root.__model_selected !== "" || root.__unet_mode
                                 displayText: root.__goal
                                 placeholder_text: displayText !== "" ? "" : "Select your model goal"
-                                model: root.__goal_list
+                                model: root.__yolo_mode ? ["(empty)"].concat(root.__yolo_goals) : root.__goal_list
                                 width: parent.width
                                 height: root.__input_height
                                 KeyNavigation.tab: required_hardware_input
@@ -822,7 +839,11 @@ Item
 
                                     if (text !== "")
                                     {
-                                        if(root.__types !== "")
+                                        // The YOLO models of the goal; the hardware tells them apart
+                                        // from the CNNs of the FPGA
+                                        if (root.__yolo_mode)
+                                            root.ask_models(text + ", " + root.__hardware_required + ", " + root.__types)
+                                        else if(root.__types !== "")
                                             root.ask_models(text + ", " + root.__types)
                                         else
                                             root.ask_models(text)
@@ -871,11 +892,20 @@ Item
                                 KeyNavigation.tab: model_select_input
                                 onText_changed:
                                 {
+                                    var previous_hardware = root.__hardware_required
                                     root.__hardware_required = text
 
+                                    // CNNs on another board: the goal and model of the previous one
+                                    // (a U-Net, or a YOLO model and its vision goal) do not apply
+                                    if (root.__is_cnn && text !== previous_hardware) {
+                                        root.__goal = ""
+                                        root.__model_selected = ""
+                                        root.__model_selected_copy = ""
+                                        model_select_input.currentIndex = -1
+                                    }
+
                                     // Detect CNN + FPGA combo
-                                    if (root.__types.toLowerCase() === "cnns" &&
-                                        text === "FPGA (xczu19eg-ffvb1517-2-i)") {
+                                    if (root.__is_cnn && text === root.__fpga_hw) {
 
                                         // Clear goal if set (goal_input.disabled reacts on its own,
                                         // declaratively, to __types/__hardware_required above)
@@ -892,8 +922,8 @@ Item
                                     if(!root.__reiterate)
                                     {
                                         required_hardware_input.currentIndex = -1
-                                        if (root.__types && root.__types.toLowerCase() === "cnns") {
-                                            root.__hardware_required = "FPGA (xczu19eg-ffvb1517-2-i)"
+                                        if (root.__is_cnn) {
+                                            root.__hardware_required = root.__fpga_hw
                                         } else {
                                             root.__hardware_required = "PIM-AI-1chip"
                                         }
@@ -926,11 +956,11 @@ Item
                                 id: model_select_input
                                 searchable: true
                                 // Disable model selection if the goal is not selected unless CNNs + FPGA combo
-                                disabled: (root.__goal === "" &&
-                                    !(root.__types && root.__types.toLowerCase() === "cnns" &&
-                                        root.__hardware_required === "FPGA (xczu19eg-ffvb1517-2-i)"))
+                                disabled: root.__goal === "" && !root.__unet_mode
                                 displayText: root.__model_selected
-                                placeholder_text: displayText !== "" ? "" : (root.__cnn_mode ? "Select a U-Net model (required for CNNs)" : "Select the ml model")
+                                placeholder_text: displayText !== "" ? "" :
+                                    (root.__unet_mode ? "Select a U-Net model (required for CNNs on the FPGA)" :
+                                     root.__yolo_mode ? "Select a YOLO model (optional)" : "Select the ml model")
                                 model: root.__model_list
                                 width: parent.width
                                 height: root.__input_height
@@ -978,7 +1008,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: num_outputs_input
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__num_outputs === 0 ? "" : root.__num_outputs
                                 validator: RegExpValidator { regExp: /^[0-9]*$/ }
                                 placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
@@ -1038,7 +1068,7 @@ Item
                             read_only: root.__reiterate
                             id: dataset_metadata_description_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
-                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                             text: root.__dataset_description
                             placeholder_text: "Dataset description"
                             width: parent.width
@@ -1076,7 +1106,7 @@ Item
                                 id: dataset_metadata_topic_input
                                 visible: root.__dataset_topic !== ""
                                 // Only used to infer the goal, so ignored once a goal or a model is chosen
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__dataset_topic
                                 placeholder_text: "Dataset description"
                                 width: parent.width
@@ -1108,7 +1138,7 @@ Item
                                 id: dataset_metadata_keywords_input
                                 visible: root.__dataset_keywords !== ""
                                 // Only used to infer the goal, so ignored once a goal or a model is chosen
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__dataset_keywords
                                 placeholder_text: "Dataset keywords"
                                 width: parent.width
@@ -1140,7 +1170,7 @@ Item
                             read_only: root.__reiterate
                             id: dataset_metadata_applications_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
-                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                             text: root.__dataset_applications
                             placeholder_text: "Dataset applications"
                             width: parent.width
@@ -1171,7 +1201,7 @@ Item
                             read_only: root.__reiterate
                             id: dataset_metadata_profile_input
                             // Only used to infer the goal, so ignored once a goal or a model is chosen
-                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__cnn_mode
+                            disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
                             text: root.__dataset_profile
                             placeholder_text: "Dataset profile"
                             width: parent.width
@@ -1226,7 +1256,7 @@ Item
                                 focus: true
                                 id: optimize_carbon_input
                                 // A selected model is used as is: there is no search to optimize
-                                disabled: root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__model_selected !== "" || root.__unet_mode
                                 displayText: root.__optimize_carbon_footprint_manual ? "Manual" : (root.__optimize_carbon_footprint_auto ? "Auto" : "")
                                 placeholder_text: displayText !== "" ? "" : "Select optimization iteration method"
                                 model: ["(empty)", "Manual", "Auto"]
@@ -1274,7 +1304,7 @@ Item
                                 read_only: root.__reiterate
                                 id: desired_carbon_footprint_input
                                 // Only meaningful as the target of a Manual or Auto optimization
-                                disabled: root.__model_selected !== "" || root.__cnn_mode ||
+                                disabled: root.__model_selected !== "" || root.__unet_mode ||
                                           (!root.__optimize_carbon_footprint_manual && !root.__optimize_carbon_footprint_auto)
                                 text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
                                 validator: RegExpValidator { regExp: /^[0-9]*\.?[0-9]*$/ }
@@ -1306,7 +1336,7 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: max_mem_footprint_input
-                                disabled: root.__model_selected !== "" || root.__cnn_mode
+                                disabled: root.__model_selected !== "" || root.__unet_mode
                                 text: root.__max_memory_footprint === 0 ? "" : root.__max_memory_footprint
                                 validator: RegExpValidator { regExp: /^[0-9]*$/ }
                                 placeholder_text: "Maximum model memory in MB, empty for no limit (only numbers)"
@@ -1468,7 +1498,7 @@ Item
                 icon_name: Settings.check_icon_name
                 text_value: "Submit"
                 disabled: root.__refreshing || root.__initializing ||
-                    (root.__cnn_mode && root.__model_selected === "") ||
+                    (root.__unet_mode && root.__model_selected === "") ||
                     (root.__problem_definition.trim() === "" &&
                      root.__problem_short_description.trim() === "" &&
                      root.__model_selected === "" &&
@@ -1571,7 +1601,6 @@ Item
                 root.__types)
     }
 
-    // Remove FPGA from transformers hardware list and keep only FPGA for CNNs
     // Back from Results: leave the form editable straight away (the restored inputs
     // arrive asynchronously and onReiterate_user_inputs keeps the goal empty too)
     function unlock_for_back() {
@@ -1580,15 +1609,17 @@ Item
         root.__model_selected_copy = ""
     }
 
+    // The FPGA and the Axelera board only run CNNs, and CNNs only run on them
     function filteredHardwareList() {
+        var cnn_boards = [root.__fpga_hw, root.__axelera_hw]
         if (root.__types && root.__types.toLowerCase() === "transformers") {
             return (root.__hardware_list || []).filter(function(h) {
-                return h !== "FPGA (xczu19eg-ffvb1517-2-i)";
+                return cnn_boards.indexOf(h) === -1;
             });
         }
-        if (root.__types && root.__types.toLowerCase() === "cnns") {
+        if (root.__is_cnn) {
             return (root.__hardware_list || []).filter(function(h) {
-                return h === "FPGA (xczu19eg-ffvb1517-2-i)";
+                return cnn_boards.indexOf(h) !== -1;
             });
         }
         return root.__hardware_list || [];
