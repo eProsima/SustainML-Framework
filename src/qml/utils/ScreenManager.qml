@@ -20,7 +20,8 @@ Item
         Compare,
         HFresults,
         UNetGraph,
-        Start           // launch splash (Start button + gear); Home is an alias for Definition
+        Start,          // launch splash (Start button + gear); Home is an alias for Definition
+        YOLO            // YOLO models of the Axelera board
     }
 
     // Variables that user might change during the app execution
