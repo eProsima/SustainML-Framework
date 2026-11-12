@@ -1008,7 +1008,9 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: num_outputs_input
-                                disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
+                                // On the Axelera board the YOLO models are ranked for the goal, so
+                                // more output models are the next ones of that ranking
+                                disabled: (root.__goal !== "" && !root.__yolo_mode) || root.__model_selected !== "" || root.__unet_mode
                                 text: root.__num_outputs === 0 ? "" : root.__num_outputs
                                 validator: RegExpValidator { regExp: /^[0-9]*$/ }
                                 placeholder_text: text !== "" ? "" : "Set quantity of output models (only numbers)"
