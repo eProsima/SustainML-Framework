@@ -103,7 +103,8 @@ Rectangle
                 columnWidths[j] = minColumnWidths[j] + share
     }
     readonly property int __margin: Settings.spacing_big * 2
-    readonly property int __scroll_view_height: height - __summary_height
+    readonly property int __scroll_view_height: height - __summary_height -
+                                                (fingerprint.visible ? fingerprint.height + 2 * Theme.space4 : 0)
     readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 48
     readonly property int __data_height: 48
@@ -131,6 +132,10 @@ Rectangle
     property real __desired_carbon_footprint: 0
     property real __max_memory_footprint: 0
     readonly property int __summary_height: __summary === "" ? 0 : __header_height
+
+    // Fingerprint of the selected iterations: those with a result, and those left out
+    property var __fingerprint_entries: []
+    property var __fingerprint_left_out: []
 
 
     color: Theme.surface
@@ -254,6 +259,49 @@ Rectangle
         }
         root.__problem_kind_hidden = !table_model.rows.some(function(r) { return r["Problem kind"] !== "" })
         Qt.callLater(root.relayout_tables)
+        // A selected iteration may have just got its result
+        if (table_model.rows.some(function(r) { return r["Checkbox"] === "true" }))
+            Qt.callLater(root.__update_fingerprint)
+    }
+
+    // Results of the selected iterations for the fingerprint card. Left out: no model, an error
+    // in a node, or a result still incomplete.
+    function __update_fingerprint()
+    {
+        var entries = [], left_out = []
+        if (root.problem_id >= 0)
+        {
+            var rows = table_model.rows.filter(function(r) { return r["Checkbox"] === "true" })
+            rows.sort(function(a, b) { return a["Iteration"] - b["Iteration"] })
+            rows.forEach(function(r) {
+                var json = engine.request_specific_results(root.problem_id, r["Iteration"])
+                var model = json.ML_MODEL || {}, hw = json.HW_RESOURCES || {}, carbon = json.CARBON_FOOTPRINT || {}
+                var name = model.model ? String(model.model) : ""
+                var hardware = hw.hw_description ? String(hw.hw_description) : ""
+                var e = {
+                    "iteration": r["Iteration"],
+                    "model": name,
+                    "hardware": hardware,
+                    "co2": Number(carbon.carbon_footprint),
+                    "energy": Number(carbon.energy_consumption) * 1000,   // kWh
+                    "latency": Number(hw.latency) * 3600,                 // the nodes exchange hours
+                    "memory": Number(hw.memory_footprint_of_ml_model) || 0,
+                    "power": Number(hw.power_consumption)
+                }
+                var ok = name !== "" && name !== "Error" && name !== "NO_MODEL" &&
+                         hardware.toLowerCase().indexOf("error") === -1 &&
+                         Number(carbon.carbon_intensity) > 0 && e.co2 > 0 && e.energy > 0 && e.latency > 0 && e.power > 0
+                if (ok)
+                    entries.push(e)
+                else
+                    left_out.push(r["Iteration"])
+            })
+        }
+        root.__fingerprint_entries = entries
+        root.__fingerprint_left_out = left_out
+        // The accuracy of the YOLO models comes from the catalog of the Axelera board
+        if (main_window.yolo_models.length === 0 && entries.some(function(e) { return /^yolo/i.test(e.model) }))
+            engine.request_yolo_models()
     }
 
     // Results that arrive before this view has its problem_id (the first results of a problem
@@ -374,7 +422,7 @@ Rectangle
         color: Theme.surface
         anchors.left: parent.left
         width: root.width
-        height: root.height - root.__summary_height
+        height: root.__scroll_view_height
 
         SmlScrollView
         {
@@ -662,6 +710,7 @@ Rectangle
                                 onClicked: {
                                     var idx = table_model.index(row, __check_column)
                                     table_model.setData(idx, "display", checked ? "true" : "false")
+                                    Qt.callLater(root.__update_fingerprint)
                                     if (checked) {
                                         root.component_signal("general_view", "add_to_compare", table_model.rows[row]["Iteration"])
                                     }
@@ -715,6 +764,23 @@ Rectangle
                 }
             }
         }
+    }
+
+    SmlModelFingerprint {
+        id: fingerprint
+        visible: root.__fingerprint_entries.length > 0
+        anchors {
+            left: parent.left
+            right: parent.right
+            bottom: parent.bottom
+            leftMargin: Theme.space5
+            rightMargin: Theme.space5
+            bottomMargin: Theme.space4
+        }
+        height: implicitHeight
+        entries: root.__fingerprint_entries
+        left_out: root.__fingerprint_left_out
+        catalog: main_window.yolo_models
     }
 
     // Nothing evaluated yet for this problem

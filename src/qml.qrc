@@ -5,6 +5,8 @@
         <file alias="ScreenManager">qml/utils/ScreenManager.qml</file>
         <file alias="Theme">qml/utils/Theme.qml</file>
         <file>qml/components/SmlButton.qml</file>
+        <file>qml/components/SmlRadarChart.qml</file>
+        <file>qml/components/SmlModelFingerprint.qml</file>
         <file>qml/components/SmlToolTip.qml</file>
         <file>qml/components/SmlFocusRing.qml</file>
         <file>qml/components/SmlIconButton.qml</file>
