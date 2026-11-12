@@ -108,6 +108,7 @@ Item
     signal go_results()
     signal go_dataset_path()
     signal go_unet_models()
+    signal go_yolo_models(string country)
     signal send_task(
         string problem_short_description,
         string problem_definition,
@@ -342,6 +343,17 @@ Item
                     root.ask_models(cfg)
                     root.go_unet_models()
                 }
+            },
+
+            // YOLO models button: the YOLO models of the Axelera board, in the country chosen here
+            SmlButton
+            {
+                id: yolo_models_button
+                visible: !root.__reiterate
+                icon_name: "zap"
+                text_value: "YOLO models"
+                tooltip_text: "Compare the CO2 and accuracy of the YOLO models of the Axelera board"
+                onClicked: root.go_yolo_models(root.__geo_location_region)
             },
 
             // HF models button

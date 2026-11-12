@@ -40,6 +40,11 @@ Window {
     property var goal_list: []
     property var hardware_list: []
     property var model_list: []
+    // YOLO models screen: the models of the Axelera board, the grid carbon intensities, and the
+    // country to show them in
+    property var yolo_models: []
+    property var carbon_intensities: ({})
+    property string yolo_country: "WORLD"
     property bool refreshing: false
     property bool tasking: false
     property bool initializing: true
@@ -226,6 +231,16 @@ Window {
         {
             main_window.goal_list = ["(empty)"].concat(list_goals)
             main_window.refreshing = false
+        }
+
+        function onYolo_models_available(models)
+        {
+            main_window.yolo_models = models
+        }
+
+        function onCarbon_intensities_available(intensities)
+        {
+            main_window.carbon_intensities = intensities
         }
 
         function onHardwares_available(list_hardwares)
@@ -909,6 +924,11 @@ Window {
                 onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
+                onGo_yolo_models: {
+                    if (country !== "")
+                        main_window.yolo_country = country
+                    main_window.load_screen(ScreenManager.Screens.YOLO)
+                }
                 hf_results_available: main_window.hf_saved_searches.length > 0
                 hf_comparisons_count: main_window.hf_compare_history.length
 
@@ -1204,6 +1224,25 @@ Window {
                     text_kind: SmlText.TextKind.Body
 
                     anchors.centerIn: parent
+                }
+            }
+        }
+
+        // YOLO models of the Axelera board
+        Component
+        {
+            id: yolo_screen
+            SmlYoloModelsScreen
+            {
+                models: main_window.yolo_models
+                intensities: main_window.carbon_intensities
+                country: main_window.yolo_country
+                onCountryChanged: main_window.yolo_country = country
+                onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
+                onGo_back: main_window.load_screen(ScreenManager.Screens.Definition)
+                onRequest_data: {
+                    engine.request_yolo_models()
+                    engine.request_carbon_intensities()
                 }
             }
         }
@@ -3228,6 +3267,9 @@ Window {
                 case ScreenManager.Screens.UNet:
                     screen_to_be_loaded = uNet_screen
                     break
+                case ScreenManager.Screens.YOLO:
+                    screen_to_be_loaded = yolo_screen
+                    break
                 case ScreenManager.Screens.HFsearch:
                     screen_to_be_loaded = huggingFace_screen
                     break
@@ -3335,6 +3377,7 @@ Window {
                 movement[3] = Settings.background_2_y_initial
                 break
             case ScreenManager.Screens.UNet:
+            case ScreenManager.Screens.YOLO:
                 movement[0] = Settings.app_width * 5
                 movement[1] = Settings.app_height * 5
                 movement[2] = Settings.background_2_x_initial

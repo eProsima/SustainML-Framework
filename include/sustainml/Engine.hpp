@@ -96,6 +96,18 @@ public:
     Q_INVOKABLE QString unet_models_info_url() const;
 
     /**
+     * @brief Ask the HW resources node for the YOLO models of the Axelera board, with their
+     *        accuracy and the resources they use. Answered by yolo_models_available.
+     */
+    Q_INVOKABLE void request_yolo_models();
+
+    /**
+     * @brief Ask the carbon footprint node for the grid carbon intensity of every country.
+     *        Answered by carbon_intensities_available.
+     */
+    Q_INVOKABLE void request_carbon_intensities();
+
+    /**
      * @brief Write the self-contained U-Net visualizer page (from the qrc template) to a temporary
      *        file, with the models info and the selected model embedded in it.
      * @param models_json JSON array with the entries of unet_models_info.jsonl
@@ -656,6 +668,23 @@ signals:
      */
     void hardwares_available(
             const QStringList& hardwares);
+
+    /**
+     * @brief YOLO models of the Axelera board received
+     *
+     * @param models one map per model: name, display_name, architecture, size, goal, metric,
+     *        accuracy_fp32, accuracy_int8, latency_s, power_w, energy_per_inference_j, memory_mb
+     */
+    void yolo_models_available(
+            const QVariantList& models);
+
+    /**
+     * @brief Grid carbon intensities received
+     *
+     * @param intensities map from ISO alpha-2 country code to {country, year, g_per_kwh}
+     */
+    void carbon_intensities_available(
+            const QVariantMap& intensities);
 
     /**
      * @brief Models received signal to display in the GUI
