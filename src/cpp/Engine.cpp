@@ -763,6 +763,59 @@ void Engine::request_hardwares()
             });
 }
 
+void Engine::request_yolo_models()
+{
+    QJsonObject json_config;
+    json_config["configuration"] = "yolo_models";
+    json_config["node_id"] = static_cast<int>(sustainml::NodeID::ID_HW_RESOURCES);
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonObject config_obj = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8()).object();
+                    if (config_obj["yolo_models"].isArray())
+                    {
+                        emit yolo_models_available(config_obj["yolo_models"].toArray().toVariantList());
+                    }
+                    else
+                    {
+                        emit update_log(QString("YOLO models not available: ") +
+                                config_obj["error"].toString());
+                    }
+                }
+            });
+}
+
+void Engine::request_carbon_intensities()
+{
+    QJsonObject json_config;
+    json_config["configuration"] = "carbon_intensities";
+    json_config["node_id"] = static_cast<int>(sustainml::NodeID::ID_CARBON_FOOTPRINT);
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonObject config_obj = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8()).object();
+                    if (config_obj["carbon_intensities"].isObject())
+                    {
+                        emit carbon_intensities_available(
+                            config_obj["carbon_intensities"].toObject().toVariantMap());
+                    }
+                    else
+                    {
+                        emit update_log(QString("Carbon intensities not available: ") +
+                                config_obj["error"].toString());
+                    }
+                }
+            });
+}
+
 void Engine::request_model_info(
         QString mode_name)
 {
