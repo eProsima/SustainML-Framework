@@ -53,18 +53,11 @@ Item
     readonly property bool __yolo_mode: root.__is_cnn && root.__hardware_required === root.__axelera_hw
     readonly property var __yolo_goals: ["object-detection", "oriented-object-detection",
         "instance-segmentation", "semantic-segmentation", "keypoint-detection"]
-    on__Model_selectedChanged:
-    {
-        // A selected model skips the search, so its optimization fields no longer apply
-        if (root.__model_selected === "")
-            return
-        root.__optimize_carbon_footprint_auto = false
-        root.__optimize_carbon_footprint_manual = false
-        root.__desired_carbon_footprint = 0.0
-        root.__max_memory_footprint = 0
-        desired_carbon_footprint_input.text = ""
-        max_mem_footprint_input.text = ""
-    }
+    // A selected model (or a U-Net on the FPGA) skips the search, so the number of output models
+    // and the optimization fields do not apply to it. They keep what the user typed, only disabled,
+    // and send_task leaves them out. Clearing them here lost them for good: switching to CNNs
+    // asks for the U-Net list, and a new list briefly selects its first model
+    readonly property bool __search_skipped: root.__model_selected !== "" || root.__unet_mode
     property string __model_selected_copy: __model_selected
 
     property string notSupportProblemMessage: ""
@@ -987,9 +980,6 @@ Item
                                         // A specific model has been chosen
                                         root.__model_selected = text
                                         root.__model_selected_copy = text
-                                        // Force num_outputs to 1 and show it in the box
-                                        root.__num_outputs = 1
-                                        num_outputs_input.text = "1"
                                     }
                                 }
                                 onModelChanged:
@@ -1599,18 +1589,18 @@ Item
                 root.__dataset_metadata_applications,
                 root.__minimum_samples,
                 root.__maximum_samples,
-                root.__optimize_carbon_footprint_auto,
+                root.__optimize_carbon_footprint_auto && !root.__search_skipped,
                 root.__goal,
-                root.__optimize_carbon_footprint_manual,
+                root.__optimize_carbon_footprint_manual && !root.__search_skipped,
                 root.__previous_iteration,
-                root.__desired_carbon_footprint,
-                root.__max_memory_footprint,
+                root.__search_skipped ? 0.0 : root.__desired_carbon_footprint,
+                root.__search_skipped ? 0 : root.__max_memory_footprint,
                 root.__hardware_required,
                 root.__geo_location_continent,
                 root.__geo_location_region,
                 root.__extra_data,
                 root.__previous_problem_id,
-                root.__num_outputs,
+                root.__search_skipped ? 1 : root.__num_outputs,
                 root.__model_selected,
                 root.__types)
     }
