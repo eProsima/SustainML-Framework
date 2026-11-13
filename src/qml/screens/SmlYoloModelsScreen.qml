@@ -206,11 +206,14 @@ Item
         return gain >= steep_gain_ ? "steep" : (gain >= saturated_gain_ ? "flattening" : "saturated")
     }
 
-    // The curve of the selected models. A step is a model to the next bigger one selected of the
-    // same task and architecture (a family): accuracy points gained per doubling of CO2. The
-    // steps between the same sizes are joined (median), in order of CO2, and each one gets the
-    // zone of its gain, never steeper than the zone before it: past the point where accuracy
-    // flattens, a bigger model of one task does not make the curve steep again.
+    // The curve of the selected models. A step is a model to the model of the next size (n, s, m,
+    // l, x) of the same task and architecture (a family), both selected: accuracy points gained
+    // per doubling of CO2. A step over a size (YOLO11 n to l, or a size not selected) would
+    // average several steps and cannot tell where the gain changes, so it is left out of the
+    // zones. The steps between the same sizes are joined (median), from the smallest sizes to the
+    // biggest, and each one gets the zone of its gain, never steeper than the zone before it:
+    // past the point where accuracy flattens, a bigger model of one task does not make the curve
+    // steep again. A zone starts at the size its first step starts from.
     function curve_of(list) {
         var families = {}
         list.forEach(function(m) {
@@ -219,19 +222,20 @@ Item
                 families[key] = []
             families[key].push(m)
         })
-        var lines = [], groups = {}
+        var lines = [], groups = {}, measured_to = 0
         for (var key in families) {
             var f = families[key].slice().sort(function(a, b) { return sizes_.indexOf(a.size) - sizes_.indexOf(b.size) })
             lines.push(f)
             for (var i = 1; i < f.length; i++) {
                 var x0 = rel_co2(f[i - 1]), x1 = rel_co2(f[i])
-                if (x1 <= x0 * 1.05)
+                if (x1 <= x0 * 1.05 || sizes_.indexOf(f[i].size) - sizes_.indexOf(f[i - 1].size) !== 1)
                     continue
                 var k = f[i - 1].size + ">" + f[i].size
                 if (!groups[k])
                     groups[k] = {"from": f[i - 1].size, "to": f[i].size, "x0": [], "x1": [], "gain": []}
                 groups[k].x0.push(x0)
                 groups[k].x1.push(x1)
+                measured_to = Math.max(measured_to, x1)
                 groups[k].gain.push((pct_acc(f[i]) - pct_acc(f[i - 1])) / (Math.log(x1 / x0) / Math.LN2))
             }
         }
@@ -239,7 +243,9 @@ Item
         for (var g in groups)
             steps.push({"from": groups[g].from, "to": groups[g].to, "x0": median(groups[g].x0),
                         "x1": median(groups[g].x1), "gain": median(groups[g].gain), "count": groups[g].gain.length})
-        steps.sort(function(a, b) { return a.x0 * a.x1 - b.x0 * b.x1 })
+        steps.sort(function(a, b) {
+            return (sizes_.indexOf(a.from) - sizes_.indexOf(b.from)) || (sizes_.indexOf(a.to) - sizes_.indexOf(b.to))
+        })
         var order = ["steep", "flattening", "saturated"], worst = 0
         steps.forEach(function(st) {
             worst = Math.max(worst, order.indexOf(zone_of(st.gain)))
@@ -254,7 +260,7 @@ Item
                 bands.push({"zone": st.zone, "steps": [st],
                             "x": Math.max(st.x0, last ? last.x : 0)})   // where the zone starts
         })
-        return {"lines": lines, "steps": steps, "bands": bands}
+        return {"lines": lines, "steps": steps, "bands": bands, "measured_to": measured_to}
     }
 
     // The conclusion written under the curve, from the selected models
@@ -262,15 +268,20 @@ Item
         var list = selected_models()
         if (list.length < min_selected)
             return ""
-        var bands = curve_of(list).bands
+        var curve = curve_of(list)
+        var bands = curve.bands
         if (bands.length === 0)
-            return "Select at least two sizes of the same task and architecture to see how the accuracy grows with the CO2."
+            return "Select two neighbouring sizes (n and s, s and m, m and l, or l and x) of the same task and architecture to see how the accuracy grows with the CO2."
         var names = {"steep": "Steep", "flattening": "Flattening", "saturated": "Saturated"}
         var text = bands.map(function(b) {
             return names[b.zone] + ": " + b.steps.map(function(st) {
                 return st.from + " → " + st.to + " " + (st.gain >= 0 ? "+" : "") + fmt(st.gain, 1)
             }).join(", ") + " accuracy points per doubling of CO2."
         }).join(" ")
+        // Steps past the last one measured could only keep the zone or make it flatter
+        var beyond = list.filter(function(m) { return rel_co2(m) > curve.measured_to * 1.05 })
+        if (bands.length && beyond.length)
+            text += " Past ×" + fmt(curve.measured_to, 1) + " no step between neighbouring sizes is selected, so no further zone change can be seen there."
         var worse = list.filter(function(m) {
             if (m.size !== "x") return false
             for (var i = 0; i < models.length; i++)
@@ -671,7 +682,7 @@ Item
                         id: curve_frame
                         visible: root.selected_count >= root.min_selected
                         width: parent.width
-                        height: 440
+                        height: 528
 
                         property var points_: []   // drawn points, for the hover
                         property var labels_: []   // text of the curve, set by the Canvas
@@ -720,6 +731,7 @@ Item
                                     "flattening": ["Flattening", "Flattening"],
                                     "saturated": ["Saturated: little gain", "Saturated"]
                                 }
+                                // The first zone from the left edge, the last one to the right edge
                                 curve.bands.forEach(function(band, i) {
                                     var x0 = i === 0 ? xs(0.9) : xs(band.x)
                                     var x1 = i === curve.bands.length - 1 ? xs(x_hi) : xs(curve.bands[i + 1].x)
@@ -752,11 +764,15 @@ Item
                                 ctx.strokeStyle = Theme.danger
                                 ctx.lineWidth = 2
                                 ctx.setLineDash([6, 4])
+                                // A label too close to the one before goes one line above it
+                                var last_x = -1e9, row = 0
                                 for (var i = 1; i < curve.bands.length; i++) {
                                     var v = curve.bands[i].x
                                     ctx.beginPath(); ctx.moveTo(xs(v), mt); ctx.lineTo(xs(v), H - mb); ctx.stroke()
-                                    label("×" + root.fmt(v, 1) + " (from " + curve.bands[i].steps[0].from + ")", xs(v) + 5, H - mb - 8,
-                                          "left", Theme.fontSizeMeta, true, Theme.danger)
+                                    row = xs(v) - last_x < 120 ? row + 1 : 0
+                                    last_x = xs(v)
+                                    label("×" + root.fmt(v, 1) + " (from " + curve.bands[i].steps[0].from + ")", xs(v) + 5,
+                                          H - mb - 8 - row * (Theme.fontSizeMeta + 6), "left", Theme.fontSizeMeta, true, Theme.danger, 0, true)
                                 }
 
                                 // Each family of the selected models, smallest to biggest

@@ -3,6 +3,8 @@ import QtQuick 2.15
 // Project imports
 import eProsima.SustainML.Theme 1.0
 
+import "markers.js" as Markers
+
 /*
     Radar of a few models over the same axes, where less is better on every axis. Each axis is
     scaled from the best of the series (near the centre) to the worst (outer ring), on a log
@@ -20,9 +22,6 @@ Item {
 
     property var axes: []
     property var series: []
-
-    // Marker of each series, the second encoding next to its colour
-    readonly property var shapes: ["circle", "square", "triangle", "diamond"]
 
     property var __labels: []
     property var __points: []
@@ -101,32 +100,18 @@ Item {
                 ctx.lineWidth = 2
                 ctx.stroke()
                 pts.forEach(function(p, i) {
-                    root.__marker(ctx, root.shapes[j % root.shapes.length], p[0], p[1], s.color)
+                    ctx.fillStyle = s.color
+                    ctx.strokeStyle = Qt.darker(s.color, 1.5)
+                    ctx.lineWidth = 1.2
+                    Markers.path(ctx, s.shape !== undefined ? s.shape : j, p[0], p[1], 5.5)
+                    ctx.fill()
+                    ctx.stroke()
                     points.push({"x": p[0], "y": p[1], "series": s.name, "axis": root.axes[i].name, "text": s.texts[i]})
                 })
             })
             root.__labels = labels
             root.__points = points
         }
-    }
-
-    function __marker(ctx, shape, x, y, color) {
-        ctx.fillStyle = color
-        ctx.strokeStyle = Theme.surface
-        ctx.lineWidth = 2
-        ctx.beginPath()
-        if (shape === "square")
-            ctx.rect(x - 4.5, y - 4.5, 9, 9)
-        else if (shape === "triangle") {
-            ctx.moveTo(x, y - 6); ctx.lineTo(x + 5.5, y + 4); ctx.lineTo(x - 5.5, y + 4); ctx.closePath()
-        }
-        else if (shape === "diamond") {
-            ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y); ctx.closePath()
-        }
-        else
-            ctx.arc(x, y, 5, 0, 2 * Math.PI)
-        ctx.fill()
-        ctx.stroke()
     }
 
     // Axis names as Text items: the Canvas fills glyphs with holes where their strokes overlap

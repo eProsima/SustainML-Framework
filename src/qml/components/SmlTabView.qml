@@ -343,6 +343,7 @@ Item {
                 visible: allow_close_tabs &&
                          title !== "Overview" &&
                          title !== "Iteration" &&
+                         title !== "Fingerprint" &&
                          (idx == __current_tab || parent.width > __min_tab_size)
                 anchors.right: parent.right
                 anchors.rightMargin: __tabs_margins
@@ -376,7 +377,7 @@ Item {
                 anchors.left: close_icon.left; anchors.leftMargin: - __tabs_margins
                 onClicked: {
                     // act as close is close icon shown (same expression as in close_icon visible attribute)
-                    if (sustainml_custom_tabview.allow_close_tabs && title !== "Overview" && title !== "Iteration" && (idx == __current_tab || parent.width > __min_tab_size))
+                    if (sustainml_custom_tabview.allow_close_tabs && title !== "Overview" && title !== "Iteration" && title !== "Fingerprint" && (idx == __current_tab || parent.width > __min_tab_size))
                     {
                         // __tab_model.remove() inside this call can destroy/recreate this very
                         // delegate mid-handler, so nothing after it may touch this delegate's own

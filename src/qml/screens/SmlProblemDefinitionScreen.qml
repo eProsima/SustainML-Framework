@@ -350,7 +350,7 @@ Item
             {
                 id: yolo_models_button
                 visible: !root.__reiterate
-                icon_name: "zap"
+                icon_name: "layout_grid"
                 text_value: "YOLO models"
                 tooltip_text: "Compare the CO2 and accuracy of the YOLO models of the Axelera board"
                 onClicked: root.go_yolo_models(root.__geo_location_region)
@@ -361,7 +361,7 @@ Item
             {
                 id: hf_search_button
                 visible: !root.__reiterate
-                icon_name: "sparkles"
+                icon_name: "scan_search"
                 text_value: "HF models"
                 tooltip_text: "Find best Hugging Face models for this description"
                 onClicked: hf_choice_popup.open()

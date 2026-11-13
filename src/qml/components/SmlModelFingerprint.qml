@@ -3,6 +3,8 @@ import QtQuick 2.15
 // Project imports
 import eProsima.SustainML.Theme 1.0
 
+import "markers.js" as Markers
+
 /*
     Fingerprint of the selected results: one radar for the YOLO models of the Axelera board,
     with their accuracy gap from the model zoo, and one for the other models (Hugging Face,
@@ -21,10 +23,30 @@ SmlCard {
     property var left_out: []
     property var catalog: []
 
-    // Green, violet, magenta, olive: apart for colour-blind readers too; the marker shape of
-    // each series tells them apart as well
-    readonly property var series_colors: ["#4DA626", "#6250d6", "#d55181", "#8a6a00"]
+    // Vivid green, blue, purple, yellow, red and orange. Some look alike to colour-blind readers
+    // and the yellow is light on a white background, so every marker has a darker outline and
+    // its own shape, and any model can be hidden.
+    readonly property var series_colors: ["#34b233", "#1e6ff0", "#8b3fd9", "#f2c200", "#e02828", "#f07c00"]
     readonly property int max_series: series_colors.length
+
+    // Models hidden from the radars, by iteration (clicked in the legend)
+    property var hidden: ({})
+
+    // Space of a radar with the column on its right; side by side only when both fit
+    // Height of a radar, set by the view to fill the space it has
+    property real radar_height: 468
+    readonly property int __radar_size: Math.round(radar_height * 1.28)
+    readonly property int __side_width: 300
+    readonly property bool __side_by_side: width >= 2 * (__radar_size + Theme.space3 + __side_width) + Theme.space5
+
+    function __toggle(iteration) {
+        var copy = Object.assign({}, hidden)
+        if (copy[iteration])
+            delete copy[iteration]
+        else
+            copy[iteration] = true
+        hidden = copy
+    }
 
     readonly property var __yolo: entries.filter(function(e) { return root.__catalog_entry(e.model) !== null })
     readonly property var __other: entries.filter(function(e) { return root.__catalog_entry(e.model) === null })
@@ -59,7 +81,9 @@ SmlCard {
         return (m ? m.display_name : e.model) + " · it. " + e.iteration
     }
 
-    // Axes and series of one radar. Memory only when every model has it.
+    // Axes and series of one radar: every model for the legend ("series", colour and marker
+    // shape by its place in the list) and the ones not hidden for the radar ("shown"). Memory
+    // only when every model has it.
     function __radar(list, with_accuracy) {
         list = list.slice(0, max_series)
         var axes = [
@@ -74,10 +98,10 @@ SmlCard {
         if (with_accuracy)
             axes.push({"name": "Accuracy gap", "log": false, "get": function(e) { return root.__accuracy_gap(e.model) },
                        "unit": " points"})
-        return {
-            "axes": axes.map(function(a) { return {"name": a.name, "log": a.log, "bold": a.bold === true} }),
-            "series": list.map(function(e, j) {
+        var series = list.map(function(e, j) {
                 return {
+                    "iteration": e.iteration,
+                    "shape": j,
                     "name": root.__name(e),
                     "detail": e.hardware,
                     "color": root.series_colors[j],
@@ -88,14 +112,18 @@ SmlCard {
                     })
                 }
             })
+        return {
+            "axes": axes.map(function(a) { return {"name": a.name, "log": a.log, "bold": a.bold === true} }),
+            "series": series,
+            "shown": series.filter(function(sr) { return !root.hidden[sr.iteration] })
         }
     }
 
     Column {
         width: parent.width
-        spacing: Theme.space3
+        spacing: Theme.space4
 
-        Row {
+        Flow {
             width: parent.width
             spacing: Theme.space5
 
@@ -106,115 +134,139 @@ SmlCard {
                     {"title": "Other models (Hugging Face, ONNX)", "hint": "No accuracy: these models have none in SustainML",
                      "list": root.__other, "accuracy": false}
                 ]
-                delegate: Column {
+                // Radar on the left; title, hint and legend on its right
+                delegate: Row {
                     id: panel
                     required property var modelData
                     readonly property var radar_: root.__radar(modelData.list, modelData.accuracy)
                     visible: modelData.list.length > 0
-                    // Both panels share the row; one alone takes all of it
-                    width: (root.__yolo.length > 0 && root.__other.length > 0)
+                    width: (root.__side_by_side && root.__yolo.length > 0 && root.__other.length > 0)
                            ? (parent.width - Theme.space5) / 2 : parent.width
-                    spacing: Theme.space2
+                    spacing: Theme.space3
 
-                    Text {
-                        text: panel.modelData.title
-                        font.family: Theme.uiFontFamily
-                        font.pixelSize: Theme.fontSizeBody
-                        font.weight: Font.DemiBold
-                        color: Theme.textPrimary
-                    }
-                    Text {
-                        width: parent.width
-                        text: panel.modelData.hint
-                        wrapMode: Text.WordWrap
-                        font.family: Theme.uiFontFamily
-                        font.pixelSize: Theme.fontSizeMeta
-                        color: Theme.textSecondary
+                    SmlRadarChart {
+                        id: radar
+                        width: root.__radar_size
+                        height: root.radar_height
+                        axes: panel.radar_.axes
+                        series: panel.radar_.shown
                     }
 
-                    Row {
-                        width: parent.width
-                        spacing: Theme.space3
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - radar.width - Theme.space3
+                        spacing: Theme.space2
 
-                        SmlRadarChart {
-                            width: Math.min(420, parent.width * 0.6)
-                            height: 280
-                            axes: panel.radar_.axes
-                            series: panel.radar_.series
+                        Text {
+                            width: parent.width
+                            text: panel.modelData.title
+                            wrapMode: Text.WordWrap
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeBody
+                            font.weight: Font.DemiBold
+                            color: Theme.textPrimary
+                        }
+                        Text {
+                            width: parent.width
+                            text: panel.modelData.hint
+                            wrapMode: Text.WordWrap
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
+                            color: Theme.textSecondary
+                        }
+                        Text {
+                            visible: panel.radar_.series.length > 1
+                            width: parent.width
+                            topPadding: Theme.space2
+                            text: "Click a model to hide or show it"
+                            wrapMode: Text.WordWrap
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeMicro
+                            color: Theme.textMuted
                         }
 
-                        // Legend: marker and colour of each model
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: parent.width - Math.min(420, parent.width * 0.6) - Theme.space3
-                            spacing: Theme.space2
-                            Repeater {
-                                model: panel.radar_.series
-                                delegate: Row {
-                                    id: legend_row
-                                    required property var modelData
-                                    required property int index
-                                    width: parent.width
-                                    spacing: Theme.space2
-                                    Canvas {
-                                        width: 14; height: 14
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        Component.onCompleted: requestPaint()
-                                        onPaint: {
-                                            var ctx = getContext("2d")
-                                            ctx.reset()
-                                            ctx.fillStyle = legend_row.modelData.color
-                                            ctx.beginPath()
-                                            var shape = ["circle", "square", "triangle", "diamond"][legend_row.index % 4]
-                                            if (shape === "square") ctx.rect(2.5, 2.5, 9, 9)
-                                            else if (shape === "triangle") { ctx.moveTo(7, 1); ctx.lineTo(12.5, 11); ctx.lineTo(1.5, 11); ctx.closePath() }
-                                            else if (shape === "diamond") { ctx.moveTo(7, 1); ctx.lineTo(13, 7); ctx.lineTo(7, 13); ctx.lineTo(1, 7); ctx.closePath() }
-                                            else ctx.arc(7, 7, 5, 0, 2 * Math.PI)
-                                            ctx.fill()
-                                        }
-                                    }
-                                    Column {
-                                        width: parent.width - 14 - Theme.space2
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        Text {
-                                            width: parent.width
-                                            text: legend_row.modelData.name
-                                            wrapMode: Text.WrapAnywhere
-                                            maximumLineCount: 2
-                                            elide: Text.ElideRight
-                                            font.family: Theme.uiFontFamily
-                                            font.pixelSize: Theme.fontSizeMeta
-                                            color: Theme.textPrimary
-                                        }
-                                        Text {
-                                            width: parent.width
-                                            text: legend_row.modelData.detail
-                                            elide: Text.ElideRight
-                                            font.family: Theme.uiFontFamily
-                                            font.pixelSize: Theme.fontSizeMicro
-                                            color: Theme.textSecondary
-                                        }
+                        // Legend: marker and colour of each model, a click hides or shows it
+                        Repeater {
+                            model: panel.radar_.series
+                            delegate: Item {
+                                id: legend_row
+                                required property var modelData
+                                readonly property bool hidden_: root.hidden[modelData.iteration] === true
+                                width: parent.width
+                                height: legend_text.implicitHeight + Theme.space2
+                                opacity: hidden_ ? 0.4 : 1
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: Theme.radiusSm
+                                    color: legend_mouse.containsMouse ? Theme.accentSubtle : "transparent"
+                                }
+                                Canvas {
+                                    id: legend_marker
+                                    x: Theme.space1
+                                    width: 14; height: 14
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    Component.onCompleted: requestPaint()
+                                    onPaint: {
+                                        var ctx = getContext("2d")
+                                        ctx.reset()
+                                        ctx.fillStyle = legend_row.modelData.color
+                                        ctx.strokeStyle = Qt.darker(legend_row.modelData.color, 1.5)
+                                        ctx.lineWidth = 1.2
+                                        Markers.path(ctx, legend_row.modelData.shape, 7, 7, 5.5)
+                                        ctx.fill()
+                                        ctx.stroke()
                                     }
                                 }
+                                Column {
+                                    id: legend_text
+                                    anchors { left: legend_marker.right; leftMargin: Theme.space2; right: parent.right; verticalCenter: parent.verticalCenter }
+                                    Text {
+                                        width: parent.width
+                                        text: legend_row.modelData.name + (legend_row.hidden_ ? " (hidden)" : "")
+                                        wrapMode: Text.Wrap
+                                        maximumLineCount: 2
+                                        elide: Text.ElideRight
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMeta
+                                        color: Theme.textPrimary
+                                    }
+                                    Text {
+                                        width: parent.width
+                                        text: legend_row.modelData.detail
+                                        elide: Text.ElideRight
+                                        font.family: Theme.uiFontFamily
+                                        font.pixelSize: Theme.fontSizeMicro
+                                        color: Theme.textSecondary
+                                    }
+                                }
+                                MouseArea {
+                                    id: legend_mouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.__toggle(legend_row.modelData.iteration)
+                                }
                             }
-                            Text {
-                                visible: panel.modelData.list.length > root.max_series
-                                width: parent.width
-                                wrapMode: Text.WordWrap
-                                text: "Only the first " + root.max_series + " of the " + panel.modelData.list.length + " selected are drawn."
-                                font.family: Theme.uiFontFamily
-                                font.pixelSize: Theme.fontSizeMeta
-                                color: Theme.textSecondary
-                            }
-                            Text {
-                                visible: panel.modelData.list.length === 1
-                                width: parent.width
-                                wrapMode: Text.WordWrap
-                                text: "Select another iteration to compare with."
-                                font.family: Theme.uiFontFamily
-                                font.pixelSize: Theme.fontSizeMeta
-                                color: Theme.textSecondary
-                            }
+                        }
+
+                        Text {
+                            visible: panel.modelData.list.length > root.max_series
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: "Only the first " + root.max_series + " of the " + panel.modelData.list.length + " selected are drawn."
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
+                            color: Theme.textSecondary
+                        }
+                        Text {
+                            visible: panel.modelData.list.length === 1
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            text: "Select another iteration to compare with."
+                            font.family: Theme.uiFontFamily
+                            font.pixelSize: Theme.fontSizeMeta
+                            color: Theme.textSecondary
                         }
                     }
                 }
