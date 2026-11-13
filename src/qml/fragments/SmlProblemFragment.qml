@@ -44,13 +44,18 @@ Item
 
         property var problem_components: {"general_view": "qrc:/qml/fragments/SmlGeneralFragment.qml",
                                         "iteration_view": "qrc:/qml/fragments/SmlIterationFragment.qml",
+                                      "fingerprint_view": "qrc:/qml/fragments/SmlFingerprintFragment.qml",
                                        "comparison_view": "qrc:/qml/fragments/SmlComparisonFragment.qml"}
 
         property var components_title_map: { "general_view": "Overview",
                                            "iteration_view": "Iteration",
+                                         "fingerprint_view": "Fingerprint",
                                           "comparison_view": "Comparison"}
         property var components_stack_id_map: { "general_view": 0,
                                               "iteration_view": 1,
+                                            // Fixed and far from the comparison tabs, which take
+                                            // the highest stack id + 1
+                                            "fingerprint_view": 100,
                                              "comparison_view": 2}
 
         anchors.fill: parent
@@ -94,6 +99,7 @@ Item
                 {
                     sustainml_fragment_problem.__comparison_interation_ids_list.push(iteration_id)
                     problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
+                    problem_fragment_view.create_new_tab(components_title_map["fingerprint_view"], components_stack_id_map["fingerprint_view"], problem_id, "fingerprint_view")
                     sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                 }
 
@@ -116,6 +122,7 @@ Item
                         if (sustainml_fragment_problem.__comparison_interation_ids_list.length == 0)
                         {
                             problem_fragment_view.close_tab(components_stack_id_map["iteration_view"], problem_id)
+                            problem_fragment_view.close_tab(components_stack_id_map["fingerprint_view"], problem_id)
                         }
                     }
 

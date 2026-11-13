@@ -223,6 +223,18 @@
         <file>images/icons/info/info_warning.svg</file>
         <file>images/icons/info/info_warning_dark.svg</file>
         <file>images/icons/info/info_white.svg</file>
+        <file>images/icons/layout_grid/layout_grid_accent.svg</file>
+        <file>images/icons/layout_grid/layout_grid_accent_dark.svg</file>
+        <file>images/icons/layout_grid/layout_grid_danger.svg</file>
+        <file>images/icons/layout_grid/layout_grid_danger_dark.svg</file>
+        <file>images/icons/layout_grid/layout_grid_dark.svg</file>
+        <file>images/icons/layout_grid/layout_grid_light.svg</file>
+        <file>images/icons/layout_grid/layout_grid_muted.svg</file>
+        <file>images/icons/layout_grid/layout_grid_success.svg</file>
+        <file>images/icons/layout_grid/layout_grid_success_dark.svg</file>
+        <file>images/icons/layout_grid/layout_grid_warning.svg</file>
+        <file>images/icons/layout_grid/layout_grid_warning_dark.svg</file>
+        <file>images/icons/layout_grid/layout_grid_white.svg</file>
         <file>images/icons/leaf/leaf_accent.svg</file>
         <file>images/icons/leaf/leaf_accent_dark.svg</file>
         <file>images/icons/leaf/leaf_danger.svg</file>
@@ -331,6 +343,18 @@
         <file>images/icons/scale/scale_warning.svg</file>
         <file>images/icons/scale/scale_warning_dark.svg</file>
         <file>images/icons/scale/scale_white.svg</file>
+        <file>images/icons/scan_search/scan_search_accent.svg</file>
+        <file>images/icons/scan_search/scan_search_accent_dark.svg</file>
+        <file>images/icons/scan_search/scan_search_danger.svg</file>
+        <file>images/icons/scan_search/scan_search_danger_dark.svg</file>
+        <file>images/icons/scan_search/scan_search_dark.svg</file>
+        <file>images/icons/scan_search/scan_search_light.svg</file>
+        <file>images/icons/scan_search/scan_search_muted.svg</file>
+        <file>images/icons/scan_search/scan_search_success.svg</file>
+        <file>images/icons/scan_search/scan_search_success_dark.svg</file>
+        <file>images/icons/scan_search/scan_search_warning.svg</file>
+        <file>images/icons/scan_search/scan_search_warning_dark.svg</file>
+        <file>images/icons/scan_search/scan_search_white.svg</file>
         <file>images/icons/search/search_accent.svg</file>
         <file>images/icons/search/search_accent_dark.svg</file>
         <file>images/icons/search/search_danger.svg</file>

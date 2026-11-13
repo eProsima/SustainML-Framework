@@ -6,6 +6,7 @@
         <file alias="Theme">qml/utils/Theme.qml</file>
         <file>qml/components/SmlButton.qml</file>
         <file>qml/components/SmlRadarChart.qml</file>
+        <file>qml/components/markers.js</file>
         <file>qml/components/SmlModelFingerprint.qml</file>
         <file>qml/components/SmlToolTip.qml</file>
         <file>qml/components/SmlFocusRing.qml</file>
@@ -35,6 +36,7 @@
         <file>qml/fragments/SmlComparisonFragment.qml</file>
         <file>qml/fragments/SmlGeneralFragment.qml</file>
         <file>qml/fragments/SmlIterationFragment.qml</file>
+        <file>qml/fragments/SmlFingerprintFragment.qml</file>
         <file>qml/fragments/SmlProblemFragment.qml</file>
         <file>qml/screens/SmlHomeScreen.qml</file>
         <file>qml/screens/SmlProblemDefinitionScreen.qml</file>
