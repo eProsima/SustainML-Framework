@@ -9,6 +9,9 @@ import eProsima.SustainML.Theme 1.0
 
     Usage:
         SmlChip { text: "RUNNING"; tone: "info" }
+
+    plain drops the pill (fill and outline), leaving the dot and the text: for a status
+    in a list, where a pill would look like a button.
  */
 Rectangle {
     id: chip
@@ -21,6 +24,8 @@ Rectangle {
     property bool show_dot: icon_name === ""
     // Live / busy state: a growing sprout instead of the dot
     property bool pulse: false
+    // No fill or outline: only the dot (or icon) and the text
+    property bool plain: false
 
     readonly property color tone_color_: Theme.toneColor(tone)
     readonly property string icon_variant_: tone === "danger" ? Theme.iconDanger
@@ -29,11 +34,11 @@ Rectangle {
                                           : tone === "accent" ? Theme.iconAccent
                                           : Theme.iconMuted
 
-    implicitWidth: row.implicitWidth + 2 * Theme.space2 + 2
+    implicitWidth: row.implicitWidth + (plain ? 0 : 2 * Theme.space2 + 2)
     implicitHeight: 22
     radius: height / 2
-    color: Theme.alpha(tone_color_, Theme.darkMode ? 0.16 : 0.10)
-    border.width: 1
+    color: plain ? Theme.transparent : Theme.alpha(tone_color_, Theme.darkMode ? 0.16 : 0.10)
+    border.width: plain ? 0 : 1
     border.color: Theme.alpha(tone_color_, Theme.darkMode ? 0.35 : 0.28)
 
     Row {
@@ -54,9 +59,9 @@ Rectangle {
             id: dot
             visible: chip.show_dot && !chip.pulse
             anchors.verticalCenter: parent.verticalCenter
-            width: 7
-            height: 7
-            radius: 3.5
+            width: chip.plain ? 8 : 7
+            height: width
+            radius: width / 2
             color: chip.tone_color_
         }
 
@@ -73,7 +78,8 @@ Rectangle {
             text: chip.text
             textFormat: Text.PlainText
             font.family: Theme.uiFontFamily
-            font.pixelSize: Theme.fontSizeMicro
+            // Without the pill it is read as text in its row, at the size of that text
+            font.pixelSize: chip.plain ? Theme.fontSizeBody : Theme.fontSizeMicro
             font.weight: Font.DemiBold
             font.letterSpacing: 0.3
             color: chip.tone_color_

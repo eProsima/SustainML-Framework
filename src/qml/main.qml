@@ -3189,6 +3189,9 @@ Window {
         visible: ScreenManager.current_screen !== ScreenManager.Screens.Reiterate
         icon_name: Settings.settings_icon_name
         tooltip_text: "Go to Node Status screen"
+        // A larger icon than the other icon buttons (it is alone in the corner of every
+        // header), in a hover square of the same size as theirs
+        icon_size: Theme.iconSizeXLarge
         disabled: main_window.tasking
 
         x: parent.width - width - Theme.space4

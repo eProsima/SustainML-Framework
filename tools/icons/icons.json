@@ -22,6 +22,7 @@
         "success_dark": "#4ADE80"
     },
     "icons": {
+        "activity": {"lucide": "activity"},
         "back": {"lucide": "arrow-left"},
         "check": {"lucide": "check"},
         "checklist": {"lucide": "list-checks"},
@@ -35,7 +36,6 @@
         "external": {"lucide": "external-link"},
         "file": {"lucide": "file-text"},
         "folder": {"lucide": "folder-open"},
-        "gear": {"lucide": "settings"},
         "history": {"lucide": "history"},
         "home": {"lucide": "house"},
         "info": {"lucide": "info"},
@@ -60,7 +60,6 @@
         "up": {"lucide": "chevron-up"},
         "upload": {"lucide": "upload"},
         "warning": {"lucide": "triangle-alert"},
-        "workflow": {"lucide": "workflow"},
         "zap": {"lucide": "zap"}
     }
 }
