@@ -18,7 +18,7 @@ import "../components"
         multiple of the smallest model of the same task against the share of that task's best
         accuracy, with the lines where the curve changes.
 
-    The CO2 of a model is its energy per inference (measured latency x estimated power, from the
+    The CO2 of a model is its energy per inference (measured latency x measured power, from the
     HW resources node) x the grid carbon intensity of the country (from the carbon footprint node).
  */
 Item
