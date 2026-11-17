@@ -53,6 +53,9 @@ Item
     readonly property bool __yolo_mode: root.__is_cnn && root.__hardware_required === root.__axelera_hw
     readonly property var __yolo_goals: ["object-detection", "oriented-object-detection",
         "instance-segmentation", "semantic-segmentation", "keypoint-detection"]
+    // No hardware chosen ("(empty)" in its list): nothing can be evaluated, so the task cannot be
+    // submitted, and for CNNs neither their goal nor their model can be chosen yet
+    readonly property bool __no_hardware: root.__hardware_required === ""
     on__Model_selectedChanged:
     {
         // A selected model skips the search, so its optimization fields no longer apply
@@ -892,6 +895,7 @@ Item
                                 KeyNavigation.tab: model_select_input
                                 onText_changed:
                                 {
+                                    if (text === "(empty)") text = ""
                                     var previous_hardware = root.__hardware_required
                                     root.__hardware_required = text
 
@@ -955,13 +959,17 @@ Item
                                 focus: true
                                 id: model_select_input
                                 searchable: true
-                                // Disable model selection if the goal is not selected unless CNNs + FPGA combo
-                                disabled: root.__goal === "" && !root.__unet_mode
+                                // Disable model selection if the goal is not selected unless CNNs + FPGA combo,
+                                // and for CNNs until their board is chosen (each board has its own models)
+                                disabled: (root.__goal === "" && !root.__unet_mode) || (root.__is_cnn && root.__no_hardware)
                                 displayText: root.__model_selected
                                 placeholder_text: displayText !== "" ? "" :
-                                    (root.__unet_mode ? "Select a U-Net model (required for CNNs on the FPGA)" :
+                                    ((root.__is_cnn && root.__no_hardware) ? "Select the hardware first" :
+                                     root.__unet_mode ? "Select a U-Net model (required for CNNs on the FPGA)" :
                                      root.__yolo_mode ? "Select a YOLO model (optional)" : "Select the ml model")
-                                model: root.__model_list
+                                // "(empty)" first, as in the other lists, to go back to no model. Added
+                                // here only: the list itself also feeds the U-Net models screen
+                                model: ["(empty)"].concat(root.__model_list)
                                 width: parent.width
                                 height: root.__input_height
                                 KeyNavigation.tab: num_outputs_input
@@ -1499,7 +1507,7 @@ Item
                 variant: "primary"
                 icon_name: Settings.check_icon_name
                 text_value: "Submit"
-                disabled: root.__refreshing || root.__initializing ||
+                disabled: root.__refreshing || root.__initializing || root.__no_hardware ||
                     (root.__unet_mode && root.__model_selected === "") ||
                     (root.__problem_definition.trim() === "" &&
                      root.__problem_short_description.trim() === "" &&
@@ -1620,8 +1628,9 @@ Item
             });
         }
         if (root.__is_cnn) {
+            // "(empty)" stays, as in the other lists
             return (root.__hardware_list || []).filter(function(h) {
-                return cnn_boards.indexOf(h) !== -1;
+                return h === "(empty)" || cnn_boards.indexOf(h) !== -1;
             });
         }
         return root.__hardware_list || [];
