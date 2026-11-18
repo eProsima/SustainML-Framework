@@ -452,40 +452,9 @@ void Engine::launch_task(
     Utils::split_string(outputs.toStdString(), outs, ' ');
     cancel_requested_.store(false);
 
-    uint32_t min = 1;
-    uint32_t max = sizeof(uint32_t) - 1;
-    if (minimum_samples > 0)
-    {
-        try
-        {
-            min = static_cast<uint32_t>(minimum_samples);
-        }
-        catch (const std::exception& e)
-        {
-            emit update_log(QString("Error converting minimum samples to uint32_t: ") + e.what());
-        }
-    }
-    else
-    {
-        emit update_log(QString("Error: minimum samples (") + QString::number(minimum_samples) +
-                QString(") must be greater than 0. Using default value " + QString::number(min)));
-    }
-    if (maximum_samples > 0)
-    {
-        try
-        {
-            max = static_cast<uint32_t>(maximum_samples);
-        }
-        catch (const std::exception& e)
-        {
-            emit update_log(QString("Error converting maximum samples to uint32_t: ") + e.what());
-        }
-    }
-    else
-    {
-        emit update_log(QString("Error: maximum samples (") + QString::number(maximum_samples) +
-                QString(") must be greater than 0. Using default value " + QString::number(max)));
-    }
+    // 0: not specified (an empty field in the form); any other number, 1 included, is a limit
+    uint32_t min = minimum_samples > 0 ? static_cast<uint32_t>(minimum_samples) : 0;
+    uint32_t max = maximum_samples > 0 ? static_cast<uint32_t>(maximum_samples) : 0;
 
     if (num_outputs < 1)
     {

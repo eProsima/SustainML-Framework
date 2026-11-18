@@ -25,8 +25,9 @@ Item
     property string __problem_definition: ""
     property string __inputs: ""
     property string __outputs: ""
-    property int __minimum_samples: 1
-    property int __maximum_samples: 1
+    // 0: not specified (an empty field). Any number typed, 1 included, is a real limit
+    property int __minimum_samples: 0
+    property int __maximum_samples: 0
     property bool __optimize_carbon_footprint_auto: false
     property string __goal: ""
     property string __types: "Transformers"
@@ -233,8 +234,8 @@ Item
             problem_definition_input.text = problem_definition
             inputs_input.text = inputs
             outputs_input.text = outputs
-            minimum_samples_input.text = minimum_samples > 1 ? minimum_samples : ""
-            maximum_samples_input.text = maximum_samples > 1 ? maximum_samples : ""
+            minimum_samples_input.text = minimum_samples > 0 ? minimum_samples : ""
+            maximum_samples_input.text = maximum_samples > 0 ? maximum_samples : ""
             desired_carbon_footprint_input.text = desired_carbon_footprint === 0 ? "" : desired_carbon_footprint
             max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
@@ -737,11 +738,12 @@ Item
                                 read_only: root.__reiterate
                                 id: minimum_samples_input
                                 disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
-                                text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
+                                text: root.__minimum_samples === 0 ? "" : root.__minimum_samples
                                 // Not IntValidator: it's locale-aware and treats the locale's group
                                 // separator (a comma, in many locales) as acceptable input. A plain
                                 // digit-only pattern has no such leniency.
-                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                // Whole numbers from 1: 0 is how an empty field is sent
+                                validator: RegExpValidator { regExp: /^([1-9][0-9]*)?$/ }
                                 placeholder_text: "Min samples required (only numbers)"
                                 width: parent.width
                                 height: root.__input_height
@@ -752,9 +754,9 @@ Item
                                     if (!isNaN(num)) {
                                         root.__minimum_samples = num
                                     } else {
-                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // Emptied: back to 0, the "not specified" value, so the
                                         // previous number is not submitted again
-                                        root.__minimum_samples = 1
+                                        root.__minimum_samples = 0
                                         text = ""
                                     }
                                 }
@@ -779,8 +781,8 @@ Item
                                 read_only: root.__reiterate
                                 id: maximum_samples_input
                                 disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
-                                text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
-                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                text: root.__maximum_samples === 0 ? "" : root.__maximum_samples
+                                validator: RegExpValidator { regExp: /^([1-9][0-9]*)?$/ }
                                 placeholder_text: "Max samples required (only numbers)"
                                 width: parent.width
                                 height: root.__input_height
@@ -791,9 +793,9 @@ Item
                                     if (!isNaN(num)) {
                                         root.__maximum_samples = num
                                     } else {
-                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // Emptied: back to 0, the "not specified" value, so the
                                         // previous number is not submitted again
-                                        root.__maximum_samples = 1
+                                        root.__maximum_samples = 0
                                         text = ""
                                     }
                                 }
@@ -1533,8 +1535,8 @@ Item
         root.__problem_definition = ""
         root.__inputs = ""
         root.__outputs = ""
-        root.__minimum_samples = 1
-        root.__maximum_samples = 1
+        root.__minimum_samples = 0
+        root.__maximum_samples = 0
         root.__optimize_carbon_footprint_auto = false
         root.__goal = ""
         root.__optimize_carbon_footprint_manual = false
