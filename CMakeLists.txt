@@ -68,7 +68,7 @@ list(APPEND CMAKE_PREFIX_PATH ${QT_PATH})
 
 find_package(Qt5 5.15 COMPONENTS Core Widgets Gui Qml Quick QuickControls2 Charts REQUIRED)
 
-foreach(component Core Widgets Gui Quick Qml QuickControls2 Charts Utils)
+foreach(component Core Widgets Gui Quick Qml QuickControls2 Charts)
     if(${Qt5${component}_FOUND})
         message(STATUS "Found Qt5${component}: ${Qt5${component}_CONFIG} (found version ${Qt5${component}_VERSION})")
     endif()
@@ -87,18 +87,15 @@ endif()
 # Configure Qt project
 ###############################################################################
 # Include the Qt5Widgets and QtQml header files for the Qt Framework and QML functions.
-include_directories(${Qt5Widgets_INCLUDE_DIRS} ${QtQml_INCLUDE_DIRS} ${Qt5Charts_INCLUDE_DIRS})
+include_directories(${Qt5Widgets_INCLUDE_DIRS} ${Qt5Charts_INCLUDE_DIRS})
 # Specify the needed Qt definitions
-add_definitions(${Qt5Widgets_DEFINITIONS} ${QtQml_DEFINITIONS} ${Qt5Quick_DEFINITIONS} ${Qt5Charts_DEFINITIONS})
+add_definitions(${Qt5Widgets_DEFINITIONS} ${Qt5Quick_DEFINITIONS} ${Qt5Charts_DEFINITIONS})
 
 # WARNING
 # The creation of the qml_qrc.cpp file is managed by the rcc
 # If this functionality is called from the main cmake dir (this) the file will be generated in building time
 # Thus, if this file is required in subdirectories, this 4 instructions below must be added in the same
 # CMakeList of the executable (Use different name for QT_RESOURCES variable)
-
-# Set the app icon resource file for windows
-#set(APP_ICON_RESOURCE_WINDOWS ${CMAKE_CURRENT_SOURCE_DIR}/resources/sustainml_frontend.rc)
 
 # Set the qml.qrc file containing the QML and other resources of the application
 qt5_add_resources(QT_RESOURCES
@@ -107,12 +104,8 @@ qt5_add_resources(QT_RESOURCES
         ${PROJECT_SOURCE_DIR}/src/images.qrc)
 
 # Additional compilation steps required by a Qt program
-# User Interface Compiler (UIC)
-set(CMAKE_AUTOUIC ON)
 # Meta-Object Compiler (MOC)
 set(CMAKE_AUTOMOC ON)
-# Resource Compiler (RCC)
-set(CMAKE_AUTORCC ON)
 
 ###############################################################################
 # Compile C++ library

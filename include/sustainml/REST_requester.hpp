@@ -28,7 +28,6 @@
 #include <QNetworkAccessManager>
 #include <QObject>
 
-#include <condition_variable>
 #include <functional>
 
 class REST_requester : public QObject
@@ -49,7 +48,6 @@ public:
         REQUEST_RESULTS,
         REQUEST_NODE_STATUS,
         REQUEST_CONFIG,
-        CANCEL_REQUEST,
         REQUEST_HF_MODELS_INFO,
         REQUEST_HF_MODELS_COMPARE,
         REQUEST_SAVED_FILES,

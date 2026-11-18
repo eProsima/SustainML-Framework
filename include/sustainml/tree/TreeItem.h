@@ -67,18 +67,11 @@ public:
     //! Count the number of columns (in our case always 2: name & value)
     int column_count() const;
 
-    //! Count the number of columns
-    QVariant data(
-            int column) const;
-
     //! Return the name of the node
     QVariant get_item_name() const;
 
     //! Return the value of the node
     QVariant get_item_value() const;
-
-    //! Return the name of the node in string format
-    QString name() const;
 
     //! Return the row that this node has regarding its parent
     int row() const;

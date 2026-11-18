@@ -361,7 +361,6 @@ ComboBox {
             for (var i = 0; i < count; i++) {
                 var itemText = model[i];
                 if (typeof(itemText) === "string" && itemText.indexOf(letter) === 0) {
-                    // currentIndex = i;
                     popup.contentItem.positionViewAtIndex(i, ListView.Beginning);
                     break;
                 }

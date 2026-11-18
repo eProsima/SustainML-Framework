@@ -22,7 +22,6 @@
 #include <QJsonValue>
 #include <QJsonArray>
 #include <QJsonObject>
-#include <QNetworkReply>
 #include <QProcess>
 #include <QQmlApplicationEngine>
 #include <QRegularExpression>
@@ -40,10 +39,7 @@
 
 #include <sustainml_cpp/types/types.hpp>
 
-#define PRINT_STATUS_LOG false
-
 Engine::Engine()
-    : enabled_(false)
 {
     node_status_timer_ = new QTimer(this);
     node_status_timer_->setInterval(500);
@@ -57,9 +53,6 @@ QObject* Engine::enable()
 
     // Load main GUI
     load(QUrl(QLatin1String("qrc:/qml/main.qml")));
-
-    // Set enable as True
-    enabled_ = true;
 
     // Start timer
     node_status_timer_->start();
@@ -502,16 +495,6 @@ void Engine::launch_task(
     json_data["geo_location_region"] = geo_location_region;
     json_data["extra_data"] = extra_data;
 
-    // if(previous_problem_id == 0 && has_active_problem_)
-    // {
-    //     emit notSupportProblem("Second problem not supported yet");
-    // }
-    // else
-    // {
-    //     has_active_problem_ = true;
-    //     // Launch user input request
-    //     user_input_request(json_data);
-    // }
     user_input_request(json_data);
 }
 
@@ -546,7 +529,6 @@ void Engine::launch_dataset_path_task(
 void Engine::request_current_data(
         const bool& retrieve_all)
 {
-    void* data = nullptr;
     int iterator_start = received_task_ids.size() == 0 ? 0 : received_task_ids.size() - 1;
     if (retrieve_all)
     {
@@ -780,41 +762,6 @@ void Engine::request_carbon_intensities()
                     {
                         emit update_log(QString("Carbon intensities not available: ") +
                                 config_obj["error"].toString());
-                    }
-                }
-            });
-}
-
-void Engine::request_model_info(
-        QString mode_name)
-{
-    QJsonObject json_config;
-    json_config["configuration"] = "model_info, " + mode_name;
-    json_config["node_id"] = 4;
-
-    config_request(json_config, [this](const QJsonObject& json_obj)
-            {
-                QJsonObject response_obj = json_obj["response"].toObject();
-                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
-                {
-                    QJsonDocument config_doc = QJsonDocument::fromJson(
-                        response_obj["configuration"].toString().toUtf8());
-                    if (config_doc.isObject())
-                    {
-                        QJsonObject config_obj = config_doc.object();
-                        if (config_obj.contains("metrics") && config_obj["metrics"].isString())
-                        {
-                            QStringList model_uri = config_obj["model_uri"].toString().split(", ");
-                            QStringList id = config_obj["id"].toString().split(", ");
-                            QStringList name = config_obj["name"].toString().split(", ");
-                            QStringList problem = config_obj["problem"].toString().split(", ");
-                            QStringList coverTag = config_obj["coverTag"].toString().split(", ");
-                            QStringList library = config_obj["library"].toString().split(", ");
-                            QStringList downloads = config_obj["downloads"].toString().split(", ");
-                            QStringList likes = config_obj["likes"].toString().split(", ");
-                            QStringList lastModified = config_obj["lastModified"].toString().split(", ");
-                            // emit mode_details(model_uri, id, name, problem, coverTag, library, downloads, likes, lastModified);  // TODO: Implement this signal
-                        }
                     }
                 }
             });
@@ -1096,19 +1043,7 @@ void Engine::user_input_response(
         request_results(task_id, sustainml::NodeID::MAX);
         emit update_log(QString("User input send for ") + Utils::task_string(task_id));
     }
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            (ptr)->disconnect();
-            (ptr)->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::node_results_request(
@@ -1156,19 +1091,7 @@ void Engine::node_results_response(
         }
 
     }
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            (ptr)->disconnect();
-            (ptr)->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 QJsonObject Engine::specific_node_results_request(
@@ -1186,19 +1109,7 @@ QJsonObject Engine::specific_node_results_request(
                 print_results(Utils::node_id(json_obj), json_obj);
                 response_json = json_obj;
             }
-            // Remove REST requester from queue
-            std::lock_guard<std::mutex> lock(requesters_mutex_);
-            for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-            {
-                if (*it == requester)
-                {
-                    auto ptr = *it;
-                    requesters_.erase(it);
-                    ptr->disconnect();
-                    ptr->deleteLater();
-                    break;
-                }
-            }
+            remove_requester(requester);
             loop.quit();
         },
         REST_requester::RequestType::REQUEST_RESULTS,
@@ -1237,19 +1148,7 @@ void Engine::orchestrator_response(
         // specialized method to emit user inputs to reiteration
         send_reiteration_inputs(json_obj);
     }
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            (ptr)->disconnect();
-            (ptr)->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::node_status_request(
@@ -1361,19 +1260,7 @@ void Engine::node_status_response(
             emit initializing_off();
         }
     }
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            (ptr)->disconnect();
-            (ptr)->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::config_request(
@@ -1428,53 +1315,13 @@ void Engine::config_response(
         }
     }
 
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            (ptr)->disconnect();
-            (ptr)->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::request_for_cancel()
 {
+    // The backend has no cancel request: the app only stops following more iterations of the task
     cancel_requested_.store(true);
-    QJsonObject json_obj;
-
-    REST_requester* requester = new REST_requester(
-        std::bind(&Engine::response_for_cancel, this, std::placeholders::_1, std::placeholders::_2),
-        REST_requester::RequestType::CANCEL_REQUEST,
-        json_obj);
-
-    {
-        std::lock_guard<std::mutex> lock(requesters_mutex_);
-        requesters_.push_back(requester);
-    }
-}
-
-void Engine::response_for_cancel(
-        const REST_requester* requester,
-        const QJsonObject& json_obj)
-{
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
 }
 
 void Engine::request_saved_files_list(
@@ -1510,19 +1357,7 @@ void Engine::saved_files_response(
     }
     emit saved_files_available(names);
 
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::save_current_tasks(
@@ -1567,19 +1402,7 @@ void Engine::save_tasks_response(
         emit update_log(QString("Saved current results."));
     }
 
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::delete_saved_file(
@@ -1605,19 +1428,7 @@ void Engine::delete_saved_file_response(
 {
     Q_UNUSED(json_obj);
 
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::load_saved_tasks(
@@ -1673,19 +1484,7 @@ void Engine::load_tasks_response(
         replay_loaded_tasks(json_obj["tasks"].toArray());
     }
 
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::persist_task_display_name(
@@ -1740,19 +1539,7 @@ void Engine::wipe_database_response(
     saved_display_names_.clear();
     emit update_log(QString("All save files deleted."));
 
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::save_all(
@@ -1866,19 +1653,7 @@ void Engine::save_all_response(
         emit update_log(QString("Saved everything."));
     }
 
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }
 
 void Engine::load_all(
@@ -1916,17 +1691,5 @@ void Engine::load_all_response(
     }
     emit hf_state_loaded(hf_searches, hf_comparisons);
 
-    // Remove REST requester from queue
-    std::lock_guard<std::mutex> lock(requesters_mutex_);
-    for (auto it = requesters_.begin(); it != requesters_.end(); ++it)
-    {
-        if (*it == requester)
-        {
-            auto ptr = *it;
-            requesters_.erase(it);
-            ptr->disconnect();
-            ptr->deleteLater();
-            break;
-        }
-    }
+    remove_requester(requester);
 }

@@ -29,7 +29,6 @@ Item
     signal update_comparison(var comparison_interation_ids_list)
 
     // Private properties
-    readonly property var __signal_kind: ["add_to_compare", "out_of_compare"]
     property var __comparison_interation_ids_list: []
     property var __comparison_values_list: []
 

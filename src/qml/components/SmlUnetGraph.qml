@@ -52,7 +52,6 @@ Item {
     readonly property color c_bar:          Theme.brandGreen
     readonly property color c_link:         Theme.accentText   // same green as highlighted values; links are underlined
     readonly property color c_diff:         Theme.accentText   // values that differ from the original U-Net
-    readonly property color c_highlight:    Theme.brandLime
 
     readonly property int __gap: Settings.spacing_normal
     property bool layers_expanded: false

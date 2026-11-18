@@ -27,7 +27,6 @@
 #include <QJsonDocument>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QDebug>
 
 REST_requester::REST_requester(
         std::function<void(const REST_requester* requester, const QJsonObject& json_obj)> callback,
@@ -79,9 +78,6 @@ QString REST_requester::request_type_to_url(
             break;
         case RequestType::REQUEST_CONFIG:
             url += "/config_request";
-            break;
-        case RequestType::CANCEL_REQUEST:
-            url += "/cancel";
             break;
         case RequestType::REQUEST_HF_MODELS_INFO:
             url += "/hf_models_info";

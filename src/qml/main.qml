@@ -20,7 +20,6 @@ Window {
     id: main_window
 
     // Properties
-    property bool in_use: true
     property string log: "LOG"
     property string app_requirements_node_last_status: "INACTIVE"
     property string carbon_footprint_node_last_status: "INACTIVE"
@@ -29,7 +28,6 @@ Window {
     property string ml_model_node_last_status: "INACTIVE"
     property string ml_model_metadata_node_last_status: "INACTIVE"
     property int current_problem_id: -1
-    property int current_iteration_id: -1
 
     property string dataset_description: ""
     property string dataset_topic: ""
@@ -147,7 +145,6 @@ Window {
         function onTask_sent(problem_id, iteration_id)
         {
             main_window.current_problem_id = problem_id
-            main_window.current_iteration_id = iteration_id
             main_window.tasking = true
             main_window.load_screen(ScreenManager.Screens.Results)
         }
@@ -1210,24 +1207,6 @@ Window {
             }
         }
 
-        // New empty screen 1 TO BE USED
-        Component
-        {
-            id: new_screen_1_todo_rename
-
-            Rectangle
-            {
-                color: "transparent"
-                SmlText
-                {
-                    text_value: "this is a new screen #1"
-                    text_kind: SmlText.TextKind.Body
-
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
         // YOLO models of the Axelera board
         Component
         {
@@ -1581,7 +1560,6 @@ Window {
                         required property var modelData
                         required property int index
                         readonly property bool active: unetCard.modelData === main_window.unetActiveModel
-                        readonly property bool next_active: main_window.unetOpenModels[unetCard.index + 1] === main_window.unetActiveModel
                         // share the bar like SmlTabView: at most 200 px, narrower as more cards open
                         width: Math.min(200, unetCards.width / Math.max(1, unetCards.count))
                         height: 38

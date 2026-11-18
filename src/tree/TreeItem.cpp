@@ -54,12 +54,6 @@ int TreeItem::column_count() const
     return item_data_.count();
 }
 
-QVariant TreeItem::data(
-        int column) const
-{
-    return item_data_.value(column);
-}
-
 QVariant TreeItem::get_item_name() const
 {
     return item_data_.value(TreeItemData::NAME);
@@ -68,11 +62,6 @@ QVariant TreeItem::get_item_name() const
 QVariant TreeItem::get_item_value() const
 {
     return item_data_.value(TreeItemData::VALUE);
-}
-
-QString TreeItem::name() const
-{
-    return get_item_name().toString();
 }
 
 TreeItem* TreeItem::parent_item()
