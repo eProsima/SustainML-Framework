@@ -19,7 +19,6 @@ Item
     // Public properties
     property int current_problem_id: -1
     property string errorMessage: ""
-    property int current_iteration_id: -1
     // Gate: suppress HW error popup if the model stage already failed (Error/NO_MODEL)
     property var __suppress_hw_error: ({})   // key: "problem:iteration" -> true | false
 
@@ -53,9 +52,6 @@ Item
     // Save is only enabled once a problem is here, i.e. fully complete, not just started.
     property var list_of_ready_problems: []
     property var __completed_nodes: ({})
-    readonly property int __margin: Settings.spacing_big * 2
-    readonly property int __tab_view_width: 1000
-    readonly property int __tab_view_height: 600
     property bool tasking: false
 
     function __mark_node_complete(problem_id, node_key)
@@ -78,7 +74,6 @@ Item
         function onNew_app_requirements_node_output(problem_id, iteration_id, app_requirements)
         {
             root.current_problem_id = problem_id;
-            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -98,7 +93,6 @@ Item
         function onNew_hw_constraints_node_output(problem_id, iteration_id, hw_required, max_memory_footprint)
         {
             root.current_problem_id = problem_id;
-            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -119,7 +113,6 @@ Item
         function onNew_ml_model_metadata_node_output(problem_id, iteration_id, metadata, keywords)
         {
             root.current_problem_id = problem_id;
-            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -144,7 +137,6 @@ Item
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
         {
             root.current_problem_id = problem_id;
-            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -177,7 +169,6 @@ Item
         function onNew_hw_resources_node_output(problem_id, iteration_id, hw_description, power_consumption, latency, memory_footprint_of_ml_model, max_hw_memory_footprint)
         {
             root.current_problem_id = problem_id;
-            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -212,7 +203,6 @@ Item
         function onNew_carbon_footprint_node_output(problem_id, iteration_id, carbon_footprint, energy_consumption, carbon_intensity)
         {
             root.current_problem_id = problem_id;
-            root.current_iteration_id = iteration_id;
             if (list_of_problems.length === 0)
             {
                 tab_view.update_stack_id(problem_id, 0)
@@ -236,17 +226,6 @@ Item
         }
 
     }
-
-    // Detect when data has been received to load tabs components
-    // onCurrent_problem_idChanged:
-    // {
-    //     tab_view.update_problem_id(current_problem_id, -1)
-    //     tab_view.update_tab_name("Problem " + current_problem_id, 0)
-    //     if (!list_of_problems.includes(current_problem_id))
-    //     {
-    //         list_of_problems.push(current_problem_id)
-    //     }
-    // }
 
     SmlScreenHeader
     {

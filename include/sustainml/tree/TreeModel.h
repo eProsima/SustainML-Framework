@@ -63,13 +63,6 @@ public:
         treeModelValueRole                      //! Role for attribute Value
     };
 
-    /**
-     *
-     */
-    explicit TreeModel(
-            const json& data,
-            QObject* parent = 0);
-
     explicit TreeModel(
             QObject* parent = 0);
 

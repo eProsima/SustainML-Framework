@@ -108,10 +108,10 @@ int main(
     std::shared_ptr<Engine> engine = std::make_shared<Engine>();
     QObject* topLevel = engine->enable();
 
-    QQuickWindow* window = qobject_cast<QQuickWindow*>(topLevel); \
+    QQuickWindow* window = qobject_cast<QQuickWindow*>(topLevel);
     if ( !window )
     {
-        qWarning("Error: Your root item has to be a Window."); \
+        qWarning("Error: Your root item has to be a Window.");
         return -1;
     }
     window->show();

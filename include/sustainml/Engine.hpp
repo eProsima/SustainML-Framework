@@ -26,17 +26,13 @@
 #include <memory>
 #include <unordered_map>
 #include <deque>
+#include <mutex>
 
 #include <QJsonArray>
 #include <QMap>
-#include <QNetworkAccessManager>
 #include <QQmlApplicationEngine>
-#include <QQueue>
 #include <QSet>
-#include <QtCharts/QVXYModelMapper>
-#include <QThread>
 #include <QTimer>
-#include <QWaitCondition>
 
 #include <sustainml_cpp/core/Constants.hpp>
 #include <sustainml_cpp/types/types.hpp>
@@ -306,8 +302,9 @@ public slots:
     void request_current_data (
             const bool& retrieve_all);
     /**
-     * @brief public method to request specific task results from all  nodes.
-     * @param task_id task identifier pointer
+     * @brief public method to request specific task results from all nodes.
+     * @param problem_id problem identifier
+     * @param iteration_id iteration identifier
      */
     QJsonObject request_specific_results(
             const int problem_id,
@@ -348,14 +345,6 @@ public slots:
     void request_hardwares();
 
     /**
-     * @brief public method to request model details
-     *
-     * @param mode_name indicate model name that details are requested
-     */
-    void request_model_info(
-            QString mode_name);
-
-    /**
      * @brief public method to request models types from goal
      *
      * @param goal indicate goal to request models types
@@ -364,7 +353,7 @@ public slots:
             QString goal);
 
     /**
-     * @brief private method to request user_inputs from the given previous task.
+     * @brief public method to request user_inputs from the given previous task.
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
@@ -375,7 +364,7 @@ public slots:
             int iteration_id,
             bool reiteration = false);
 
-    //! Send cancellation request to nodes
+    //! Stop following more iterations of the task being run
     void request_for_cancel();
 
 signals:
@@ -695,14 +684,6 @@ signals:
             const QStringList& models);
 
     /**
-     * @brief Signal to display the error message
-     *
-     * @param message error message to display
-     */
-    void notSupportProblem(
-            const QString& message);
-
-    /**
      * @brief Emitted when HF search results are available
      * @param models List of model entries (objects or strings depending on backend payload)
      */
@@ -780,11 +761,6 @@ signals:
             const QString& part,
             const QVariantList& data);
 
-protected:
-
-    //! Set to true if the engine is being enabled
-    bool enabled_;
-
 private:
 
     /**
@@ -823,7 +799,6 @@ private:
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
     std::unordered_map<int, std::deque<std::function<void(const QJsonObject&)>>> config_callback_queue_;
-    // bool has_active_problem_ = false;
 
     // REST requester
     //! Send user input to the Framework pipeline
@@ -938,14 +913,8 @@ private:
             const QJsonObject& json_obj);
 
 
-    //! Manage cancellation request response
-    void response_for_cancel(
-            const REST_requester* requester,
-            const QJsonObject& json_obj);
-
     QTimer* node_status_timer_;
 
-    bool ml_model_idle = true;
     bool ml_model_meta_idle = true;
     bool hw_idle = true;
 };

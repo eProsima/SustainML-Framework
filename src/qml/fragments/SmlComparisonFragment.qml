@@ -168,7 +168,6 @@ Rectangle
                         shown.labelColor = Theme.textPrimary;
                     }
                     _barSets.push(barSet);
-                    // console.log("BarSet created for element: " + j);
                 } else {
                     console.log("Unable to create BarSet for element: " + j);
                 }
@@ -294,7 +293,6 @@ Rectangle
             }
 
             SmlScrollView {
-                // anchors.fill: parent
                 anchors.top: iterationTextHeader.bottom
                 anchors.topMargin: Settings.spacing_small
                 anchors.left: parent.left

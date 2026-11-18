@@ -20,16 +20,7 @@
 #include <sustainml/tree/TreeItem.h>
 #include <sustainml/tree/TreeModel.h>
 
-#include <iostream> // debug
-
-TreeModel::TreeModel(
-        const json& data,
-        QObject* parent)
-    : QAbstractItemModel(parent)
-{
-    root_item_ = new TreeItem(QList<QString>() << "Name" << "Value");
-    setup_model_data(data, root_item_);
-}
+#include <iostream>
 
 TreeModel::TreeModel(
         QObject* parent)
@@ -65,14 +56,12 @@ QVariant TreeModel::data(
 {
     if (!index.isValid())
     {
-        std::cout << "TreeModel::data - invalid index" << std::endl;
         return QVariant();
     }
 
     TreeItem* item = get_item(index);
     if (!item)
     {
-        std::cout << "TreeModel::data - null item" << std::endl;
         return QVariant();
     }
 
@@ -81,14 +70,11 @@ QVariant TreeModel::data(
     {
         case treeModelNameRole:
             result = item->get_item_name();
-            std::cout << "TreeModel::data - name role: '" << result.toString().toStdString() << "'" << std::endl;
             break;
         case treeModelValueRole:
             result = item->get_item_value();
-            std::cout << "TreeModel::data - value role: '" << result.toString().toStdString() << "'" << std::endl;
             break;
         default:
-            std::cout << "TreeModel::data - unknown role: " << role << std::endl;
             break;
     }
 
@@ -219,18 +205,6 @@ void TreeModel::updateFromJsonString(const QString& json_str)
     try
     {
         json parsed = json::parse(json_str.toStdString());
-        std::cout << "TreeModel::updateFromJsonString: parsing succeeded." << std::endl;    // debug
-        if (parsed.is_object() || parsed.is_array())
-        {
-            std::cout << "TreeModel::updateFromJsonString: container type = "
-                      << (parsed.is_object() ? "object" : "array")
-                      << ", size = " << parsed.size() << std::endl;
-        }
-        else
-        {
-            std::cout << "TreeModel::updateFromJsonString: primitive JSON value" << std::endl;
-        }
-        std::cout << "TreeModel::updateFromJsonString: content:\n" << parsed.dump(2) << std::endl;  // debug
         update(parsed);
     }
     catch (const std::exception& e)

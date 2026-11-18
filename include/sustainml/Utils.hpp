@@ -129,18 +129,6 @@ public:
     }
 
     /**
-     * @brief Get the name from node json object
-     *
-     * @param json JSON object
-     * @return QString Node name
-     */
-    static QString node_name(
-            const QJsonObject& json)
-    {
-        return node_name(node_id(json));
-    }
-
-    /**
      * @brief Get the task id from json object
      *
      * @param json JSON object
@@ -177,81 +165,6 @@ public:
         }
         return QString("Task {") + QString::number(task_id.problem_id()) + QString(",") +
                QString::number(task_id.iteration_id()) + QString("}");
-        // TODO define which task representation is the correct one
-        //if (types::TaskId() == task_id)
-        //{
-        //    return QString("Problem ID: invalid, Iteration ID: invalid");
-        //}
-        //return QString("Problem ID: ") + QString::number(task_id.problem_id()) + QString(", Iteration ID: ") +
-        //        QString::number(task_id.iteration_id());
-    }
-
-    /**
-     * @brief Get the task from json object
-     *
-     * @param json JSON object
-     * @return QString Task ID
-     */
-    static QString task_string(
-            const QJsonObject& json)
-    {
-        if (json.contains("task_id"))
-        {
-            QJsonObject task_id = json["task_id"].toObject();
-            return task_string(types::TaskId(task_id.value("problem_id").toInt(),
-                           task_id.value("iteration_id").toInt()));
-        }
-        else
-        {
-            return QString("UNKNOWN");
-        }
-    }
-
-    /**
-     * @brief  Get the status from json object
-     *
-     * @param json JSON object
-     * @return int Node status. If not found, return -1
-     */
-    static int status(
-            const QJsonObject& json)
-    {
-        if (json.contains("status"))
-        {
-            return json["status"].toInt();
-        }
-        else
-        {
-            return -1;
-        }
-    }
-
-    /**
-     * @brief Get the status as a string from value
-     *
-     * @param status NodeStatus object
-     * @return QString Node status
-     */
-    static QString status_string(
-            const QJsonObject& json)
-    {
-        switch (status(json))
-        {
-            case static_cast<int>(0): // Status::NODE_INACTIVE:
-                return QString("INACTIVE");
-            case static_cast<int>(1): // Status::NODE_ERROR:
-                return QString("ERROR");
-            case static_cast<int>(2): // Status::NODE_IDLE:
-                return QString("IDLE");
-            case static_cast<int>(3): // Status::NODE_INITIALIZING:
-                return QString("INITIALIZING");
-            case static_cast<int>(4): // Status::NODE_RUNNING:
-                return QString("RUNNING");
-            case static_cast<int>(5): // Status::NODE_TERMINATING:
-                return QString("TERMINATING");
-            default:
-                return QString("UNKNOWN");
-        }
     }
 
     /**

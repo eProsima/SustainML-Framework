@@ -20,7 +20,6 @@ Item {
     property bool allow_new_tabs: false
     property bool allow_close_tabs: true
     property bool reduced_tabs: false
-    property bool rounded: true
     property bool allow_tab_rename: false
     // "card": framed tabs, the selected one a surface card joined to the page (top-level
     // tabs); "underline": outlined segments on a baseline, the
@@ -32,7 +31,6 @@ Item {
 
     // Private properties
     property int __current_tab: 0                                               // current tab displayed
-    property int __last_stack: 1                                                // force unique idx on QML components
     property ListModel __tab_model: ListModel {}                                // tab model for tab management
 
     // Public signals
@@ -41,7 +39,6 @@ Item {
     signal loaded_item_signal(string component, string signal_kind, string iteration_id)  // abstract signal from loaded components
 
     // Private signals
-    signal change_stack_view_(int stack_id, var stack_component_name)
     signal tabClosed(int stack_id_closed)
     signal tab_renamed(int stack_id, string new_title)
 
@@ -53,7 +50,6 @@ Item {
     readonly property int __max_tab_size: !reduced_tabs ? 200 : 200 - __tab_icons_size - (2 * __tabs_margins)
     readonly property int __min_tab_size: !reduced_tabs ? 180 : 180 - __tab_icons_size - (2 * __tabs_margins)
     readonly property int __add_tab_width: 50
-    readonly property int __min_gap: 80
     readonly property int __radius: Theme.radiusMd
 
     // initialize first element in the tab
@@ -95,9 +91,6 @@ Item {
             Loader
             {
                 id: stack
-                //required property int stack_id
-                //required property string customInitialItem
-                //source: sustainml_custom_tabview.__get_load_component(customInitialItem)
 
                 Connections {
                     target: stack.item
@@ -237,12 +230,8 @@ Item {
             // nothing once the tab is too narrow for any text at all, leaving just the
             // close icon visible - no special-casing needed for that.
             //
-            // Built manually with literal "..." instead of Qt's own "elide: Text.ElideLeft"
-            // - that inserts a single Unicode ellipsis glyph (U+2026) using this item's
-            // own font, and title_font (Arima Madurai) renders that specific glyph as an
-            // unclear pair of cramped dots rather than a recognizable ellipsis. Three
-            // literal "." characters render correctly in this font, so build the elided
-            // string ourselves instead of relying on Qt's automatic substitution.
+            // Built manually with literal "..." instead of Qt's own "elide: Text.ElideLeft",
+            // which inserts a single Unicode ellipsis glyph (U+2026) instead of three dots.
             Text {
                 id: tab_title_display
                 visible: !tab_title.editing

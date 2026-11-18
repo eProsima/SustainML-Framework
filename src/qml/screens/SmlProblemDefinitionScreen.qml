@@ -17,9 +17,6 @@ Item
 {
     id: root
 
-    // Internal properties
-    readonly property int __margin: Theme.space5
-
     // Input values
     property string __problem_short_description: ""
     property string __problem_definition: ""
@@ -62,9 +59,7 @@ Item
     // and send_task leaves them out. Clearing them here lost them for good: switching to CNNs
     // asks for the U-Net list, and a new list briefly selects its first model
     readonly property bool __search_skipped: root.__model_selected !== "" || root.__unet_mode
-    property string __model_selected_copy: __model_selected
 
-    property string notSupportProblemMessage: ""
 
     // Private properties
     property var __goal_list: []
@@ -203,7 +198,6 @@ Item
                 root.__dataset_applications = dataset_metadata_applications
                 root.__goal = goal
                 root.__model_selected = model_selected
-                root.__model_selected_copy = model_selected
                 root.__hardware_required = hardware_required
                 root.__num_outputs = num_outputs > 0 ? num_outputs : 1
                 num_outputs_input.text = root.__num_outputs
@@ -219,7 +213,6 @@ Item
                         dataset_metadata_profile, dataset_metadata_keywords, dataset_metadata_applications)
                 root.__goal = ""
                 root.__model_selected = ""
-                root.__model_selected_copy = ""
                 // After __types above, whose change resets the hardware to the type's default;
                 // only if it is valid for the restored type
                 if (hardware_required !== "" &&
@@ -240,14 +233,6 @@ Item
             max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
             root.__previous_problem_id = 0
-        }
-
-        function onNotSupportProblem(error_msg)
-        {
-            if (!root.__reiterate) {
-                root.notSupportProblemMessage = error_msg
-                notSupportDialog.open()
-            }
         }
     }
 
@@ -602,7 +587,6 @@ Item
                                 // to the new one, and while set it disables the goal and description fields
                                 if (text !== "") {
                                     root.__model_selected = ""
-                                    root.__model_selected_copy = ""
                                     model_select_input.currentIndex = -1
                                 }
                                 // Nor does a YOLO vision goal, which is not a Transformers goal
@@ -844,7 +828,6 @@ Item
                                     // Reset any previously selected model when the goal changes so
                                     // dependent fields recompute their disabled state correctly.
                                     root.__model_selected = ""
-                                    root.__model_selected_copy = ""
                                     model_select_input.currentIndex = -1
 
                                     if (text !== "")
@@ -911,7 +894,6 @@ Item
                                     if (root.__is_cnn && text !== previous_hardware) {
                                         root.__goal = ""
                                         root.__model_selected = ""
-                                        root.__model_selected_copy = ""
                                         model_select_input.currentIndex = -1
                                     }
 
@@ -984,12 +966,10 @@ Item
                                     if (text === "(empty)" || text === "") {
                                         // No model selected
                                         root.__model_selected = ""
-                                        root.__model_selected_copy = ""
                                         // Keep __num_outputs as-is; user can type whatever they want
                                     } else {
                                         // A specific model has been chosen
                                         root.__model_selected = text
-                                        root.__model_selected_copy = text
                                     }
                                 }
                                 onModelChanged:
@@ -1551,7 +1531,6 @@ Item
         root.__previous_problem_id = 0
         root.__num_outputs = 1
         root.__model_selected = ""
-        root.__model_selected_copy = ""
         // __dataset_description/topic/profile/keywords/applications are NOT reset
         // here directly - they're one-way bound FROM main_window.dataset_description
         // etc., and a direct assignment would permanently sever that binding (any
@@ -1620,7 +1599,6 @@ Item
     function unlock_for_back() {
         root.__goal = ""
         root.__model_selected = ""
-        root.__model_selected_copy = ""
     }
 
     // The FPGA and the Axelera board only run CNNs, and CNNs only run on them
@@ -1638,15 +1616,5 @@ Item
             });
         }
         return root.__hardware_list || [];
-    }
-
-
-    // Error message dialog
-    SmlDialog
-    {
-        id: notSupportDialog
-        placeholder_text: "Problem not supported"
-        text_value: notSupportProblemMessage
-        tone: "warning"
     }
 }

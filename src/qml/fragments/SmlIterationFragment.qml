@@ -24,8 +24,6 @@ Rectangle {
     required property int problem_id
     required property int stack_id
 
-    // width: 800
-    // height: 400
     color: Theme.surface
 
     // Public signals
@@ -39,13 +37,6 @@ Rectangle {
     property bool __problem_kind_checked: false
     property bool __problem_kind_empty: false
     property var minColumnWidths: [84, 140, 170, 130, 120, 130, 130, 130, 130, 130]
-    property int sumMinColumnWidths: {
-        var total = 0;
-        for (var i = 0; i < minColumnWidths.length; i++) {
-            total += minColumnWidths[i];
-        }
-        return total;
-    }
     property var columnWidths: [84, 140, 170, 130, 120, 130, 130, 130, 130, 130]
 
     // Width of both tables, from the visible columns' widths. Set explicitly by
@@ -99,15 +90,11 @@ Rectangle {
     }
 
     property var jsonList : []
-    readonly property int fixedColumnWidth: 150
-    readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height
-    readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 48
     readonly property int __data_height: 48
     readonly property int __cell_padding: Theme.space3
     readonly property color __cell_background_color: Theme.cardHeader
-    readonly property color __cell_background_nightmode_color: Theme.cardHeader
 
     TableModel {
         id: table_model
@@ -195,12 +182,10 @@ Rectangle {
         {
             id: scroll_view
 
-            // anchors.fill: parent
             anchors.left: parent.left
             width: root.width
             height: root.__scroll_view_height
             content_width: general_header_table.contentWidth
-            // content_height: general_header_table.height + general_table.height + 1
             layout: SmlScrollBar.ScrollBarLayout.Horizontal
             interactive: false
             onWidthChanged: root.__fit_columns()
@@ -212,7 +197,7 @@ Rectangle {
                 anchors.left: parent.left
                 width: scroll_view.width > general_header_table.contentWidth ? scroll_view.width : general_header_table.contentWidth
                 height: __header_height
-                color: ScreenManager.night_mode ? __cell_background_nightmode_color : __cell_background_color
+                color: __cell_background_color
                 // Deferred: forceLayout() re-triggers columnWidthProvider, which changes
                 // general_header_table.contentWidth - a synchronous call here would run
                 // that recompute while this very "width" binding (it reads that same
@@ -237,8 +222,6 @@ Rectangle {
                     columnWidthProvider: function (column) { return root.__column_width(column) }
                     width: root.__tables_width
                     contentWidth: root.__tables_width
-                    // onWidthChanged: forceLayout()
-                    // columnWidthProvider: getColumnWidth(column)
 
                     model: TableModel {
                         TableModelColumn { display: "Iteration" }
@@ -271,7 +254,6 @@ Rectangle {
                         implicitWidth: width
                         implicitHeight: __header_height
                         color: "transparent"
-                        // border.width: 1
                         Text
                         {
                             anchors.fill: parent

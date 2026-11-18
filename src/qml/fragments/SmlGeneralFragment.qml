@@ -24,17 +24,9 @@ Rectangle
 
     // Public signals
     signal component_signal(string viewType, string signal_kind, string id)
-    // signal go_reiterate();
 
     // Private properties
     property var minColumnWidths: [44, 40, 84, 140, 170, 130, 130, 130, 130, 130]
-    property int sumMinColumnWidths: {
-        var total = 0;
-        for (var i = 0; i < minColumnWidths.length; i++) {
-            total += minColumnWidths[i];
-        }
-        return total;
-    }
     property var columnWidths: [44, 40, 84, 140, 170, 130, 130, 130, 130, 130]
 
     // The Problem column shows the goal of each iteration, which a CNN problem never has (its
@@ -102,15 +94,11 @@ Rectangle
             if (__column_shown(j))
                 columnWidths[j] = minColumnWidths[j] + share
     }
-    readonly property int __margin: Settings.spacing_big * 2
     readonly property int __scroll_view_height: height - __summary_height
-    readonly property int __scroll_view_content_height: 700
     readonly property int __header_height: 48
     readonly property int __data_height: 48
     readonly property int __cell_padding: Theme.space3
     readonly property color __cell_background_color: Theme.cardHeader
-    readonly property color __cell_background_nightmode_color: Theme.cardHeader
-    readonly property int __reiterate_column: 0
     readonly property int __check_column: 1
     readonly property int __iteration_column: 2
     readonly property int __problem_kind_column: 3
@@ -380,12 +368,10 @@ Rectangle
         {
             id: scroll_view
 
-            // anchors.fill: parent
             anchors.left: parent.left
             width: root.width
             height: root.__scroll_view_height
             content_width: general_header_table.contentWidth
-            // content_height: general_header_table.height + general_table.height + 1
             layout: SmlScrollBar.ScrollBarLayout.Horizontal
             interactive: false
             onWidthChanged: {
@@ -400,7 +386,7 @@ Rectangle
                 anchors.left: parent.left
                 width: scroll_view.width > general_header_table.contentWidth ? scroll_view.width : general_header_table.contentWidth
                 height: __header_height
-                color: ScreenManager.night_mode ? __cell_background_nightmode_color : __cell_background_color
+                color: __cell_background_color
                 onWidthChanged: {
                     Qt.callLater(root.relayout_tables)
                 }
@@ -413,14 +399,10 @@ Rectangle
                         left: parent.left
                         bottom: parent.bottom
                     }
-                    // columnSpacing: 1
-                    // rowSpacing: 1
                     boundsBehavior: Flickable.StopAtBounds
                     columnWidthProvider: function (column) { return root.__column_width(column) }
                     width: root.__tables_width
                     contentWidth: root.__tables_width
-                    // onWidthChanged: forceLayout()
-                    // columnWidthProvider: getColumnWidth(column)
 
                     model: TableModel {
                         TableModelColumn {display: "Reiterate"}
@@ -453,7 +435,6 @@ Rectangle
                         implicitWidth: width
                         implicitHeight: __header_height
                         color: "transparent"
-                        // border.width: 1
                         Text
                         {
                             anchors.fill: parent

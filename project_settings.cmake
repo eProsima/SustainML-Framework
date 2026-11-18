@@ -22,8 +22,6 @@ set(MODULE_NAME
 set(MODULE_SUMMARY
     "Qt Application for SustainML.")
 
-set(MODULE_CPP_VERSION 14)
-
 set(MODULE_FIND_PACKAGES
         fastcdr
         fastdds
