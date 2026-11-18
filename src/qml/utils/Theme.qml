@@ -23,7 +23,7 @@ QtObject {
     readonly property bool darkMode: ScreenManager.night_mode
 
     readonly property var lightPalette_: ({
-        appBackground: "#F1F8EB",
+        appBackground: "#F5FAF0",
         surface: "#FFFFFF",
         raised: "#FFFFFF",
         overlay: "#FFFFFF",
@@ -49,7 +49,7 @@ QtObject {
         headerTint: "#EAF7DF",
         scrim: "#59000000",
         shadow: "#14000000",
-        decorationOpacity: 0.5
+        decorationOpacity: 0.4
     })
 
     readonly property var darkPalette_: ({

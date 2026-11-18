@@ -39,7 +39,7 @@ QtObject {
     readonly property string bullet_point_icon_name:    "leaf"
     readonly property string home_icon_name:            "home"
     readonly property string start_icon_name:           "leaf"
-    readonly property string settings_icon_name:        "gear"
+    readonly property string settings_icon_name:        "activity"
     readonly property string add_tab_icon_name:         "plus"
     readonly property string close_tab_icon_name:       "cross"
     readonly property string refresh_icon_name:         "refresh"

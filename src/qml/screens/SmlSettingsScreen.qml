@@ -117,7 +117,7 @@ Item
         }
         width: Math.min(parent.width - 2 * Theme.pagePadding, 560)
         title: "Framework nodes"
-        icon_name: "workflow"
+        icon_name: Settings.settings_icon_name   // same as the Node status button
         content_padding: Theme.space2
 
         Column
@@ -157,7 +157,9 @@ Item
                     SmlChip
                     {
                         anchors { right: parent.right; rightMargin: Theme.space4; verticalCenter: parent.verticalCenter }
-                        text: node_row.status
+                        // A status, not a control: no pill, and in sentence case like the rest of the row
+                        plain: true
+                        text: node_row.status.charAt(0) + node_row.status.slice(1).toLowerCase()
                         tone: root.__status_tone(node_row.status)
                         pulse: node_row.status == "RUNNING" || node_row.status == "INITIALIZING"
                     }

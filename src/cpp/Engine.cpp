@@ -452,40 +452,9 @@ void Engine::launch_task(
     Utils::split_string(outputs.toStdString(), outs, ' ');
     cancel_requested_.store(false);
 
-    uint32_t min = 1;
-    uint32_t max = sizeof(uint32_t) - 1;
-    if (minimum_samples > 0)
-    {
-        try
-        {
-            min = static_cast<uint32_t>(minimum_samples);
-        }
-        catch (const std::exception& e)
-        {
-            emit update_log(QString("Error converting minimum samples to uint32_t: ") + e.what());
-        }
-    }
-    else
-    {
-        emit update_log(QString("Error: minimum samples (") + QString::number(minimum_samples) +
-                QString(") must be greater than 0. Using default value " + QString::number(min)));
-    }
-    if (maximum_samples > 0)
-    {
-        try
-        {
-            max = static_cast<uint32_t>(maximum_samples);
-        }
-        catch (const std::exception& e)
-        {
-            emit update_log(QString("Error converting maximum samples to uint32_t: ") + e.what());
-        }
-    }
-    else
-    {
-        emit update_log(QString("Error: maximum samples (") + QString::number(maximum_samples) +
-                QString(") must be greater than 0. Using default value " + QString::number(max)));
-    }
+    // 0: not specified (an empty field in the form); any other number, 1 included, is a limit
+    uint32_t min = minimum_samples > 0 ? static_cast<uint32_t>(minimum_samples) : 0;
+    uint32_t max = maximum_samples > 0 ? static_cast<uint32_t>(maximum_samples) : 0;
 
     if (num_outputs < 1)
     {
@@ -758,6 +727,59 @@ void Engine::request_hardwares()
                             QStringList hardwares = config_obj["hardwares"].toString().split(", ");
                             emit hardwares_available(hardwares);
                         }
+                    }
+                }
+            });
+}
+
+void Engine::request_yolo_models()
+{
+    QJsonObject json_config;
+    json_config["configuration"] = "yolo_models";
+    json_config["node_id"] = static_cast<int>(sustainml::NodeID::ID_HW_RESOURCES);
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonObject config_obj = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8()).object();
+                    if (config_obj["yolo_models"].isArray())
+                    {
+                        emit yolo_models_available(config_obj["yolo_models"].toArray().toVariantList());
+                    }
+                    else
+                    {
+                        emit update_log(QString("YOLO models not available: ") +
+                                config_obj["error"].toString());
+                    }
+                }
+            });
+}
+
+void Engine::request_carbon_intensities()
+{
+    QJsonObject json_config;
+    json_config["configuration"] = "carbon_intensities";
+    json_config["node_id"] = static_cast<int>(sustainml::NodeID::ID_CARBON_FOOTPRINT);
+
+    config_request(json_config, [this](const QJsonObject& json_obj)
+            {
+                QJsonObject response_obj = json_obj["response"].toObject();
+                if (response_obj.contains("configuration") && response_obj["configuration"].isString())
+                {
+                    QJsonObject config_obj = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8()).object();
+                    if (config_obj["carbon_intensities"].isObject())
+                    {
+                        emit carbon_intensities_available(
+                            config_obj["carbon_intensities"].toObject().toVariantMap());
+                    }
+                    else
+                    {
+                        emit update_log(QString("Carbon intensities not available: ") +
+                                config_obj["error"].toString());
                     }
                 }
             });

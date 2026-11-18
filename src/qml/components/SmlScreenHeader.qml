@@ -6,7 +6,7 @@ import eProsima.SustainML.Theme 1.0
 /*
     Top bar of every screen: the navigation buttons (Home as a labelled button, Back as
     an outlined icon button), the screen title and subtitle, and the screen's actions on the right. The far right
-    is left free for the Node status (gear) button that main.qml keeps on top of every
+    is left free for the Node status (activity) button that main.qml keeps on top of every
     screen.
 
     Usage:

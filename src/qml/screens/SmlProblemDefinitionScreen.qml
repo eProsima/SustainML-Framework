@@ -25,8 +25,9 @@ Item
     property string __problem_definition: ""
     property string __inputs: ""
     property string __outputs: ""
-    property int __minimum_samples: 1
-    property int __maximum_samples: 1
+    // 0: not specified (an empty field). Any number typed, 1 included, is a real limit
+    property int __minimum_samples: 0
+    property int __maximum_samples: 0
     property bool __optimize_carbon_footprint_auto: false
     property string __goal: ""
     property string __types: "Transformers"
@@ -56,18 +57,11 @@ Item
     // No hardware chosen ("(empty)" in its list): nothing can be evaluated, so the task cannot be
     // submitted, and for CNNs neither their goal nor their model can be chosen yet
     readonly property bool __no_hardware: root.__hardware_required === ""
-    on__Model_selectedChanged:
-    {
-        // A selected model skips the search, so its optimization fields no longer apply
-        if (root.__model_selected === "")
-            return
-        root.__optimize_carbon_footprint_auto = false
-        root.__optimize_carbon_footprint_manual = false
-        root.__desired_carbon_footprint = 0.0
-        root.__max_memory_footprint = 0
-        desired_carbon_footprint_input.text = ""
-        max_mem_footprint_input.text = ""
-    }
+    // A selected model (or a U-Net on the FPGA) skips the search, so the number of output models
+    // and the optimization fields do not apply to it. They keep what the user typed, only disabled,
+    // and send_task leaves them out. Clearing them here lost them for good: switching to CNNs
+    // asks for the U-Net list, and a new list briefly selects its first model
+    readonly property bool __search_skipped: root.__model_selected !== "" || root.__unet_mode
     property string __model_selected_copy: __model_selected
 
     property string notSupportProblemMessage: ""
@@ -111,6 +105,7 @@ Item
     signal go_results()
     signal go_dataset_path()
     signal go_unet_models()
+    signal go_yolo_models(string country)
     signal send_task(
         string problem_short_description,
         string problem_definition,
@@ -239,8 +234,8 @@ Item
             problem_definition_input.text = problem_definition
             inputs_input.text = inputs
             outputs_input.text = outputs
-            minimum_samples_input.text = minimum_samples > 1 ? minimum_samples : ""
-            maximum_samples_input.text = maximum_samples > 1 ? maximum_samples : ""
+            minimum_samples_input.text = minimum_samples > 0 ? minimum_samples : ""
+            maximum_samples_input.text = maximum_samples > 0 ? maximum_samples : ""
             desired_carbon_footprint_input.text = desired_carbon_footprint === 0 ? "" : desired_carbon_footprint
             max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
@@ -347,12 +342,23 @@ Item
                 }
             },
 
+            // YOLO models button: the YOLO models of the Axelera board, in the country chosen here
+            SmlButton
+            {
+                id: yolo_models_button
+                visible: !root.__reiterate
+                icon_name: "layout_grid"
+                text_value: "YOLO models"
+                tooltip_text: "Compare the CO2 and accuracy of the YOLO models of the Axelera board"
+                onClicked: root.go_yolo_models(root.__geo_location_region)
+            },
+
             // HF models button
             SmlButton
             {
                 id: hf_search_button
                 visible: !root.__reiterate
-                icon_name: "sparkles"
+                icon_name: "scan_search"
                 text_value: "HF models"
                 tooltip_text: "Find best Hugging Face models for this description"
                 onClicked: hf_choice_popup.open()
@@ -732,11 +738,12 @@ Item
                                 read_only: root.__reiterate
                                 id: minimum_samples_input
                                 disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
-                                text: root.__minimum_samples === 1 ? "" : root.__minimum_samples
+                                text: root.__minimum_samples === 0 ? "" : root.__minimum_samples
                                 // Not IntValidator: it's locale-aware and treats the locale's group
                                 // separator (a comma, in many locales) as acceptable input. A plain
                                 // digit-only pattern has no such leniency.
-                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                // Whole numbers from 1: 0 is how an empty field is sent
+                                validator: RegExpValidator { regExp: /^([1-9][0-9]*)?$/ }
                                 placeholder_text: "Min samples required (only numbers)"
                                 width: parent.width
                                 height: root.__input_height
@@ -747,9 +754,9 @@ Item
                                     if (!isNaN(num)) {
                                         root.__minimum_samples = num
                                     } else {
-                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // Emptied: back to 0, the "not specified" value, so the
                                         // previous number is not submitted again
-                                        root.__minimum_samples = 1
+                                        root.__minimum_samples = 0
                                         text = ""
                                     }
                                 }
@@ -774,8 +781,8 @@ Item
                                 read_only: root.__reiterate
                                 id: maximum_samples_input
                                 disabled: root.__goal !== "" || root.__model_selected !== "" || root.__unet_mode
-                                text: root.__maximum_samples === 1 ? "" : root.__maximum_samples
-                                validator: RegExpValidator { regExp: /^[0-9]*$/ }
+                                text: root.__maximum_samples === 0 ? "" : root.__maximum_samples
+                                validator: RegExpValidator { regExp: /^([1-9][0-9]*)?$/ }
                                 placeholder_text: "Max samples required (only numbers)"
                                 width: parent.width
                                 height: root.__input_height
@@ -786,9 +793,9 @@ Item
                                     if (!isNaN(num)) {
                                         root.__maximum_samples = num
                                     } else {
-                                        // Emptied: back to 1, the "not specified" value, so the
+                                        // Emptied: back to 0, the "not specified" value, so the
                                         // previous number is not submitted again
-                                        root.__maximum_samples = 1
+                                        root.__maximum_samples = 0
                                         text = ""
                                     }
                                 }
@@ -983,9 +990,6 @@ Item
                                         // A specific model has been chosen
                                         root.__model_selected = text
                                         root.__model_selected_copy = text
-                                        // Force num_outputs to 1 and show it in the box
-                                        root.__num_outputs = 1
-                                        num_outputs_input.text = "1"
                                     }
                                 }
                                 onModelChanged:
@@ -1531,8 +1535,8 @@ Item
         root.__problem_definition = ""
         root.__inputs = ""
         root.__outputs = ""
-        root.__minimum_samples = 1
-        root.__maximum_samples = 1
+        root.__minimum_samples = 0
+        root.__maximum_samples = 0
         root.__optimize_carbon_footprint_auto = false
         root.__goal = ""
         root.__optimize_carbon_footprint_manual = false
@@ -1595,18 +1599,18 @@ Item
                 root.__dataset_metadata_applications,
                 root.__minimum_samples,
                 root.__maximum_samples,
-                root.__optimize_carbon_footprint_auto,
+                root.__optimize_carbon_footprint_auto && !root.__search_skipped,
                 root.__goal,
-                root.__optimize_carbon_footprint_manual,
+                root.__optimize_carbon_footprint_manual && !root.__search_skipped,
                 root.__previous_iteration,
-                root.__desired_carbon_footprint,
-                root.__max_memory_footprint,
+                root.__search_skipped ? 0.0 : root.__desired_carbon_footprint,
+                root.__search_skipped ? 0 : root.__max_memory_footprint,
                 root.__hardware_required,
                 root.__geo_location_continent,
                 root.__geo_location_region,
                 root.__extra_data,
                 root.__previous_problem_id,
-                root.__num_outputs,
+                root.__search_skipped ? 1 : root.__num_outputs,
                 root.__model_selected,
                 root.__types)
     }
