@@ -49,9 +49,9 @@ then generate. To **change** one, change its Lucide name and regenerate; no QML 
 | `success_dark` | `#4ADE80` |
 
 ## Icon names
-
 | Name | Lucide |
 |---|---|
+| `activity` | `activity` |
 | `back` | `arrow-left` |
 | `check` | `check` |
 | `checklist` | `list-checks` |
@@ -65,10 +65,10 @@ then generate. To **change** one, change its Lucide name and regenerate; no QML 
 | `external` | `external-link` |
 | `file` | `file-text` |
 | `folder` | `folder-open` |
-| `gear` | `settings` |
 | `history` | `history` |
 | `home` | `house` |
 | `info` | `info` |
+| `layout_grid` | `layout-grid` |
 | `leaf` | `leaf` |
 | `load` | `folder-down` |
 | `mop` | `brush-cleaning` |
@@ -78,6 +78,7 @@ then generate. To **change** one, change its Lucide name and regenerate; no QML 
 | `refresh` | `refresh-cw` |
 | `save` | `save` |
 | `scale` | `scale` |
+| `scan_search` | `scan-search` |
 | `search` | `search` |
 | `sparkles` | `sparkles` |
 | `sprout` | `sprout` |
@@ -88,15 +89,4 @@ then generate. To **change** one, change its Lucide name and regenerate; no QML 
 | `up` | `chevron-up` |
 | `upload` | `upload` |
 | `warning` | `triangle-alert` |
-| `workflow` | `workflow` |
-| `zap` | `zap` |
-| `square` | `square (filled)` |
-| `success` | `circle-check` |
-| `sun` | `sun` |
-| `table` | `table-2` |
-| `trash` | `trash-2` |
-| `up` | `chevron-up` |
-| `upload` | `upload` |
-| `warning` | `triangle-alert` |
-| `workflow` | `workflow` |
 | `zap` | `zap` |

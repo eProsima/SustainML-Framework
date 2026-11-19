@@ -20,7 +20,6 @@ Window {
     id: main_window
 
     // Properties
-    property string log: "LOG"
     property string app_requirements_node_last_status: "INACTIVE"
     property string carbon_footprint_node_last_status: "INACTIVE"
     property string hw_constraints_node_last_status: "INACTIVE"
@@ -77,6 +76,7 @@ Window {
     property var hf_selected_ids: []               // Array of model_id strings
     property int maxCompareModels: 5               // Maximum number of models to compare
     property var hf_compare_obj: null
+    property string hf_compare_error: ""          // Why the last comparison failed ("" if it did not)
     property var hf_compare_last_request_ids: []   // Frozen ids for the last compare request
     property var hf_compare_history: []            // Saved comparisons
 
@@ -147,11 +147,6 @@ Window {
             main_window.current_problem_id = problem_id
             main_window.tasking = true
             main_window.load_screen(ScreenManager.Screens.Results)
-        }
-
-        function onUpdate_log(new_log)
-        {
-            main_window.log = main_window.log + "\n" + new_log
         }
 
         function onUpdate_app_requirements_node_status(new_status)
@@ -353,15 +348,21 @@ Window {
         }
 
         function onHf_models_compare_available(reportObj) {
+            main_window.hf_compare_error = ""
             main_window.hf_compare_obj = reportObj || ({})
 
             // Save using frozen ids
             main_window.hf_save_compare(main_window.hf_compare_last_request_ids, main_window.hf_compare_obj)
         }
 
+        // Getting the models' info or comparing them failed: leave the "comparing" state
+        // (an empty hf_compare_obj) and say why
+        function onHf_models_info_error(message) {
+            main_window.hf_compare_failed(message)
+        }
+
         function onHf_models_compare_error(message) {
-            main_window.hf_compare_obj = ({})             // Clear stale content
-            main_window.hf_open_compare_index = -1
+            main_window.hf_compare_failed(message)
         }
     }
 
@@ -663,8 +664,17 @@ Window {
         // Not auto-opened: nothing is selected by default, the user picks it from the list like any other saved entry
     }
 
+    function hf_compare_failed(message) {
+        console.warn("[HF] Comparison failed:", message)
+        hf_compare_obj = null
+        hf_open_compare_index = -1
+        hf_compare_error = message
+    }
+
     function hf_load_saved_compare(index) {
         if (index < 0 || index >= hf_compare_history.length) return
+
+        hf_compare_error = ""
 
         hf_renaming_index = -1     // Discard any unsaved rename in progress elsewhere
 
@@ -1191,7 +1201,6 @@ Window {
             {
                 id: log_screen_component
 
-                log: main_window.log
                 app: main_window.app_requirements_node_last_status
                 carbon: main_window.carbon_footprint_node_last_status
                 hw_constraints: main_window.hw_constraints_node_last_status
@@ -1814,6 +1823,7 @@ Window {
                                 // Clear current view: nothing should appear open/selected while the
                                 // new comparison is being computed, and the selection must not carry
                                 // over into whatever the user picks for their next comparison.
+                                main_window.hf_compare_error = ""
                                 main_window.hf_compare_obj = ({})
                                 main_window.hf_open_compare_index = -1
                                 main_window.hf_selected_ids = []
@@ -2250,6 +2260,11 @@ Window {
                             text: "Comparing " + main_window.hf_compare_last_request_ids.length + " models..."
                             tone: "accent"
                             pulse: true
+                        },
+                        SmlChip {
+                            visible: main_window.hf_compare_error !== "" && main_window.hf_compare_history.length > 0
+                            text: "Comparison failed"
+                            tone: "danger"
                         }
                     ]
 
@@ -2259,11 +2274,12 @@ Window {
                         anchors.centerIn: parent
                         readonly property bool waiting_: compare_card.comparing_
                         visible: main_window.hf_compare_history.length === 0 && main_window.hf_open_compare_index === -1
+                        readonly property bool failed_: main_window.hf_compare_error !== ""
                         busy: waiting_
                         title: waiting_ ? "Comparing " + main_window.hf_compare_last_request_ids.length + " models"
-                                        : "No comparisons"
+                                        : failed_ ? "Comparison failed" : "No comparisons"
                         hint: waiting_ ? main_window.hf_compare_last_request_ids.join(", ") + "\n\nThe comparison appears here as soon as it is ready."
-                                       : "Saved comparisons appear here."
+                                       : failed_ ? main_window.hf_compare_error : "Saved comparisons appear here."
                     }
 
                     // Clicking any blank area of this panel (behind everything else, so any

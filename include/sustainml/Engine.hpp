@@ -380,14 +380,6 @@ signals:
             const int& iteration_id);
 
     /**
-     * @brief Update log signal with raw string, appending new records in the displayed log
-     *
-     * @param log log string to display
-     */
-    void update_log(
-            const QString& log);
-
-    /**
      * @brief Update app requirements node status signal to display in the GUI
      *
      * @param status status string to display

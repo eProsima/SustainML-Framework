@@ -127,11 +127,6 @@ Item
             }
             tab_view.focus(problem_id, problem_id)
             root.__mark_node_complete(problem_id, "ml_model_metadata")
-
-            if (keywords === "Error" && !errorDialog.visible) {
-                errorMessage = "Error in node ML Model Metadata. Please check the logs for more details."
-                errorDialog.open()
-            }
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
