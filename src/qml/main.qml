@@ -932,8 +932,8 @@ Window {
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
                 onGo_yolo_models: {
-                    if (country !== "")
-                        main_window.yolo_country = country
+                    // The country of the form, or the world average when none is chosen there
+                    main_window.yolo_country = country !== "" ? country : "WORLD"
                     main_window.load_screen(ScreenManager.Screens.YOLO)
                 }
                 hf_results_available: main_window.hf_saved_searches.length > 0
@@ -1225,7 +1225,7 @@ Window {
                 models: main_window.yolo_models
                 intensities: main_window.carbon_intensities
                 country: main_window.yolo_country
-                onCountryChanged: main_window.yolo_country = country
+                onCountry_picked: main_window.yolo_country = code
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_back: main_window.load_screen(ScreenManager.Screens.Definition)
                 onRequest_data: {
@@ -2136,34 +2136,6 @@ Window {
                 id: compareScreen
                 color: "transparent"
 
-                function softHyphenate(s, step) {
-                    s = (s === undefined || s === null) ? "" : String(s)
-                    // Insert soft hyphen into long runs without spaces
-                    var out = ""
-                    var run = ""
-                    for (var i = 0; i < s.length; ++i) {
-                        var ch = s[i]
-                        if (ch === " " || ch === "\n" || ch === "\t") {
-                            out += breakRun(run, step) + ch
-                            run = ""
-                        } else {
-                            run += ch
-                        }
-                    }
-                    out += breakRun(run, step)
-                    return out
-                }
-
-                function breakRun(run, step) {
-                    if (!run || run.length <= step) return run
-                    var res = ""
-                    for (var i = 0; i < run.length; i += step) {
-                        if (i > 0) res += "\u00AD"   // Soft hyphen
-                        res += run.slice(i, i + step)
-                    }
-                    return res
-                }
-
                 SmlScreenHeader
                 {
                     id: compare_header
@@ -2542,10 +2514,11 @@ Window {
 
                                         Text {
                                             width: parent.width * 0.34
-                                            text: softHyphenate(modelData.model_id || "", 14)
+                                            text: modelData.model_id || ""
                                             font.family: Theme.uiFontFamily
                                             font.pixelSize: Theme.fontSizeBody
-                                            wrapMode: Text.WordWrap
+                                            // Long names without spaces break at "/", "-" or anywhere
+                                            wrapMode: Text.Wrap
                                             elide: Text.ElideNone
                                             color: Theme.textSecondary
                                         }
@@ -2573,27 +2546,24 @@ Window {
                                         Text {
                                             width: parent.width * 0.14
 
-                                            // Normalize architectures into a string, then soft-hyphenate
-                                            text: softHyphenate(
-                                                Array.isArray(modelData.architectures)
-                                                    ? modelData.architectures.join(", ")
-                                                    : (modelData.architectures || ""),
-                                                14
-                                            )
+                                            // Normalize architectures into a string
+                                            text: Array.isArray(modelData.architectures)
+                                                ? modelData.architectures.join(", ")
+                                                : (modelData.architectures || "")
 
                                             font.family: Theme.uiFontFamily
                                             font.pixelSize: Theme.fontSizeBody
-                                            wrapMode: Text.WordWrap
+                                            wrapMode: Text.Wrap
                                             elide: Text.ElideNone
                                             color: Theme.textSecondary
                                         }
 
                                         Text {
                                             width: parent.width * 0.2
-                                            text: softHyphenate(modelData.languages || "", 14)
+                                            text: modelData.languages || ""
                                             font.family: Theme.uiFontFamily
                                             font.pixelSize: Theme.fontSizeBody
-                                            wrapMode: Text.WordWrap
+                                            wrapMode: Text.Wrap
                                             elide: Text.ElideNone
                                             color: Theme.textSecondary
                                         }

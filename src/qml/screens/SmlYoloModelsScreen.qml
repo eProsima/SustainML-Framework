@@ -38,6 +38,9 @@ Item
     signal go_home()
     signal go_back()
     signal request_data()
+    // A country picked on this screen, or the world average for one without an intensity. The
+    // screen does not set country itself, so country keeps following its binding
+    signal country_picked(string code)
 
     readonly property var sizes_: ["n", "s", "m", "l", "x"]
     readonly property var goal_names_: ({
@@ -81,6 +84,26 @@ Item
     onSelectedChanged: curve_canvas.requestPaint()
     onModelsChanged: curve_canvas.requestPaint()
 
+    // The country list fills when the intensities arrive, and the drop-down then selects its first
+    // entry by itself. Show the country of the screen instead, after that automatic selection;
+    // a country the carbon footprint node has no intensity for falls back to the world average
+    onCountries_Changed: Qt.callLater(sync_country_)
+    onCountryChanged: Qt.callLater(sync_country_)
+
+    function sync_country_() {
+        if (countries_.length === 0)
+            return
+        if (!intensities[country]) {
+            country_picked("WORLD")
+            return
+        }
+        for (var i = 0; i < countries_.length; i++)
+            if (countries_[i].code === country) {
+                country_input.currentIndex = i
+                return
+            }
+    }
+
     // ---------------------------------------------------------------- helpers
 
     function country_list(map) {
@@ -92,13 +115,6 @@ Item
         if (map["WORLD"])
             list.unshift({"code": "WORLD", "name": map["WORLD"].country})
         return list
-    }
-
-    function country_code(name) {
-        for (var i = 0; i < countries_.length; i++)
-            if (countries_[i].name === name)
-                return countries_[i].code
-        return ""
     }
 
     // Rows of the matrix: each task with each architecture it has, cells by size (null if absent)
@@ -408,11 +424,9 @@ Item
                             searchable: true
                             model: root.countries_.map(function(c) { return c.name })
                             displayText: root.country_name_
-                            onText_changed: {
-                                var code = root.country_code(text)
-                                if (code !== "")
-                                    root.country = code
-                            }
+                            // Only a pick from the list changes the country: the drop-down also
+                            // changes its index by itself when the list fills
+                            onActivated: root.country_picked(root.countries_[index].code)
                         }
                     }
 
