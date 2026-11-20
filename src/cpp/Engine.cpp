@@ -27,6 +27,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <qqmlcontext.h>
+#include <QDebug>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -86,7 +87,12 @@ void Engine::request_hf_models(
 
                 if (response_obj.contains("success") && !response_obj["success"].toBool())
                 {
-                    emit hf_models_error("hf_search: backend reported failure (success=false)");
+                    // The node's own message, when it sent one, says more than the flag
+                    const QJsonObject error_obj = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8()).object();
+                    emit hf_models_error("hf_search: " + (error_obj["error"].isString()
+                            ? error_obj["error"].toString()
+                            : QString("backend reported failure (success=false)")));
                     return;
                 }
 
@@ -180,6 +186,14 @@ void Engine::request_hf_model_tooltip(
 
                 if (response_obj.contains("success") && !response_obj["success"].toBool())
                 {
+                    // config.json missing / gated: no tooltip for this model (any other failure,
+                    // such as a timeout, leaves it to be asked again)
+                    const QJsonObject error_obj = QJsonDocument::fromJson(
+                        response_obj["configuration"].toString().toUtf8()).object();
+                    if (error_obj.contains("error"))
+                    {
+                        emit hf_model_tooltip_available(mid, "");
+                    }
                     return;
                 }
 
@@ -354,7 +368,7 @@ QString Engine::write_unet_visualizer(
     QFile tmpl(":/html/unet_visualizer.html");
     if (!tmpl.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        emit update_log("Error: U-Net visualizer template not found in resources");
+        qWarning().noquote() << "Error: U-Net visualizer template not found in resources";
         return QString();
     }
     QString page = QString::fromUtf8(tmpl.readAll());
@@ -364,7 +378,7 @@ QString Engine::write_unet_visualizer(
     QFile model_js(":/qml/utils/UnetModel.js");
     if (!model_js.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        emit update_log("Error: U-Net model script not found in resources");
+        qWarning().noquote() << "Error: U-Net model script not found in resources";
         return QString();
     }
     QString model_js_str = QString::fromUtf8(model_js.readAll());
@@ -376,7 +390,7 @@ QString Engine::write_unet_visualizer(
     QJsonDocument models_doc = QJsonDocument::fromJson(models_json.toUtf8(), &err);
     if (err.error != QJsonParseError::NoError || !models_doc.isArray())
     {
-        emit update_log(QString("Error: invalid U-Net models info: ") + err.errorString());
+        qWarning().noquote() << (QString("Error: invalid U-Net models info: ") + err.errorString());
         return QString();
     }
 
@@ -395,7 +409,7 @@ QString Engine::write_unet_visualizer(
     QDir dir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
     if (!dir.mkpath("sustainml"))
     {
-        emit update_log("Error: cannot create temporary directory for the U-Net visualizer");
+        qWarning().noquote() << "Error: cannot create temporary directory for the U-Net visualizer";
         return QString();
     }
     QString path = dir.filePath("sustainml/unet_visualizer_" + safe_name + ".html");
@@ -403,7 +417,7 @@ QString Engine::write_unet_visualizer(
     QFile out(path);
     if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
     {
-        emit update_log(QString("Error: cannot write U-Net visualizer to ") + path);
+        qWarning().noquote() << (QString("Error: cannot write U-Net visualizer to ") + path);
         return QString();
     }
     out.write(page.toUtf8());
@@ -733,7 +747,7 @@ void Engine::request_yolo_models()
                     }
                     else
                     {
-                        emit update_log(QString("YOLO models not available: ") +
+                        qWarning().noquote() << (QString("YOLO models not available: ") +
                                 config_obj["error"].toString());
                     }
                 }
@@ -760,7 +774,7 @@ void Engine::request_carbon_intensities()
                     }
                     else
                     {
-                        emit update_log(QString("Carbon intensities not available: ") +
+                        qWarning().noquote() << (QString("Carbon intensities not available: ") +
                                 config_obj["error"].toString());
                     }
                 }
@@ -936,15 +950,13 @@ void Engine::print_results(
             emit new_ml_model_metadata_node_output(
                 task_id.problem_id(),
                 task_id.iteration_id(),
-                list_of_keywords,
-                node_json["metadata"].toString());
+                node_json["metadata"].toString(),
+                list_of_keywords);
             break;
         }
         default:
             break;
     }
-    emit update_log(QString("Output received. ") + Utils::task_string(task_id) + QString(",node ") +
-            Utils::node_name(id) + QString(":\n") + Utils::raw_output(json_obj));
 }
 
 void Engine::request_orchestrator(
@@ -1032,7 +1044,7 @@ void Engine::user_input_response(
         types::TaskId task_id = Utils::task_id(json_obj);
         if (types::TaskId() == task_id)
         {
-            emit update_log(QString("Error: task id is invalid"));
+            qWarning().noquote() << QString("Error: task id is invalid");
         }
         else
         {
@@ -1041,7 +1053,6 @@ void Engine::user_input_response(
         }
         // Request results for all nodes, last task id
         request_results(task_id, sustainml::NodeID::MAX);
-        emit update_log(QString("User input send for ") + Utils::task_string(task_id));
     }
     remove_requester(requester);
 }
@@ -1085,7 +1096,6 @@ void Engine::node_results_response(
                     received_task_ids.push_back(task_id);
                     emit task_sent(static_cast<int>(task_id.problem_id()), static_cast<int>(task_id.iteration_id()));
                     request_results(task_id, sustainml::NodeID::MAX);
-                    emit update_log(QString("User input send for ") + Utils::task_string(task_id));
                 }
             }
         }
@@ -1392,16 +1402,7 @@ void Engine::save_tasks_response(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
-    QString path = json_obj.value("path").toString();
-    if (!path.isEmpty())
-    {
-        emit update_log(QString("Saved current results to ") + path);
-    }
-    else
-    {
-        emit update_log(QString("Saved current results."));
-    }
-
+    Q_UNUSED(json_obj);
     remove_requester(requester);
 }
 
@@ -1537,7 +1538,6 @@ void Engine::wipe_database_response(
 {
     Q_UNUSED(json_obj);
     saved_display_names_.clear();
-    emit update_log(QString("All save files deleted."));
 
     remove_requester(requester);
 }
@@ -1600,11 +1600,7 @@ void Engine::save_hf_response(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
-    QString message = json_obj.value("message").toString();
-    QString path = json_obj.value("path").toString();
-    emit update_log(message.isEmpty() ? QString("Saved HF history.") : message +
-            (path.isEmpty() ? QString() : QString(" (") + path + QString(")")));
-
+    Q_UNUSED(json_obj);
     remove_requester(requester);
 }
 
@@ -1643,16 +1639,7 @@ void Engine::save_all_response(
         const REST_requester* requester,
         const QJsonObject& json_obj)
 {
-    QString path = json_obj.value("path").toString();
-    if (!path.isEmpty())
-    {
-        emit update_log(QString("Saved everything to ") + path);
-    }
-    else
-    {
-        emit update_log(QString("Saved everything."));
-    }
-
+    Q_UNUSED(json_obj);
     remove_requester(requester);
 }
 

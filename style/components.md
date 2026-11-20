@@ -27,7 +27,7 @@ destructive actions use `danger`; icon-only buttons always have a `tooltip_text`
 
 | Component | Use it for |
 |---|---|
-| `SmlScreenHeader` | Top bar of every screen: `title`, `subtitle`, `navigation` (Home as a labelled `SmlButton`, Back as an `outlined` `SmlIconButton`), `actions` on the right; green line along its bottom; leaves room on the right for the global Node status (gear) button |
+| `SmlScreenHeader` | Top bar of every screen: `title`, `subtitle`, `navigation` (Home as a labelled `SmlButton`, Back as an `outlined` `SmlIconButton`), `actions` on the right; green line along its bottom; leaves room on the right for the global Node status (activity) button |
 | `SmlCard` | Section of a screen, straight on the page (no box): heading with `title`, `subtitle`, `icon_name` (green tile) and `actions` over a thin divider; children go into the content area below (`content_padding` is the gap) |
 | `SmlTabView` | Tabs over pages. `tab_style: "card"` for problem tabs (framed, the selected one joined to the page with a green top bar); `"underline"` for tabs inside a page (outlined segments, the selected one filled green) |
 | `SmlScrollView` / `SmlScrollBar` | Scrolling areas; the bar is slim, neutral, and hidden when there is nothing to scroll |
@@ -46,7 +46,7 @@ destructive actions use `danger`; icon-only buttons always have a `tooltip_text`
 
 | Component | Use it for |
 |---|---|
-| `SmlChip` | A short status in a tinted pill with a dot or icon (`tone`, `pulse` for live states) |
+| `SmlChip` | A short status in a tinted pill with a dot or icon (`tone`, `pulse` for live states, `plain` for no pill: a status in a list) |
 | `SmlIcon` | An icon (`name`, `variant` from `Theme.icon*`, `size`) |
 | `SmlText` | Text in the type roles of the theme |
 | `SmlFocusRing` | Keyboard focus outline inside a custom control |

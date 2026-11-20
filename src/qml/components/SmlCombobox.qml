@@ -26,6 +26,20 @@ ComboBox {
     property bool __edited: false
     property string __search_text: ""
     property bool __index_changed: false   // set by onCurrentIndexChanged, consumed by onActivated
+    // Rows the filter leaves, counted from the model (a list of strings, as the delegate reads it)
+    readonly property int __shown_rows: {
+        var items = sustainml_custom_combobox.model
+        if (!items || items.length === undefined)
+            return sustainml_custom_combobox.count
+        if (!sustainml_custom_combobox.searchable || sustainml_custom_combobox.__search_text === "")
+            return items.length
+        var query = sustainml_custom_combobox.__search_text.toLowerCase()
+        var shown = 0
+        for (var i = 0; i < items.length; i++)
+            if (typeof items[i] === "string" && items[i].toLowerCase().indexOf(query) !== -1)
+                shown++
+        return shown
+    }
 
     // External signal
     signal text_changed(string text)
@@ -211,12 +225,16 @@ ComboBox {
 
         onOpened: {
             sustainml_custom_combobox.__index_changed = false
+            // Empty the field itself, not only the filter: otherwise it shows the last text, and
+            // what is typed next is added to it
+            popupSearchInput.text = ""
             sustainml_custom_combobox.__search_text = ""
             if (sustainml_custom_combobox.searchable)
                 popupSearchInput.forceActiveFocus()
         }
         onClosed: {
             sustainml_custom_combobox.__edited = false
+            popupSearchInput.text = ""
             sustainml_custom_combobox.__search_text = ""
         }
 
@@ -259,7 +277,12 @@ ComboBox {
                     selectionColor: Theme.accentSubtleStrong
                     selectedTextColor: Theme.textPrimary
                     clip: true
-                    onTextChanged: sustainml_custom_combobox.__search_text = text
+                    onTextChanged: {
+                        sustainml_custom_combobox.__search_text = text
+                        // The list keeps its scroll position, which could leave the rows the filter
+                        // leaves out of view: show them from the top
+                        Qt.callLater(listView.positionViewAtBeginning)
+                    }
                     KeyNavigation.down: listView
 
                     Text {
@@ -281,11 +304,11 @@ ComboBox {
                 clip: true
                 // Cap to ~8 rows before scrolling - a long result list (e.g. HF model
                 // search) would otherwise size the popup to fit every item at once.
-                implicitHeight: Math.min(contentHeight, (Theme.controlHeightSm + 2) * 8)
+                // The rows come from the model, not from contentHeight: contentHeight depends on
+                // the rows the list creates, which depend on its height (a binding loop)
+                implicitHeight: Math.min(sustainml_custom_combobox.__shown_rows, 8) * (Theme.controlHeightSm + 2)
                 model: sustainml_custom_combobox.popup.visible ? sustainml_custom_combobox.delegateModel : null
 
-                // Not only spacing: the list's height follows its contentHeight, so without this
-                // margin an empty list starts 0 px tall and never creates its first row
                 bottomMargin: Theme.space1
 
                 ScrollBar.vertical: SmlScrollBar {

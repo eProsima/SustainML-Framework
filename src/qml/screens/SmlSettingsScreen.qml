@@ -17,7 +17,6 @@ Item
     id: root
 
     // External properties
-    property string log: ""
     property string app: ""
     property string carbon: ""
     property string hw_constraints: ""

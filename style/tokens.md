@@ -10,7 +10,7 @@ Light / dark values. Every text colour reaches **4.5:1** on every surface of its
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `appBackground` | `#F1F8EB` | `#0A170C` | page background (uniform) |
+| `appBackground` | `#F5FAF0` | `#0A170C` | page background (uniform) |
 | `surface` | `#FFFFFF` | `#131B15` | cards, pages, tab content |
 | `raised` | `#FFFFFF` | `#19231B` | inputs, secondary buttons, list rows |
 | `overlay` | `#FFFFFF` | `#212C23` | popups, menus, dialogs, tooltips |
