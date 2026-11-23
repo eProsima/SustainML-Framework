@@ -20,7 +20,6 @@ Window {
     id: main_window
 
     // Properties
-    property string log: "LOG"
     property string app_requirements_node_last_status: "INACTIVE"
     property string carbon_footprint_node_last_status: "INACTIVE"
     property string hw_constraints_node_last_status: "INACTIVE"
@@ -77,6 +76,7 @@ Window {
     property var hf_selected_ids: []               // Array of model_id strings
     property int maxCompareModels: 5               // Maximum number of models to compare
     property var hf_compare_obj: null
+    property string hf_compare_error: ""          // Why the last comparison failed ("" if it did not)
     property var hf_compare_last_request_ids: []   // Frozen ids for the last compare request
     property var hf_compare_history: []            // Saved comparisons
 
@@ -147,11 +147,6 @@ Window {
             main_window.current_problem_id = problem_id
             main_window.tasking = true
             main_window.load_screen(ScreenManager.Screens.Results)
-        }
-
-        function onUpdate_log(new_log)
-        {
-            main_window.log = main_window.log + "\n" + new_log
         }
 
         function onUpdate_app_requirements_node_status(new_status)
@@ -353,15 +348,21 @@ Window {
         }
 
         function onHf_models_compare_available(reportObj) {
+            main_window.hf_compare_error = ""
             main_window.hf_compare_obj = reportObj || ({})
 
             // Save using frozen ids
             main_window.hf_save_compare(main_window.hf_compare_last_request_ids, main_window.hf_compare_obj)
         }
 
+        // Getting the models' info or comparing them failed: leave the "comparing" state
+        // (an empty hf_compare_obj) and say why
+        function onHf_models_info_error(message) {
+            main_window.hf_compare_failed(message)
+        }
+
         function onHf_models_compare_error(message) {
-            main_window.hf_compare_obj = ({})             // Clear stale content
-            main_window.hf_open_compare_index = -1
+            main_window.hf_compare_failed(message)
         }
     }
 
@@ -612,7 +613,7 @@ Window {
             def.__previous_problem_id,
             1,
             id,
-            def.__type
+            def.__types
         )
 
         // Go to Results like normal flow
@@ -663,8 +664,17 @@ Window {
         // Not auto-opened: nothing is selected by default, the user picks it from the list like any other saved entry
     }
 
+    function hf_compare_failed(message) {
+        console.warn("[HF] Comparison failed:", message)
+        hf_compare_obj = null
+        hf_open_compare_index = -1
+        hf_compare_error = message
+    }
+
     function hf_load_saved_compare(index) {
         if (index < 0 || index >= hf_compare_history.length) return
+
+        hf_compare_error = ""
 
         hf_renaming_index = -1     // Discard any unsaved rename in progress elsewhere
 
@@ -922,8 +932,8 @@ Window {
                 onGo_dataset_path: main_window.load_screen(ScreenManager.Screens.DatasetPath)
                 onGo_unet_models: main_window.load_screen(ScreenManager.Screens.UNet)
                 onGo_yolo_models: {
-                    if (country !== "")
-                        main_window.yolo_country = country
+                    // The country of the form, or the world average when none is chosen there
+                    main_window.yolo_country = country !== "" ? country : "WORLD"
                     main_window.load_screen(ScreenManager.Screens.YOLO)
                 }
                 hf_results_available: main_window.hf_saved_searches.length > 0
@@ -1012,7 +1022,7 @@ Window {
             ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
             ListElement { label: "Carbon footprint [gCO2e]"; value: "X" }
-            ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
+            ListElement { label: "Carbon intensity [gCO2/kWh]"; value: "X" }
             ListElement { label: "Memory footprint [MB]"; value: "X" }
         }
 
@@ -1191,7 +1201,6 @@ Window {
             {
                 id: log_screen_component
 
-                log: main_window.log
                 app: main_window.app_requirements_node_last_status
                 carbon: main_window.carbon_footprint_node_last_status
                 hw_constraints: main_window.hw_constraints_node_last_status
@@ -1216,7 +1225,7 @@ Window {
                 models: main_window.yolo_models
                 intensities: main_window.carbon_intensities
                 country: main_window.yolo_country
-                onCountryChanged: main_window.yolo_country = country
+                onCountry_picked: main_window.yolo_country = code
                 onGo_home: main_window.load_screen(ScreenManager.Screens.Home)
                 onGo_back: main_window.load_screen(ScreenManager.Screens.Definition)
                 onRequest_data: {
@@ -1814,6 +1823,7 @@ Window {
                                 // Clear current view: nothing should appear open/selected while the
                                 // new comparison is being computed, and the selection must not carry
                                 // over into whatever the user picks for their next comparison.
+                                main_window.hf_compare_error = ""
                                 main_window.hf_compare_obj = ({})
                                 main_window.hf_open_compare_index = -1
                                 main_window.hf_selected_ids = []
@@ -2126,34 +2136,6 @@ Window {
                 id: compareScreen
                 color: "transparent"
 
-                function softHyphenate(s, step) {
-                    s = (s === undefined || s === null) ? "" : String(s)
-                    // Insert soft hyphen into long runs without spaces
-                    var out = ""
-                    var run = ""
-                    for (var i = 0; i < s.length; ++i) {
-                        var ch = s[i]
-                        if (ch === " " || ch === "\n" || ch === "\t") {
-                            out += breakRun(run, step) + ch
-                            run = ""
-                        } else {
-                            run += ch
-                        }
-                    }
-                    out += breakRun(run, step)
-                    return out
-                }
-
-                function breakRun(run, step) {
-                    if (!run || run.length <= step) return run
-                    var res = ""
-                    for (var i = 0; i < run.length; i += step) {
-                        if (i > 0) res += "\u00AD"   // Soft hyphen
-                        res += run.slice(i, i + step)
-                    }
-                    return res
-                }
-
                 SmlScreenHeader
                 {
                     id: compare_header
@@ -2250,6 +2232,11 @@ Window {
                             text: "Comparing " + main_window.hf_compare_last_request_ids.length + " models..."
                             tone: "accent"
                             pulse: true
+                        },
+                        SmlChip {
+                            visible: main_window.hf_compare_error !== "" && main_window.hf_compare_history.length > 0
+                            text: "Comparison failed"
+                            tone: "danger"
                         }
                     ]
 
@@ -2259,11 +2246,12 @@ Window {
                         anchors.centerIn: parent
                         readonly property bool waiting_: compare_card.comparing_
                         visible: main_window.hf_compare_history.length === 0 && main_window.hf_open_compare_index === -1
+                        readonly property bool failed_: main_window.hf_compare_error !== ""
                         busy: waiting_
                         title: waiting_ ? "Comparing " + main_window.hf_compare_last_request_ids.length + " models"
-                                        : "No comparisons"
+                                        : failed_ ? "Comparison failed" : "No comparisons"
                         hint: waiting_ ? main_window.hf_compare_last_request_ids.join(", ") + "\n\nThe comparison appears here as soon as it is ready."
-                                       : "Saved comparisons appear here."
+                                       : failed_ ? main_window.hf_compare_error : "Saved comparisons appear here."
                     }
 
                     // Clicking any blank area of this panel (behind everything else, so any
@@ -2526,10 +2514,11 @@ Window {
 
                                         Text {
                                             width: parent.width * 0.34
-                                            text: softHyphenate(modelData.model_id || "", 14)
+                                            text: modelData.model_id || ""
                                             font.family: Theme.uiFontFamily
                                             font.pixelSize: Theme.fontSizeBody
-                                            wrapMode: Text.WordWrap
+                                            // Long names without spaces break at "/", "-" or anywhere
+                                            wrapMode: Text.Wrap
                                             elide: Text.ElideNone
                                             color: Theme.textSecondary
                                         }
@@ -2557,27 +2546,24 @@ Window {
                                         Text {
                                             width: parent.width * 0.14
 
-                                            // Normalize architectures into a string, then soft-hyphenate
-                                            text: softHyphenate(
-                                                Array.isArray(modelData.architectures)
-                                                    ? modelData.architectures.join(", ")
-                                                    : (modelData.architectures || ""),
-                                                14
-                                            )
+                                            // Normalize architectures into a string
+                                            text: Array.isArray(modelData.architectures)
+                                                ? modelData.architectures.join(", ")
+                                                : (modelData.architectures || "")
 
                                             font.family: Theme.uiFontFamily
                                             font.pixelSize: Theme.fontSizeBody
-                                            wrapMode: Text.WordWrap
+                                            wrapMode: Text.Wrap
                                             elide: Text.ElideNone
                                             color: Theme.textSecondary
                                         }
 
                                         Text {
                                             width: parent.width * 0.2
-                                            text: softHyphenate(modelData.languages || "", 14)
+                                            text: modelData.languages || ""
                                             font.family: Theme.uiFontFamily
                                             font.pixelSize: Theme.fontSizeBody
-                                            wrapMode: Text.WordWrap
+                                            wrapMode: Text.Wrap
                                             elide: Text.ElideNone
                                             color: Theme.textSecondary
                                         }
@@ -3403,7 +3389,7 @@ Window {
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
         reiterateModel.set(5, { label: "Carbon footprint [gCO2e]", value: results["Carbon footprint"] })
-        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kWh]", value: results["Carbon intensity"] })
         reiterateModel.set(7, { label: "Memory footprint [MB]", value: results["Memory footprint"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         load_screen(ScreenManager.Screens.Reiterate)

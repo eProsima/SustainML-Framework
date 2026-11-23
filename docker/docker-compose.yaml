@@ -29,7 +29,7 @@ services:
     container_name: back_end
     environment:
       - SUSTAINML_NODE=back_end
-      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID:-0}
       - HF_TOKEN=${HF_TOKEN}
       - PYTHONUNBUFFERED=1
     volumes:
@@ -42,7 +42,7 @@ services:
     container_name: app_requirements
     environment:
       - SUSTAINML_NODE=app_requirements
-      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID:-0}
       - PYTHONUNBUFFERED=1
     volumes:
       - sustainml_share_data:/sustainml_share_data
@@ -58,7 +58,7 @@ services:
       - sustainml_share_data:/sustainml_share_data
     environment:
       - SUSTAINML_NODE=carbon_tracker
-      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID:-0}
       - PYTHONUNBUFFERED=1
     network_mode: host
     ipc: host
@@ -68,7 +68,7 @@ services:
     container_name: hw_constraints
     environment:
       - SUSTAINML_NODE=hw_constraints
-      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID:-0}
       - PYTHONUNBUFFERED=1
     volumes:
       - sustainml_share_data:/sustainml_share_data
@@ -81,7 +81,7 @@ services:
     privileged: true
     environment:
       - SUSTAINML_NODE=hw_resources
-      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID:-0}
       - PYTHONUNBUFFERED=1
     volumes:
       - sustainml_share_data:/sustainml_share_data
@@ -93,7 +93,7 @@ services:
     container_name: ml_model
     environment:
       - SUSTAINML_NODE=ml_model
-      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID:-0}
       - PYTHONUNBUFFERED=1
     volumes:
       - sustainml_share_data:/sustainml_share_data
@@ -105,7 +105,7 @@ services:
     container_name: ml_model_metadata
     environment:
       - SUSTAINML_NODE=ml_model_metadata
-      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID}
+      - SUSTAINML_DOMAIN_ID=${SUSTAINML_DOMAIN_ID:-0}
       - PYTHONUNBUFFERED=1
     volumes:
       - sustainml_share_data:/sustainml_share_data

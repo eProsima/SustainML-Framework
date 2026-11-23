@@ -160,7 +160,7 @@ Rectangle
         function onNew_ml_model_metadata_node_output(problem_id, iteration_id, metadata, keywords)
         {
             if (problem_id === root.problem_id)
-                root.__set_cells(iteration_id, {"Problem kind": keywords}, false)
+                root.__set_cells(iteration_id, {"Problem kind": metadata}, false)
         }
 
         function onNew_ml_model_node_output(problem_id, iteration_id, model, model_path, properties, properties_path, input_batch, target_latency)
@@ -425,7 +425,7 @@ Rectangle
                             "Suggested hardware" : "Hardware",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [gCO2e]",
-                            "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
+                            "Carbon intensity" : "Carbon Intensity [gCO2/kWh]",
                             "Memory footprint" : "Memory Footprint [MB]"}
                         ]
                     }

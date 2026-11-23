@@ -5,7 +5,7 @@ How each part of the application is built. A new screen should follow the closes
 ## Screen
 
 - `SmlScreenHeader` at the top: navigation (Home, Back) on the left, then the title and a
-  one-line subtitle, the screen's actions on the right. The global Node status (gear)
+  one-line subtitle, the screen's actions on the right. The global Node status (activity)
   button sits at the right end of every header, except on the iteration info view.
 - Below it, the content straight on the uniform `Theme.appBackground`, `Theme.pagePadding`
   from the edges and at most `Theme.contentMaxWidth` wide, in `SmlCard` sections (heading +
@@ -45,8 +45,10 @@ How each part of the application is built. A new screen should follow the closes
 ## Status
 
 - Node and task states are `SmlChip`s: IDLE success, RUNNING accent (pulsing),
-  INITIALIZING warning, anything else danger. Progress ("Refreshing...", "Working on
-  task...", "Searching Hugging Face...") is a pulsing green chip.
+  INITIALIZING warning, anything else danger. In a list (the Node status screen) they are
+  `plain` chips in sentence case ("Idle"), so they do not look like buttons. Progress
+  ("Refreshing...", "Working on task...", "Searching Hugging Face...") is a pulsing green
+  chip.
 
 ## Dialogs
 

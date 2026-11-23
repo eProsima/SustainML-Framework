@@ -145,7 +145,7 @@ Rectangle
                         case "Carbon Footprint [gCO2e]":
                             valuesArray.push(data.CARBON_FOOTPRINT.carbon_footprint);
                             break;
-                        case "Carbon Intensity [gCO2/kW]":
+                        case "Carbon Intensity [gCO2/kWh]":
                             valuesArray.push(data.CARBON_FOOTPRINT.carbon_intensity);
                             break;
                         case "Energy Consumption [kWh]":
