@@ -440,7 +440,7 @@ signals:
             const QString& app_requirements);
 
     /**
-     * @brief New carbon footprint node output signal to display in the GUI
+     * @brief New hardware constraints node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier
@@ -454,7 +454,7 @@ signals:
             const QString& max_memory_footprint);
 
     /**
-     * @brief New carbon footprint node output signal to display in the GUI
+     * @brief New ML model metadata node output signal to display in the GUI
      *
      * @param problem_id problem identifier
      * @param iteration_id iteration identifier

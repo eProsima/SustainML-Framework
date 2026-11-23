@@ -58,7 +58,7 @@ The *SustainML Framework* is composed of a Qt/QML GUI, a backend (a REST server 
 3. **HW Constraints** and **HW Resources Provider**: evaluate the model on the chosen hardware.
 4. **Carbon Footprint**: estimate the energy and carbon footprint of the model on that hardware.
 
-The nodes communicate through [eProsima Fast DDS](https://www.eprosima.com/index.php/products-all/eprosima-fast-dds), and each one is a Python program built on the SustainML library, which hides the DDS communications.
+The nodes communicate through [eProsima Fast DDS](https://www.eprosima.com/middleware/fast-dds), and each one is a Python program built on the SustainML library, which hides the DDS communications.
 See the [documentation](https://sustainml.readthedocs.io/en/latest/) for the details of each node and the user manual of the GUI.
 
 ---

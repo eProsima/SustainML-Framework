@@ -425,7 +425,7 @@ Rectangle
                             "Suggested hardware" : "Hardware",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [gCO2e]",
-                            "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
+                            "Carbon intensity" : "Carbon Intensity [gCO2/kWh]",
                             "Memory footprint" : "Memory Footprint [MB]"}
                         ]
                     }

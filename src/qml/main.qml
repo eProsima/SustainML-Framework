@@ -613,7 +613,7 @@ Window {
             def.__previous_problem_id,
             1,
             id,
-            def.__type
+            def.__types
         )
 
         // Go to Results like normal flow
@@ -1022,7 +1022,7 @@ Window {
             ListElement { label: "Suggested hardware"; value: "X" }
             ListElement { label: "Power consumption [W]"; value: "X" }
             ListElement { label: "Carbon footprint [gCO2e]"; value: "X" }
-            ListElement { label: "Carbon intensity [gCO2/kW]"; value: "X" }
+            ListElement { label: "Carbon intensity [gCO2/kWh]"; value: "X" }
             ListElement { label: "Memory footprint [MB]"; value: "X" }
         }
 
@@ -3389,7 +3389,7 @@ Window {
         reiterateModel.set(3, { label: "Suggested hardware", value: results["Suggested hardware"] })
         reiterateModel.set(4, { label: "Power consumption [W]", value: results["Power consumption"] })
         reiterateModel.set(5, { label: "Carbon footprint [gCO2e]", value: results["Carbon footprint"] })
-        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kW]", value: results["Carbon intensity"] })
+        reiterateModel.set(6, { label: "Carbon intensity [gCO2/kWh]", value: results["Carbon intensity"] })
         reiterateModel.set(7, { label: "Memory footprint [MB]", value: results["Memory footprint"] })
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         load_screen(ScreenManager.Screens.Reiterate)

@@ -45,6 +45,17 @@ Rectangle {
     // relayout (e.g. hiding a column) changed the width it was computed from, a binding loop.
     property real __tables_width: __visible_columns_width() + 1
 
+    // Whether a suggested model is a Hugging Face model ("owner/name"), which has a page on the Hub.
+    // The U-Nets of the FPGA (unet_model_xxx or a path to an .onnx file) and the YOLO models of the
+    // Axelera board have none
+    function __is_hf_model(name) {
+        if (typeof name !== "string" || name === "" || name.charAt(0) === "/")
+            return false
+        if (name.toLowerCase().endsWith(".onnx"))
+            return false
+        return name.split("/").length === 2
+    }
+
     // Width shown for a column: 0 when hidden, else its own width, except that the last
     // visible column also takes the room left when the visible columns together are
     // narrower than the view (they then fill it). Pure: it never changes columnWidths, so
@@ -243,7 +254,7 @@ Rectangle {
                             "Latency" : "Latency [s]",
                             "Power consumption" : "Power Consumption [W]",
                             "Carbon footprint" : "Carbon Footprint [gCO2e]",
-                            "Carbon intensity" : "Carbon Intensity [gCO2/kW]",
+                            "Carbon intensity" : "Carbon Intensity [gCO2/kWh]",
                             "Energy Consumption" : "Energy Consumption [kWh]",
                             "Memory footprint" : "Memory Footprint [MB]"}
                         ]
@@ -474,7 +485,9 @@ Rectangle {
                             // MouseArea to capture right-click and show a context menu
                             MouseArea {
                                 id: contextMenuMoreData
-                                enabled: column === 0 || column === 2
+                                // Only cells with a menu react: the iteration number, and the name of a
+                                // Hugging Face model (a U-Net or YOLO model has no page on the Hub)
+                                enabled: column === 0 || (column === 2 && root.__is_hf_model(model.display))
                                 hoverEnabled: true
                                 anchors {
                                     top: parent.top
@@ -485,7 +498,7 @@ Rectangle {
                                     rightMargin: 5
                                 }
                                 acceptedButtons: Qt.RightButton
-                                cursorShape: (column === 0 || column === 2) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 onEntered: {
                                     if (enabled)
                                         parent.color = Theme.accentSubtle // slightly changed background color
@@ -500,7 +513,8 @@ Rectangle {
                                                 contextMenuData.popup(mouse.x, mouse.y);
                                                 break;
                                             case 2:
-                                                hfMenu.popup(mouse.x, mouse.y);
+                                                if (root.__is_hf_model(model.display))
+                                                    hfMenu.popup(mouse.x, mouse.y);
                                                 break;
                                             default:
                                                 break;
@@ -956,7 +970,7 @@ Rectangle {
             "latency": "Time it takes for a complete inference of the model in the suggested hardware (s).",
             "power consumption": "Instantaneous power consumed during execution of the model on the hardware (W).",
             "carbon footprint": "Total CO2e emissions from the use of the model on the suggested hardware (gCO2e).",
-            "carbon intensity": "Emissions per unit of energy consumed (gCO2/kW).",
+            "carbon intensity": "Emissions per unit of energy consumed (gCO2/kWh).",
             "energy consumption": "Total energy used by the execution (kWh).",
             "memory footprint": "Memory the model needs: its weights plus the working memory to process the longest input it accepts (MB)."
         })
