@@ -1467,6 +1467,7 @@ void Engine::replay_loaded_tasks(
         types::TaskId task_id(problem_id, iteration_id);
         received_task_ids.push_back(task_id);
         replayed_task_ids_.insert(Utils::task_string(task_id));
+        loaded_problem_ids_.insert(problem_id);
         // Replay through the existing results path: this fires the same per-node
         // requests/signals a live task already uses, so the Results screen tab
         // creation logic needs no separate code path for loaded tasks. The backend
@@ -1499,6 +1500,12 @@ QString Engine::saved_display_name(
         int problem_id) const
 {
     return saved_display_names_.value(problem_id);
+}
+
+bool Engine::is_loaded_problem(
+        int problem_id) const
+{
+    return loaded_problem_ids_.contains(problem_id);
 }
 
 void Engine::forget_task(

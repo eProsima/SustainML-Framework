@@ -74,6 +74,9 @@ Item
     // Iteration info view (the info button of a Results row): every field is read-only and
     // shows what that iteration ran with, and the footer actions are hidden
     property bool __reiterate: false
+    // A problem loaded from a save file: the back-end only has its results, so it cannot be
+    // reiterated (Reiterate is hidden)
+    property bool __loaded_problem: false
     property bool __initializing: true
     // The iteration evaluated a Hugging Face model (its Analyze button)
     property bool __hf_analyze: false
@@ -233,6 +236,15 @@ Item
             max_mem_footprint_input.text = max_memory_footprint === 0 ? "" : max_memory_footprint
             root.__previous_iteration = 0
             root.__previous_problem_id = 0
+            // Iteration info view: its Reiterate button runs these inputs again as the next
+            // iteration of the same problem (a Manual or Auto optimization then skips the
+            // models already tried in that problem)
+            if (root.__reiterate)
+            {
+                root.__previous_iteration = iteration_id
+                root.__previous_problem_id = problem_id
+                root.__loaded_problem = engine.is_loaded_problem(problem_id)
+            }
         }
     }
 
@@ -580,6 +592,8 @@ Item
                             }
                             onText_changed:
                             {
+                                // Info view: lists the screen itself changes must not edit the iteration's inputs
+                                if (root.__reiterate) return
                                 var was_yolo = root.__yolo_mode
                                 root.__types = text
 
@@ -822,6 +836,8 @@ Item
                                 }
                                 onText_changed:
                                 {
+                                    // Info view: lists the screen itself changes must not edit the iteration's inputs
+                                    if (root.__reiterate) return
                                     if (text === "(empty)") text = ""
                                     root.__goal = text
 
@@ -885,6 +901,8 @@ Item
                                 KeyNavigation.tab: model_select_input
                                 onText_changed:
                                 {
+                                    // Info view: lists the screen itself changes must not edit the iteration's inputs
+                                    if (root.__reiterate) return
                                     if (text === "(empty)") text = ""
                                     var previous_hardware = root.__hardware_required
                                     root.__hardware_required = text
@@ -963,6 +981,8 @@ Item
                                 height: root.__input_height
                                 KeyNavigation.tab: num_outputs_input
                                 onText_changed: {
+                                    // Info view: lists the screen itself changes must not edit the iteration's inputs
+                                    if (root.__reiterate) return
                                     if (text === "(empty)" || text === "") {
                                         // No model selected
                                         root.__model_selected = ""
@@ -1259,6 +1279,8 @@ Item
                                 KeyNavigation.tab: desired_carbon_footprint_input
                                 onText_changed:
                                 {
+                                    // Info view: lists the screen itself changes must not edit the iteration's inputs
+                                    if (root.__reiterate) return
                                     if (text === "Manual")
                                     {
                                         root.__optimize_carbon_footprint_auto = false
@@ -1297,12 +1319,12 @@ Item
                             {
                                 read_only: root.__reiterate
                                 id: desired_carbon_footprint_input
-                                // Only meaningful as the target of a Manual or Auto optimization
-                                disabled: root.__model_selected !== "" || root.__unet_mode ||
-                                          (!root.__optimize_carbon_footprint_manual && !root.__optimize_carbon_footprint_auto)
+                                // A limit like the max memory footprint: the results are ranked against
+                                // it with any method; Manual and Auto only add the reiterations
+                                disabled: root.__model_selected !== "" || root.__unet_mode
                                 text: root.__desired_carbon_footprint === 0.0 ? "" : root.__desired_carbon_footprint
                                 validator: RegExpValidator { regExp: /^[0-9]*\.?[0-9]*$/ }
-                                placeholder_text: disabled ? "Select an optimization method first" : "Target per inference in gCO2e (only numbers)"
+                                placeholder_text: "Target per inference in gCO2e, empty for no target (only numbers)"
                                 width: parent.width
                                 height: root.__input_height
                                 KeyNavigation.tab: max_mem_footprint_input
@@ -1376,6 +1398,8 @@ Item
                                 KeyNavigation.tab: geo_location_region_input
                                 onText_changed:
                                 {
+                                    // Info view: lists the screen itself changes must not edit the iteration's inputs
+                                    if (root.__reiterate) return
                                     if (text === "(empty)")
                                     {
                                         root.__geo_location_continent = ""
@@ -1420,6 +1444,8 @@ Item
                                 KeyNavigation.tab: problem_short_description_input
                                 onText_changed:
                                 {
+                                    // Info view: lists the screen itself changes must not edit the iteration's inputs
+                                    if (root.__reiterate) return
                                     if (text === "(empty)")
                                         root.__geo_location_region = ""
                                     var code = Countries.code(root.__geo_location_continent, text)
@@ -1448,12 +1474,17 @@ Item
         }
     }
 
-    // Footer: the form's actions (none in the iteration info view)
+    // Footer: the form's actions. The iteration info view only has Reiterate, and only for a
+    // model search with a Manual or Auto optimization: only these skip the models already tried
+    // in the problem, so without them (or with a chosen model) it would run the same model again.
+    // Not for a problem loaded from a save file either (see __loaded_problem)
     Rectangle
     {
         id: footer
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        visible: !root.__reiterate
+        visible: !root.__reiterate ||
+                 (!root.__search_skipped && !root.__loaded_problem &&
+                  (root.__optimize_carbon_footprint_manual || root.__optimize_carbon_footprint_auto))
         height: visible ? 64 : 0
         color: Theme.surface
 
@@ -1478,6 +1509,7 @@ Item
             SmlButton
             {
                 id: clear_all_button
+                visible: !root.__reiterate
                 icon_name: Settings.clear_icon_name
                 text_value: "Clear all"
                 tooltip_text: "Clear all fields and dataset metadata"
@@ -1489,15 +1521,16 @@ Item
             {
                 id: submit_button
                 variant: "primary"
-                icon_name: Settings.check_icon_name
-                text_value: "Submit"
+                icon_name: root.__reiterate ? Settings.reiterate_icon_name : Settings.check_icon_name
+                text_value: root.__reiterate ? "Reiterate" : "Submit"
                 disabled: root.__refreshing || root.__initializing || root.__no_hardware ||
                     (root.__unet_mode && root.__model_selected === "") ||
                     (root.__problem_definition.trim() === "" &&
                      root.__problem_short_description.trim() === "" &&
                      root.__model_selected === "" &&
                      root.__dataset_description === "")
-                tooltip_text: "Submit the problem and start task"
+                tooltip_text: root.__reiterate ? "Run these inputs again as a new iteration of this problem"
+                                               : "Submit the problem and start task"
                 onClicked:
                 {
                     focus = true
@@ -1589,7 +1622,9 @@ Item
                 root.__geo_location_region,
                 root.__extra_data,
                 root.__previous_problem_id,
-                root.__search_skipped ? 1 : root.__num_outputs,
+                // Reiterate adds one iteration (the iteration's own count is what was left of its
+                // output models, e.g. 5 for the first of five, which would start five more)
+                (root.__search_skipped || root.__reiterate) ? 1 : root.__num_outputs,
                 root.__model_selected,
                 root.__types)
     }

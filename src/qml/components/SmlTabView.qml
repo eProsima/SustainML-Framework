@@ -624,14 +624,25 @@ Item {
     // the given idx update current tab displayed (if != current)
     function __refresh_layout(idx)
     {
-        // move to idx tab if necessary
-        if (idx != __current_tab)
-        {
-            __current_tab = idx
+        __current_tab = idx
 
-            // move to the idx tab in the stack
-            stack_layout.currentIndex = idx
+        // show the view of the tab's stack_id: after __order_tabs the tab buttons are no longer
+        // in the order of the views, so a position would show another tab's view
+        var target = idx
+        var tab = sustainml_custom_tabview.__tab_model.get(idx)
+        if (tab)
+        {
+            for (var n = 0; n < stack_layout.children.length; n++)
+            {
+                if (stack_layout.children[n].item && stack_layout.children[n].item.stack_id == tab.stack_id)
+                {
+                    target = n
+                    break
+                }
+            }
         }
+        if (stack_layout.currentIndex !== target)
+            stack_layout.currentIndex = target
         // update idx model
         tab_list.model = sustainml_custom_tabview.__tab_model
     }
@@ -768,57 +779,52 @@ Item {
         tab_list.model = sustainml_custom_tabview.__tab_model
     }
 
-    // order tabs by stack id (minor to major)
+    // order the tab buttons by the problem of their view (minor to major). Only the buttons
+    // move: each loaded view keeps its own stack_id and problem_id, because it keeps the rows
+    // it already holds (swapping them handed one problem's rows to another problem's tab,
+    // mixing them after loading a save file, where problems arrive out of order). Views are
+    // found by stack_id (__refresh_layout), never by position. The sort is stable, so tabs of
+    // the same problem (the Overview, Iteration and Fingerprint subtabs) keep their order
     function __order_tabs()
     {
-        var i, j
-        for (i=0; i<stack_layout.count; i++)
+        var entries = []
+        for (var t = 0; t < sustainml_custom_tabview.__tab_model.count; t++)
         {
-            for (j=i+1; j<stack_layout.count; j++)
+            var tab = sustainml_custom_tabview.__tab_model.get(t)
+            var problem = 0
+            for (var n = 0; n < stack_layout.children.length; n++)
             {
-                if (stack_layout.children[i].item.problem_id > stack_layout.children[j].item.problem_id)
+                if (stack_layout.children[n].item && stack_layout.children[n].item.stack_id == tab.stack_id)
                 {
-                    var stack_src = stack_layout.children[i].item.stack_id
-                    var stack_dst = stack_layout.children[j].item.stack_id
-                    var title_src = ""
-                    var title_dst = ""
-                    var idx_src = -1
-                    var idx_dst = -1
-                    for (var s=0; s< sustainml_custom_tabview.__tab_model.count; s++)
-                    {
-                        if (sustainml_custom_tabview.__tab_model.get(s).stack_id == stack_src)
-                        {
-                            idx_src = s
-                            title_src = sustainml_custom_tabview.__tab_model.get(s).title
-                        }
-                        else if (sustainml_custom_tabview.__tab_model.get(s).stack_id == stack_dst)
-                        {
-                            idx_dst = s
-                            title_dst = sustainml_custom_tabview.__tab_model.get(s).title
-                        }
-                    }
-                    if (idx_src != -1 && idx_dst != -1 && idx_src < idx_dst)
-                    {
-                        sustainml_custom_tabview.__tab_model.setProperty(idx_src, "title", title_dst)
-                        sustainml_custom_tabview.__tab_model.setProperty(idx_dst, "title", title_src)
-                        sustainml_custom_tabview.__tab_model.setProperty(idx_src, "stack_id", stack_dst)
-                        sustainml_custom_tabview.__tab_model.setProperty(idx_dst, "stack_id", stack_src)
-
-                        // Keep each loader's own stack_id/problem_id in sync with the
-                        // swap above - previously only __tab_model was updated, so a
-                        // loader's .item.stack_id kept pointing at its OLD identity
-                        // forever after any reorder, and any later close/focus/rename
-                        // looked up by stack_id would silently act on the wrong tab.
-                        var problem_src = stack_layout.children[i].item.problem_id
-                        var problem_dst = stack_layout.children[j].item.problem_id
-                        stack_layout.children[i].item.stack_id = stack_dst
-                        stack_layout.children[j].item.stack_id = stack_src
-                        stack_layout.children[i].item.problem_id = problem_dst
-                        stack_layout.children[j].item.problem_id = problem_src
-                    }
+                    problem = stack_layout.children[n].item.problem_id
+                    break
+                }
+            }
+            entries.push({"title": tab.title, "stack_id": tab.stack_id, "problem": problem, "pos": t})
+        }
+        var sorted = entries.slice().sort(function(a, b) { return (a.problem - b.problem) || (a.pos - b.pos) })
+        for (var k = 0; k < sorted.length; k++)
+        {
+            if (sorted[k].stack_id != entries[k].stack_id)
+            {
+                sustainml_custom_tabview.__tab_model.setProperty(k, "title", sorted[k].title)
+                sustainml_custom_tabview.__tab_model.setProperty(k, "stack_id", sorted[k].stack_id)
+            }
+        }
+        // The highlighted tab follows the view shown, whose button may have moved
+        var shown = stack_layout.children[stack_layout.currentIndex]
+        if (shown && shown.item)
+        {
+            for (var m = 0; m < sustainml_custom_tabview.__tab_model.count; m++)
+            {
+                if (sustainml_custom_tabview.__tab_model.get(m).stack_id == shown.item.stack_id)
+                {
+                    __current_tab = m
+                    break
                 }
             }
         }
+        tab_list.model = sustainml_custom_tabview.__tab_model
     }
 
     // get the load element for the stack view

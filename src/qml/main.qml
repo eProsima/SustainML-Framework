@@ -1068,6 +1068,35 @@ Window {
                         __reiterate: true
 
                         onGo_results: main_window.load_screen(ScreenManager.Screens.Results)
+                        // Reiterate: the same inputs as the next iteration of this problem
+                        onSend_task: {
+                            engine.launch_task(
+                                    problem_short_description,
+                                    problem_definition,
+                                    inputs,
+                                    outputs,
+                                    dataset_metadata_description,
+                                    dataset_metadata_topic,
+                                    dataset_metadata_profile,
+                                    dataset_metadata_keywords,
+                                    dataset_metadata_applications,
+                                    minimum_samples,
+                                    maximum_samples,
+                                    optimize_carbon_footprint_auto,
+                                    goal,
+                                    optimize_carbon_footprint_manual,
+                                    previous_iteration,
+                                    desired_carbon_footprint,
+                                    max_memory_footprint,
+                                    hardware_required,
+                                    geo_location_continent,
+                                    geo_location_region,
+                                    extra_data,
+                                    previous_problem_id,
+                                    num_outputs,
+                                    model_selected,
+                                    type)
+                        }
                     }
 
                     Rectangle {
@@ -3391,6 +3420,14 @@ Window {
         reiterateModel.set(5, { label: "Carbon footprint [gCO2e]", value: results["Carbon footprint"] })
         reiterateModel.set(6, { label: "Carbon intensity [gCO2/kWh]", value: results["Carbon intensity"] })
         reiterateModel.set(7, { label: "Memory footprint [MB]", value: results["Memory footprint"] })
+        // A fresh Iteration inputs screen for each iteration opened from Results: the form kept
+        // what an earlier iteration had left (lists, goal, model), so what it showed depended on
+        // the iterations opened before. Back still returns to the same instance
+        if (_screenInst[ScreenManager.Screens.Reiterate] &&
+                ScreenManager.current_screen !== ScreenManager.Screens.Reiterate) {
+            _screenInst[ScreenManager.Screens.Reiterate].destroy()
+            _screenInst[ScreenManager.Screens.Reiterate] = null
+        }
         engine.request_orchestrator(parseInt(problem_id), parseInt(results["Iteration"]), true)
         load_screen(ScreenManager.Screens.Reiterate)
     }
