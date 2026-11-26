@@ -40,7 +40,7 @@ AI developers from all experience levels can make use of the framework through i
 
 * **Problem definition from natural language**: the ML goal is inferred from the problem description (with a local `llama3` model through Ollama), or chosen by hand.
 * **Model proposal**: Hugging Face models from a knowledge graph (Neo4j) and a semantic search (RAG), YOLO models for the Axelera board, and U-Net models for the FPGA; a model can also be picked by hand.
-* **Hardware evaluation**: latency, power and memory of the model on the UPMEM processing-in-memory simulator, on the Axelera Edge 130p (measured YOLO models), or on an FPGA (U-Net models measured by DFKI, or estimated with DFKI's predictor).
+* **Hardware evaluation**: latency, power and memory of the model on the UPMEM LLM simulator (processing-in-memory and GPU architectures), on the Axelera Edge 130p (measured YOLO models), or on an FPGA (U-Net models, with the latency and power predicted by DFKI's predictor, trained on DFKI's measurements of 394 U-Nets).
 * **Energy and carbon footprint** per inference, with the grid carbon intensity of the chosen country (or of the country detected from the public IP address).
 * **Several output models and automatic reiteration**: the framework can search further models when a result exceeds the desired carbon footprint or the maximum memory footprint.
 * **Results comparison**: overview and ranking of the results, metric comparisons and fingerprint radar charts.
@@ -194,8 +194,8 @@ The full documentation is available on [Read the Docs](https://sustainml.readthe
 
     The GUI alone is run with the `sustainml` command.
 
-    The first run needs Internet access: the nodes download the Hugging Face models they analyze, and the Carbon Footprint node detects the country of the machine from its public IP address when the user does not choose one.
-    The Axelera YOLO models catalog, the FPGA U-Net measurements and predictor, the UPMEM simulator and the Hugging Face MCP server are part of the node sources and need no extra setup, hardware or token of their own.
+    The framework needs Internet access while it runs: the nodes download the `BAAI/bge-large-en` embedding model the first time and each Hugging Face model they evaluate, the Hugging Face search and comparison query the Hugging Face Hub, and the Carbon Footprint node detects the country of the machine from its public IP address when the user does not choose one.
+    The Axelera YOLO models catalog, the FPGA U-Net models and predictor, the UPMEM simulator and the Hugging Face MCP server are part of the node sources and need no extra setup, hardware or token of their own.
 
 ### Running SustainML Framework using Docker
 

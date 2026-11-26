@@ -689,6 +689,8 @@ Item {
                     model: root.model ? (function() {
                         var i = root.info, m = root.model, K = i.kernel_sizes, d = i.depth, O = UnetModel.ORIGINAL
                         var allThree = K.every(function(k) { return k === 3 })
+                        var encoder = m.encCh.join(" → ")
+                        var bottleneck = (i.initial_channels << d) + " (doubled)"
                         return [
                             ["", "Original", "This model", false, true],
                             ["Input", O.input, i.input_size + "×" + i.input_size + "×" + i.input_channels, true],
@@ -696,9 +698,9 @@ Item {
                             ["Padding", "none, maps shrink and skips are cropped", "\"same\", no cropping", true],
                             ["Kernels", O.kernels, "[" + K.join(", ") + "] per level", !allThree],
                             ["Pooling steps", String(O.levels), String(d), d !== O.levels],
-                            ["Encoder channels", O.channels, m.encCh.join(" → "), true],
-                            ["Bottleneck", O.bottleneck, (i.initial_channels << d) + " (not doubled)", true],
-                            ["Upsampling", "2×2 up-conv halves channels", "2×2 up-conv keeps channels", true],
+                            ["Encoder channels", O.channels, encoder, encoder !== O.channels],
+                            ["Bottleneck", O.bottleneck, bottleneck, bottleneck !== O.bottleneck],
+                            ["Upsampling", "2×2 up-conv halves channels", "2×2 up-conv halves channels", false],
                             ["Conv layers", String(O.convLayers), String(m.convCount), m.convCount !== O.convLayers],
                             ["Parameters", UnetModel.fmtCount(O.params),
                              UnetModel.fmtCount(m.params) + " (" + (100 * m.params / O.params).toFixed(2) + "%)", true]
@@ -772,8 +774,8 @@ Item {
                 visible: root.model !== null
                 text: !root.model ? "" :
                     "• <b>Input size</b> (" + root.__hl(root.info.input_size + "×" + root.info.input_size) + "): the tile the model processes at once. Doubling it quadruples the compute, because every layer is a convolution. Larger tiles keep finer detail per image.<br><br>" +
-                    "• <b>Depth</b> (" + root.__hl(root.info.depth + (root.info.depth === 1 ? " level" : " levels")) + "): each extra level halves the resolution once more. This widens how far each pixel can \"see\" (here " + root.model.rf + "×" + root.model.rf + " px), which helps with large objects. A new level has a quarter of the pixels but twice the channels of the level above it, so it costs about as much compute as the other levels and adds many more parameters. Among these models, one extra level multiplies compute by 1.2 to 3 and parameters by 2.6 to 8.<br><br>" +
-                    "• <b>Initial channels</b> (" + root.__hl(String(root.info.initial_channels)) + "): the width of the network, i.e. its capacity. Doubling it roughly quadruples both parameters and compute. The first encoder level already uses " + (root.info.initial_channels << 1) + " channels. <i>initial_channels</i> only appears at the last decoder level.<br><br>" +
+                    "• <b>Depth</b> (" + root.__hl(root.info.depth + (root.info.depth === 1 ? " level" : " levels")) + "): each extra level halves the resolution once more. This widens how far each pixel can \"see\" (here " + root.model.rf + "×" + root.model.rf + " px), which helps with large objects. A new level has a quarter of the pixels but twice the channels of the level above it, so it costs about as much compute as the other levels and adds many more parameters. Among these models, one extra level multiplies compute by 1.05 to 3.6 and parameters by 1.8 to 11.4.<br><br>" +
+                    "• <b>Initial channels</b> (" + root.__hl(String(root.info.initial_channels)) + "): the width of the network, i.e. its capacity. Doubling it roughly quadruples both parameters and compute. As in the original U-Net, the first encoder level and the last decoder level use " + root.info.initial_channels + " channels, and each level below doubles them.<br><br>" +
                     "• <b>Kernel sizes</b> (" + root.__hl("[" + root.info.kernel_sizes.join(", ") + "]") + "): one per encoder level plus the bottleneck. The decoder reuses the kernel of the matching encoder level. A 5×5 kernel sees more context than 3×3, but costs about 2.8× as much per layer."
             }
         }
@@ -862,8 +864,8 @@ Item {
         Muted {
             width: parent.width
             textFormat: Text.RichText   // StyledText does not underline links
-            text: "* <i>Mflops</i> and <i>Mparams</i> come from unet_models_info.jsonl. The metadata's FLOP figure counts one operation per multiply-accumulate, counts each transposed convolution per output pixel (4× its actual multiply-accumulates here), and adds the ReLU and max-pool operations. That is why it is slightly higher than the MAC count above, and not 2× MACs as in some other FLOP conventions. " +
-                  "The layer structure is derived from the metadata and matches the ONNX graphs of all 217 models. " +
+            text: "* <i>Mflops</i> and <i>Mparams</i> come from unet_models_info.jsonl. The metadata's FLOP figure counts one operation per multiply-accumulate, counts each transposed convolution per output pixel (4× its actual multiply-accumulates here), and adds the ReLU, max-pool and concatenation operations. That is why it is slightly higher than the MAC count above, and not 2× MACs as in some other FLOP conventions. " +
+                  "The layer structure is derived from the metadata and matches the ONNX graphs of all 394 models. " +
                   "Reference: O. Ronneberger, P. Fischer, T. Brox, <a href=\"https://arxiv.org/abs/1505.04597\" style=\"color:" + root.c_link + "\">U-Net: Convolutional Networks for Biomedical Image Segmentation</a>, MICCAI 2015."
         }
     }

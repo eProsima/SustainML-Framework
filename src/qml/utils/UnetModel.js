@@ -6,17 +6,19 @@
 // (src/html/unet_visualizer.html, where Engine::write_unet_visualizer() inlines
 // this file without the .pragma line), so it is plain ES5.
 //
-// The rule below was verified against the ONNX graphs of all 217 models (every
+// The rule below was verified against the ONNX graphs of all 394 models (every
 // Conv / ConvTranspose weight shape and the total parameter count match):
 //
-//   encoder level i (1..depth): 2 x [Conv k_i, ReLU], C*2^i channels, then MaxPool 2x2
-//   bottleneck:                 2 x [Conv k_depth, ReLU], C*2^depth channels
-//   decoder level i (depth..1): ConvTranspose 2x2 s2 (C*2^i -> C*2^i),
+//   encoder level i (1..depth): 2 x [Conv k_i, ReLU], C*2^(i-1) channels, then MaxPool 2x2
+//   bottleneck:                 2 x [Conv k_(depth+1), ReLU], C*2^depth channels
+//   decoder level i (depth..1): ConvTranspose 2x2 s2 (C*2^i -> C*2^(i-1)),
 //                               Concat with encoder level i,
 //                               2 x [Conv k_i, ReLU], C*2^(i-1) channels
 //   output:                     Conv 1x1 -> 1 channel (no activation)
 //
 // where C = initial_channels and k = kernel_sizes. All convs use "same" padding.
+// As in the original U-Net, the bottleneck doubles the channels of the last
+// encoder level and every up-convolution halves them.
 
 // Original U-Net (Ronneberger et al., 2015, Fig. 1). Parameter count computed from the figure's layer sizes.
 var ORIGINAL = {
@@ -98,7 +100,7 @@ function buildModel(info) {
     var cin = inC;
     for (i = 1; i <= d; i++) {
         stage = "Encoder level " + i;
-        var eres = S >> (i - 1), ech = C << i, ek = K[i - 1];
+        var eres = S >> (i - 1), ech = C << (i - 1), ek = K[i - 1];
         for (j = 0; j < 2; j++) {
             c = conv(j ? ech : cin, ech, ek, eres);
             maps.push(extend({ kind: "enc", level: i - 1, ch: ech, res: eres, k: ek, stage: stage, title: stage + ", conv " + (j + 1), op: "Conv " + kx(ek) + " + ReLU" }, c));
@@ -111,16 +113,16 @@ function buildModel(info) {
     stage = "Bottleneck";
     var bres = S >> d, bch = C << d, bk = K[d];
     for (j = 0; j < 2; j++) {
-        c = conv(bch, bch, bk, bres);
+        c = conv(j ? bch : cin, bch, bk, bres);
         maps.push(extend({ kind: "bottleneck", level: d, ch: bch, res: bres, k: bk, stage: stage, title: "Bottleneck, conv " + (j + 1), op: "Conv " + kx(bk) + " + ReLU" }, c));
     }
 
     // Decoder
     for (i = d; i >= 1; i--) {
         stage = "Decoder level " + i;
-        var dres = S >> (i - 1), up = C << i, skip = C << i, out = C << (i - 1), dk = K[i - 1];
-        var upParams = up * up * 4 + up, upMacs = up * up * 4 * (dres >> 1) * (dres >> 1);
-        ops.push({ stage: stage, op: "ConvTranspose 2×2, stride 2", k: 2, cin: up, cout: up, res: dres, params: upParams, macs: upMacs });
+        var dres = S >> (i - 1), upIn = C << i, up = C << (i - 1), skip = C << (i - 1), out = C << (i - 1), dk = K[i - 1];
+        var upParams = upIn * up * 4 + up, upMacs = upIn * up * 4 * (dres >> 1) * (dres >> 1);
+        ops.push({ stage: stage, op: "ConvTranspose 2×2, stride 2", k: 2, cin: upIn, cout: up, res: dres, params: upParams, macs: upMacs });
         ops.push({ stage: stage, op: "Concat with encoder level " + i, k: 0, cin: up + skip, cout: up + skip, res: dres, params: 0, macs: 0 });
         maps.push({
             kind: "concat", level: i - 1, ch: up + skip, upCh: up, skipCh: skip, res: dres, stage: stage,
@@ -168,7 +170,7 @@ function buildModel(info) {
     }
 
     var encCh = [];
-    for (i = 1; i <= d; i++) encCh.push(C << i);
+    for (i = 1; i <= d; i++) encCh.push(C << (i - 1));
 
     return {
         info: info, name: modelName(info), ops: ops, maps: maps, params: params, macs: macs,

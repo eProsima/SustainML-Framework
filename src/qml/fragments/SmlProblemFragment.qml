@@ -98,7 +98,9 @@ Item
                 {
                     sustainml_fragment_problem.__comparison_interation_ids_list.push(iteration_id)
                     problem_fragment_view.create_new_tab(components_title_map["iteration_view"], components_stack_id_map["iteration_view"], problem_id, "iteration_view")
-                    problem_fragment_view.create_new_tab(components_title_map["fingerprint_view"], components_stack_id_map["fingerprint_view"], problem_id, "fingerprint_view")
+                    // The fingerprint compares models: it opens with the second checked iteration
+                    if (sustainml_fragment_problem.__comparison_interation_ids_list.length >= 2)
+                        problem_fragment_view.create_new_tab(components_title_map["fingerprint_view"], components_stack_id_map["fingerprint_view"], problem_id, "fingerprint_view")
                     sustainml_fragment_problem.update_iteration(sustainml_fragment_problem.__comparison_interation_ids_list)
                 }
 
@@ -118,10 +120,12 @@ Item
                         }
                         sustainml_fragment_problem.__comparison_values_list = [];
 
+                        // A single checked iteration has nothing to compare its fingerprint with
+                        problem_fragment_view.close_tab(components_stack_id_map["fingerprint_view"], problem_id)
+
                         if (sustainml_fragment_problem.__comparison_interation_ids_list.length == 0)
                         {
                             problem_fragment_view.close_tab(components_stack_id_map["iteration_view"], problem_id)
-                            problem_fragment_view.close_tab(components_stack_id_map["fingerprint_view"], problem_id)
                         }
                     }
 
