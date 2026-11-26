@@ -109,8 +109,8 @@ Rectangle
     readonly property int __carbon_intensity_column: 8
     readonly property int __memory_footprint_column: 9
 
-    // Ranking of the iterations when the problem has a desired carbon footprint (Manual/Auto
-    // optimization) or a max memory footprint: the models within the limits first (lowest carbon
+    // Ranking of the iterations when the problem has a desired carbon footprint or a max memory
+    // footprint (with any optimization method): the models within the limits first (lowest carbon
     // footprint first), then the rest by how far over the limits they are. __summary names the
     // best one, or the closest if none fits.
     property string __summary: ""
@@ -201,7 +201,8 @@ Rectangle
             if (iteration_id >= root.__limits_iteration)
             {
                 root.__limits_iteration = iteration_id
-                root.__desired_carbon_footprint = optimize ? desired_carbon_footprint : 0
+                // The target ranks the results with any method, as the memory limit does
+                root.__desired_carbon_footprint = desired_carbon_footprint
                 root.__max_memory_footprint = max_memory_footprint
             }
             root.__update_ranking()

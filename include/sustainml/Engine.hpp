@@ -142,6 +142,15 @@ public:
             int problem_id) const;
 
     /**
+     * @brief Whether a problem was loaded from a save file in this session. The back-end keeps
+     *        only the results of loaded tasks, so their problems cannot be reiterated
+     * @param problem_id problem identifier
+     * @return true if the problem was loaded from a save file
+     */
+    Q_INVOKABLE bool is_loaded_problem(
+            int problem_id) const;
+
+    /**
      * @brief Forget a problem_id that's no longer wanted (e.g. its tab was closed),
      *        so it's no longer included the next time save_current_tasks() is called
      * @param problem_id problem identifier to forget
@@ -787,6 +796,7 @@ private:
 
     //! Tasks replayed from a save file: finished, so no further iteration follows them
     QSet<QString> replayed_task_ids_;
+    QSet<int> loaded_problem_ids_;
     QMap<int, QString> saved_display_names_;
     std::vector<REST_requester*> requesters_;
     std::mutex requesters_mutex_;
