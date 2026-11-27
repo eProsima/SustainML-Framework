@@ -126,7 +126,7 @@ The full documentation is available on [Read the Docs](https://sustainml.readthe
     python3 -m venv SustainML_venv && source SustainML_venv/bin/activate && \
     pip3 install -U colcon-common-extensions vcstool gdown && \
     cd ~/SustainML/SustainML_ws && \
-    wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/main/sustainml.repos && \
+    wget https://raw.githubusercontent.com/eProsima/SustainML-Framework/v1.0.0/sustainml.repos && \
     vcs import src < sustainml.repos
     ```
 

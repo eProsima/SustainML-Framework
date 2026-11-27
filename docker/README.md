@@ -5,7 +5,7 @@ This section describes the tools to deploy the SustainML Framework using Docker 
 In this folder, there are three different files:
 
 1. ``Dockerfile``: builds an Ubuntu 24.04 image with all the dependencies, the SustainML workspace built with colcon, the ANN index of the models knowledge base and the Neo4j database already loaded.
-    It clones the repositories listed in the ``sustainml.repos`` file of the ``main`` branch of this repository.
+    It clones the repositories listed in the ``sustainml.repos`` file of the ``v1.0.0`` tag of this repository.
 1. ``run.bash``: entrypoint script used inside the SustainML Docker container to start the node selected by the ``SUSTAINML_NODE`` environment variable.
 1. ``docker-compose.yaml``: compose file that uses both Docker image and entrypoint to deploy one container per SustainML node, plus the GUI.
 
