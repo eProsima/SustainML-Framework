@@ -2,7 +2,7 @@
 <Package>
     <DisplayName>SustainML</DisplayName>
     <Description>SustainML framework</Description>
-<Version>0.2.0</Version>
+<Version>1.0.0</Version>
 <ReleaseDate>2023-06-19</ReleaseDate>
     <Licenses>
 <License name="GNU General Public License v3" file="LICENSE" />
