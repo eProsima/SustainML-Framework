@@ -31,10 +31,10 @@ To run the SustainML Framework using Docker, please follow these steps:
 
 1. Navigate to this folder.
 1. Build the Docker image by running the following command.
-    The ``sustainml:v0.2.0`` name and tag are the ones that ``docker-compose.yaml`` uses.
+    The ``sustainml:v1.0.0`` name and tag are the ones that ``docker-compose.yaml`` uses.
 
     ```bash
-    docker build -f Dockerfile -t sustainml:v0.2.0 .
+    docker build -f Dockerfile -t sustainml:v1.0.0 .
     ```
 
     The branch of each repository can be changed with the build arguments ``fastcdr_branch``, ``fastdds_branch``, ``devutils_branch``, ``sustainml_lib_branch`` and ``sustainml_framework_branch`` (for example, ``--build-arg sustainml_lib_branch=<branch>``).
